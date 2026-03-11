@@ -6,13 +6,23 @@ An automated end-to-end testing and evaluation platform for **any system that ex
 
 ## 📸 Screenshots
 
-| Mission Board | Mission Editor |
-|---|---|
-| ![Mission Board](docs/screenshot_mission_board.png) | ![Mission Editor](docs/screenshot_mission_editor.png) |
+### Mission Board
+![Mission Board](docs/screenshot_mission_board.png)
 
-| Test History | Settings |
-|---|---|
-| ![Test History](docs/screenshot_test_history.png) | ![Settings](docs/screenshot_settings.png) |
+### Mission Editor
+![Mission Editor](docs/screenshot_mission_editor.png)
+
+### Test History
+![Test History](docs/screenshot_test_history.png)
+
+### Evaluation Report
+![Evaluation Report](docs/screenshot_evaluation_report.png)
+
+### Live Chat Log
+![Chat Log](docs/screenshot_chat_log.png)
+
+### Targeted Prompt Improvements
+![Prompt Improvements](docs/screenshot_prompt_improvements.png)
 
 ---
 
