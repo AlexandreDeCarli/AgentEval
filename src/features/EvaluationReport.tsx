@@ -1,0 +1,134 @@
+import React, { useState } from 'react';
+import { Evaluation, Mission } from '../types';
+import { Copy, Check, Info, AlertTriangle, AlertCircle, Sparkles, Clock } from 'lucide-react';
+
+interface Props {
+    evaluation: Evaluation;
+    mission?: Mission;
+}
+
+export const EvaluationReport: React.FC<Props> = ({ evaluation, mission }) => {
+    const [copiedId, setCopiedId] = useState<number | null>(null);
+
+    const handleCopy = (text: string, id: number) => {
+        navigator.clipboard.writeText(text);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const scoreColor = evaluation.overall_score >= 80 ? 'bg-green-500/10 text-green-500 border-green-500/20'
+        : evaluation.overall_score >= 50 ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+            : 'bg-red-500/10 text-red-500 border-red-500/20';
+
+    const getSeverityDetails = (sev: string) => {
+        switch (sev) {
+            case 'critico': return { icon: <AlertTriangle className="w-4 h-4 text-red-500" />, color: 'text-red-600 bg-red-100 border-red-200' };
+            case 'importante': return { icon: <AlertCircle className="w-4 h-4 text-amber-500" />, color: 'text-amber-600 bg-amber-100 border-amber-200' };
+            default: return { icon: <Sparkles className="w-4 h-4 text-blue-500" />, color: 'text-blue-600 bg-blue-100 border-blue-200' };
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Header: Score & Metrics */}
+            <div className="flex flex-wrap items-center gap-6 p-6 bg-card border border-border rounded-xl shadow-sm">
+                <div className={`text-5xl font-extrabold flex items-center justify-center w-24 h-24 rounded-full border-4 ${scoreColor} shrink-0`}>
+                    {evaluation.overall_score}
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                    <h3 className="text-2xl font-bold mb-1">Overall Performance</h3>
+                    <p className="text-muted-foreground text-sm flex items-center gap-2 mb-3">
+                        <Info className="w-4 h-4 inline" /> AI Evaluator Assessment
+                    </p>
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md text-xs font-medium border border-border">
+                            <Clock className="w-4 h-4 text-blue-500" />
+                            <span>First Resp: {(evaluation.metrics.avg_time_to_first_response_ms / 1000).toFixed(1)}s</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md text-xs font-medium border border-border">
+                            <Clock className="w-4 h-4 text-purple-500" />
+                            <span>Avg Complete: {(evaluation.metrics.avg_time_to_complete_response_ms / 1000).toFixed(1)}s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Summary */}
+            <div>
+                <h4 className="font-bold text-lg mb-3">Executive Summary</h4>
+                <div className="bg-muted p-5 rounded-lg text-sm leading-relaxed border border-border">
+                    {evaluation.summary}
+                </div>
+            </div>
+
+            {/* Criteria Breakdown */}
+            <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">Criteria Breakdown</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {evaluation.criteria_scores.map((c, i) => {
+                        const critName = mission?.evaluation_criteria?.find(mc => mc.id === c.criterion_id)?.name || c.criterion_id;
+                        return (
+                            <div key={i} className="border border-border rounded-lg p-4 bg-card shadow-sm">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="font-semibold text-foreground">{critName}</span>
+                                    <span className={`font-bold px-2 py-0.5 rounded text-xs ${c.score >= 8 ? 'bg-green-100 text-green-700' : c.score >= 5 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                        {c.score}/10
+                                    </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-snug">{c.justification}</p>
+                            </div>
+                        );
+                    })}
+                    {evaluation.criteria_scores.length === 0 && (
+                        <p className="text-muted-foreground italic text-sm">No criteria scores provided.</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Prompt Improvements */}
+            <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">Targeted Prompt Improvements</h4>
+                <div className="space-y-4">
+                    {evaluation.prompt_improvements.map((pi, i) => {
+                        const sev = getSeverityDetails(pi.severity);
+                        return (
+                            <div key={i} className="border border-border rounded-lg overflow-hidden shadow-sm bg-card">
+                                <div className={`flex items-center justify-between px-4 py-2 border-b ${sev.color}`}>
+                                    <div className="flex items-center gap-2 font-semibold text-sm capitalize">
+                                        {sev.icon} {pi.severity} Issue
+                                    </div>
+                                    <button onClick={() => handleCopy(pi.suggested_text, i)} className="flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity">
+                                        {copiedId === i ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy Fix</>}
+                                    </button>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <p className="text-sm font-medium leading-relaxed">{pi.justification}</p>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Target Statement</div>
+                                            <pre className="bg-red-500/10 text-red-600 p-3 rounded text-xs font-mono overflow-x-auto border border-red-500/20 whitespace-pre-wrap">
+                                                - {pi.target_text}
+                                            </pre>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Suggested Replacement</div>
+                                            <pre className="bg-green-500/10 text-green-600 p-3 rounded text-xs font-mono overflow-x-auto border border-green-500/20 whitespace-pre-wrap">
+                                                + {pi.suggested_text}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {evaluation.prompt_improvements.length === 0 && (
+                        <div className="py-6 text-center border-2 border-dashed border-border rounded-lg text-muted-foreground">
+                            <Sparkles className="w-8 h-8 mx-auto mb-2 text-blue-400 opacity-50" />
+                            <p>No improvements suggested! The prompt looks solid.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
