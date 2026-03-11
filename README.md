@@ -4,6 +4,16 @@ An automated end-to-end testing and evaluation platform for **any system that ex
 
 > **Important:** AgentEval does **not** test an LLM (Large Language Model) directly. It tests a **complete system** — your backend, your API, your business logic, and the AI layer together — by communicating with it through standard HTTP endpoints (`POST` to send messages, `GET` to poll responses). If your system has a chat API, AgentEval can test it.
 
+## 📸 Screenshots
+
+| Mission Board | Mission Editor |
+|---|---|
+| ![Mission Board](docs/screenshot_mission_board.png) | ![Mission Editor](docs/screenshot_mission_editor.png) |
+
+| Test History | Settings |
+|---|---|
+| ![Test History](docs/screenshot_test_history.png) | ![Settings](docs/screenshot_settings.png) |
+
 ---
 
 ## 🚀 How it Works
