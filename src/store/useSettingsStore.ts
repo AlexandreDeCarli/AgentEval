@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { fileStorage } from '../utils/fileStorage';
 
 interface SettingsState {
     geminiApiKey: string;
@@ -14,6 +15,7 @@ export const useSettingsStore = create<SettingsState>()(
         }),
         {
             name: 'agent-qa-settings',
+            storage: createJSONStorage(() => fileStorage),
         }
     )
 );

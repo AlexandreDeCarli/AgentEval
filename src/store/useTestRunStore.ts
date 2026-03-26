@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { TestRun, ChatMessage, Evaluation } from '../types';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { TestRun, ChatMessage, Evaluation, DebugLogEntry } from '../types';
+import { fileStorage } from '../utils/fileStorage';
 
 interface TestRunState {
     runs: TestRun[];
@@ -8,6 +9,7 @@ interface TestRunState {
     updateRunStatus: (id: string, status: TestRun['status'], error?: string) => void;
     addMessage: (id: string, message: ChatMessage) => void;
     updateMessage: (runId: string, msgId: string, message: ChatMessage) => void;
+    addDebugLog: (id: string, entry: DebugLogEntry) => void;
     setEvaluation: (id: string, evalResult: Evaluation) => void;
     deleteRun: (id: string) => void;
 }
@@ -41,6 +43,14 @@ export const useTestRunStore = create<TestRunState>()(
                             : r
                     ),
                 })),
+            addDebugLog: (id, entry) =>
+                set((state) => ({
+                    runs: state.runs.map((r) =>
+                        r.id === id
+                            ? { ...r, debug_logs: [...(r.debug_logs || []), entry] }
+                            : r
+                    ),
+                })),
             setEvaluation: (id, evalResult) =>
                 set((state) => ({
                     runs: state.runs.map((r) =>
@@ -54,6 +64,7 @@ export const useTestRunStore = create<TestRunState>()(
         }),
         {
             name: 'agent-qa-test-runs',
+            storage: createJSONStorage(() => fileStorage),
         }
     )
 );

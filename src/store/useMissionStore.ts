@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Mission } from '../types';
+import { fileStorage } from '../utils/fileStorage';
+import { seedMissions } from './seedData';
 
 interface MissionState {
     missions: Mission[];
@@ -63,7 +65,7 @@ export const genericMission: Mission = {
 export const useMissionStore = create<MissionState>()(
     persist(
         (set) => ({
-            missions: [defaultMockMission, genericMission],
+            missions: [defaultMockMission, genericMission, ...seedMissions],
             addMission: (mission) => set((state) => ({ missions: [...state.missions, mission] })),
             updateMission: (id, updatedMission) =>
                 set((state) => ({
@@ -86,6 +88,7 @@ export const useMissionStore = create<MissionState>()(
         }),
         {
             name: 'agent-qa-missions',
+            storage: createJSONStorage(() => fileStorage),
         }
     )
 );

@@ -29,7 +29,8 @@ export const injectMessage = (template: string | undefined | null, message: stri
     // We need to safely stringify the message so it fits inside JSON
     const safeMessage = JSON.stringify(message).slice(1, -1); // Remove outer quotes
     let result = template.replace(new RegExp('{{message}}', 'g'), safeMessage);
-    result = result.replace(new RegExp('{{wamid}}', 'g'), Math.random().toString(36).substring(2, 10));
+    result = result.replace(new RegExp('{{wamid}}', 'g'), 'wamid.' + Math.random().toString(36).substring(2, 12));
+    result = result.replace(new RegExp('{{entry_id}}', 'g'), Math.random().toString(36).substring(2, 14));
     result = result.replace(new RegExp('{{timestamp}}', 'g'), Math.floor(Date.now() / 1000).toString());
     return result;
 };
