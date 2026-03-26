@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Claude Code
+.claude/
+.playwright-cli/
+.codex/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

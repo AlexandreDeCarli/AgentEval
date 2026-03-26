@@ -33,6 +33,8 @@ export const MissionList: React.FC = () => {
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
+        // Allow re-importing the same file consecutively by resetting the input immediately.
+        e.target.value = '';
         if (!file) return;
 
         const reader = new FileReader();

@@ -1,6 +1,38 @@
 import { ApiConfig } from '../types';
 import { injectMessage } from '../utils/templateEngine';
 
+const getNestedValue = (obj: any, path: string) => {
+    if (!path || !obj) return obj;
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+};
+
+const normalizeItems = (data: any, path?: string): any[] => {
+    if (!data) return [];
+    
+    // 1. Try path extraction if path is provided
+    let extracted = data;
+    if (path) {
+        extracted = getNestedValue(data, path);
+    }
+
+    // 2. If it is already an array, use it
+    if (Array.isArray(extracted)) return extracted;
+
+    // 3. Fallback wrappers (only if no explicit path was used or if the extracted value is an object)
+    if (extracted && typeof extracted === 'object') {
+        // If it's a wrapper object with common message keys
+        if (extracted.messages && Array.isArray(extracted.messages)) return extracted.messages;
+        if (extracted.data && Array.isArray(extracted.data)) return extracted.data;
+        
+        // If the object itself looks like a message (Gemini style or standard)
+        if (extracted.role || extracted.content || extracted.parts) {
+            return [extracted];
+        }
+    }
+
+    return [];
+};
+
 export const sendTargetMessage = async (
     apiConfig: ApiConfig,
     testerMessage: string,
@@ -49,14 +81,12 @@ export const fetchPreStateIds = async (apiConfig: ApiConfig, signal?: AbortSigna
         const data = await response.json();
 
         const ids = new Set<any>();
-        const items = Array.isArray(data) ? data : (data.messages || data.data || []);
+        const items = normalizeItems(data, apiConfig.response_path);
 
-        if (Array.isArray(items)) {
-            items.forEach((item: any) => {
-                if (item.id !== undefined) ids.add(item.id);
-                else ids.add(JSON.stringify(item));
-            });
-        }
+        items.forEach((item: any) => {
+            if (item.id !== undefined) ids.add(item.id);
+            else ids.add(JSON.stringify(item));
+        });
         return ids;
     } catch (e) {
         return new Set();
@@ -94,7 +124,7 @@ export const pollTargetResponse = async (
             }
 
             const data = await response.json();
-            const items = Array.isArray(data) ? data : (data.messages || data.data || []);
+            const items = normalizeItems(data, apiConfig.response_path);
 
             // Check if ANY user message is still processing (this means the turn is not over)
             const anyUserProcessing = items.some((i: any) => i.role === 'user' && i.contentStatus === 'processing');
@@ -135,9 +165,11 @@ export const pollTargetResponse = async (
                         }
                     } catch (e) { }
 
-                    const finalStr = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
+                        const finalStr = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
 
-                    // The status to report to the UI depends on whether the overall turn is still processing
+                        console.log(`[TARGET RESPONSE] MsgId: ${itemKey}, Content: ${finalStr.substring(0, 50)}${finalStr.length > 50 ? '...' : ''}`);
+
+                        // The status to report to the UI depends on whether the overall turn is still processing
                     const statusToReport = anyUserProcessing ? 'processing' : 'processed';
 
                     const lastStatus = knownStatus.get(itemKey);
