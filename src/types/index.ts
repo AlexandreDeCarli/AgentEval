@@ -84,10 +84,14 @@ export interface Evaluation {
 }
 
 export interface DebugLogEntry {
+    id: string;
     timestamp: number;
-    type: 'request' | 'response' | 'error' | 'info';
-    label: string;
-    data: string;
+    type: 'POST' | 'GET';
+    url: string;
+    status: number;
+    duration: number;
+    requestBody?: any;
+    response: any;
 }
 
 export interface TestRun {

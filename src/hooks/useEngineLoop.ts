@@ -12,13 +12,18 @@ export const useEngineLoop = (mission: Mission) => {
     const [currentRunId, setCurrentRunId] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
 
-    const appendDebugLog = useCallback((entry: DebugLogEntry) => {
-        setDebugLogs((prev) => [...prev.slice(-99), entry]); // keep last 100
-    }, []);
-
     const { geminiApiKey } = useSettingsStore();
-    const { addRun, updateRunStatus, addMessage, updateMessage, setEvaluation } = useTestRunStore();
+    const { addRun, updateRunStatus, addMessage, updateMessage, addDebugLog, setEvaluation } = useTestRunStore();
     const { projects } = useProjectStore();
+
+    const currentRunIdRef = useRef<string | null>(null);
+
+    const appendDebugLog = useCallback((entry: DebugLogEntry) => {
+        setDebugLogs((prev) => [...prev.slice(-99), entry]); // keep last 100 in UI
+        if (currentRunIdRef.current) {
+            addDebugLog(currentRunIdRef.current, entry); // persist to store
+        }
+    }, [addDebugLog]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -38,6 +43,7 @@ export const useEngineLoop = (mission: Mission) => {
         setIsRunning(true);
         const runId = crypto.randomUUID();
         setCurrentRunId(runId);
+        currentRunIdRef.current = runId;
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
 
@@ -90,6 +96,7 @@ export const useEngineLoop = (mission: Mission) => {
             mission_id: mission.id,
             status: 'running',
             chat_history: [],
+            debug_logs: [],
             evaluation: null,
             resolved_variables: resolvedVars,
             created_at: Date.now(),

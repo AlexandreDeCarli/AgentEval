@@ -35,3 +35,4 @@ docs/screenshot_*.png
 *.njsproj
 *.sln
 *.sw?
+BUGS.md

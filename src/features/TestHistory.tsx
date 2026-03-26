@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { EvaluationReport } from './EvaluationReport';
 import { ChatBubble } from '../components/ChatBubble';
 import { TestRun } from '../types';
+import { DebugLogPanel } from '../components/DebugLogPanel';
 import { Trash2, ExternalLink } from 'lucide-react';
 
 export const TestHistory: React.FC = () => {
@@ -99,6 +100,8 @@ export const TestHistory: React.FC = () => {
                                 ))}
                             </div>
                         </div>
+
+                        <DebugLogPanel logs={selectedRun.debug_logs || []} />
 
                         {selectedRun.evaluation && (
                             <div>

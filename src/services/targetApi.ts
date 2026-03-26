@@ -1,16 +1,7 @@
-import { ApiConfig } from '../types';
+import { ApiConfig, DebugLogEntry } from '../types';
 import { injectMessage } from '../utils/templateEngine';
 
-export interface DebugLogEntry {
-    id: string;
-    timestamp: number;
-    type: 'POST' | 'GET';
-    url: string;
-    status: number;
-    duration: number;
-    requestBody?: any;
-    response: any;
-}
+export type { DebugLogEntry };
 
 const getNestedValue = (obj: any, path: string) => {
     if (!path || !obj) return obj;
@@ -166,13 +157,14 @@ export const pollTargetResponse = async (
 
             const items = normalizeItems(data, apiConfig.response_path);
 
-            // Turn is complete when no message (user or model) is still processing
-            const anyStillProcessing = items.some(
+            // Only consider target/model messages
+            const targetItems = items.filter((i: any) => i.role === 'model' || i.role === 'target');
+
+            // Turn is complete when no MODEL/TARGET message is still processing
+            // (user messages may stay 'processing' after the model replies — ignore them)
+            const anyStillProcessing = targetItems.some(
                 (i: any) => i.contentStatus === 'processing'
             );
-
-            // Only consider target/model messages that are new
-            const targetItems = items.filter((i: any) => i.role === 'model' || i.role === 'target');
             targetItems.sort((a: any, b: any) => (a.id && b.id ? a.id - b.id : 0));
 
             for (const item of targetItems) {

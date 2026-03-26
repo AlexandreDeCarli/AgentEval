@@ -7,10 +7,11 @@ import { Button } from '../components/ui/Button';
 import { Spinner } from '../components/ui/Spinner';
 import { Badge } from '../components/ui/Badge';
 import { ChatBubble } from '../components/ChatBubble';
-import { ArrowLeft, PlaySquare, Square, Terminal, X, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, PlaySquare, Square, Terminal, X, Trash2 } from 'lucide-react';
 import { EvaluationReport } from './EvaluationReport';
 import { enableMockService, resetMockService } from '../services/mockService';
 import { DebugLogEntry } from '../services/targetApi';
+import { DebugLogEntry_ as DebugEntry } from '../components/DebugLogPanel';
 
 export const TestRunner: React.FC = () => {
     const { missionId } = useParams();
@@ -219,49 +220,6 @@ export const TestRunner: React.FC = () => {
                     )}
                 </main>
             </div>
-        </div>
-    );
-};
-
-// Debug log entry row with expandable response
-const DebugEntry: React.FC<{ entry: DebugLogEntry }> = ({ entry }) => {
-    const [expanded, setExpanded] = useState(false);
-    const time = new Date(entry.timestamp).toLocaleTimeString('pt-BR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const isOk = entry.status >= 200 && entry.status < 300;
-    const methodColor = entry.type === 'POST' ? 'text-blue-400' : 'text-yellow-400';
-    const statusColor = isOk ? 'text-green-400' : 'text-red-400';
-
-    return (
-        <div className="rounded border border-zinc-800 bg-zinc-900/50">
-            <button
-                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-800/50 transition-colors text-left"
-                onClick={() => setExpanded(v => !v)}
-            >
-                {expanded ? <ChevronDown className="w-3 h-3 text-zinc-500 flex-none" /> : <ChevronRight className="w-3 h-3 text-zinc-500 flex-none" />}
-                <span className="text-zinc-600">{time}</span>
-                <span className={`font-bold ${methodColor}`}>{entry.type}</span>
-                <span className={`font-bold ${statusColor}`}>{entry.status}</span>
-                <span className="text-zinc-400 truncate flex-1">{entry.url}</span>
-                <span className="text-zinc-600 flex-none">{entry.duration}ms</span>
-            </button>
-            {expanded && (
-                <div className="border-t border-zinc-800 p-2 space-y-2">
-                    {entry.requestBody && (
-                        <div>
-                            <div className="text-zinc-500 mb-1">Request Body:</div>
-                            <pre className="text-zinc-300 whitespace-pre-wrap break-all leading-relaxed">
-                                {JSON.stringify(entry.requestBody, null, 2)}
-                            </pre>
-                        </div>
-                    )}
-                    <div>
-                        <div className="text-zinc-500 mb-1">Response:</div>
-                        <pre className="text-zinc-300 whitespace-pre-wrap break-all leading-relaxed">
-                            {JSON.stringify(entry.response, null, 2)}
-                        </pre>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

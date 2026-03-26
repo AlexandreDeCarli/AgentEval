@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { TestRun, ChatMessage, Evaluation } from '../types';
+import { TestRun, ChatMessage, Evaluation, DebugLogEntry } from '../types';
 import { fileStorage } from '../utils/fileStorage';
 
 interface TestRunState {
@@ -9,6 +9,7 @@ interface TestRunState {
     updateRunStatus: (id: string, status: TestRun['status'], error?: string) => void;
     addMessage: (id: string, message: ChatMessage) => void;
     updateMessage: (runId: string, msgId: string, message: ChatMessage) => void;
+    addDebugLog: (id: string, entry: DebugLogEntry) => void;
     setEvaluation: (id: string, evalResult: Evaluation) => void;
     deleteRun: (id: string) => void;
 }
@@ -39,6 +40,14 @@ export const useTestRunStore = create<TestRunState>()(
                                 chat_history: r.chat_history.map((m) => (m.id === msgId ? message : m)),
                                 updated_at: Date.now(),
                             }
+                            : r
+                    ),
+                })),
+            addDebugLog: (id, entry) =>
+                set((state) => ({
+                    runs: state.runs.map((r) =>
+                        r.id === id
+                            ? { ...r, debug_logs: [...(r.debug_logs || []), entry] }
                             : r
                     ),
                 })),
