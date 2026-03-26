@@ -17,6 +17,14 @@ dist-ssr
 .playwright-cli/
 .codex/
 
+# AgentEval persistent data (contém API keys e dados sensíveis)
+data/
+
+# Outputs gerados em runtime (exports, relatórios, screenshots de sessão)
+output/
+docs/browser-*.png
+docs/screenshot_*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

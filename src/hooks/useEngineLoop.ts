@@ -1,17 +1,24 @@
 import { useState, useRef, useCallback } from 'react';
 import { useTestRunStore } from '../store/useTestRunStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useProjectStore } from '../store/useProjectStore';
 import { Mission, TestRun, ChatMessage } from '../types';
 import { resolveVariables, applyVariables } from '../utils/templateEngine';
 import { generateTesterMessage, generateEvaluation } from '../services/llm';
-import { sendTargetMessage, pollTargetResponse, fetchPreStateIds } from '../services/targetApi';
+import { sendTargetMessage, pollTargetResponse, fetchPreStateIds, DebugLogEntry } from '../services/targetApi';
 
 export const useEngineLoop = (mission: Mission) => {
     const [isRunning, setIsRunning] = useState(false);
     const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+    const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+
+    const appendDebugLog = useCallback((entry: DebugLogEntry) => {
+        setDebugLogs((prev) => [...prev.slice(-99), entry]); // keep last 100
+    }, []);
 
     const { geminiApiKey } = useSettingsStore();
     const { addRun, updateRunStatus, addMessage, updateMessage, setEvaluation } = useTestRunStore();
+    const { projects } = useProjectStore();
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -33,6 +40,16 @@ export const useEngineLoop = (mission: Mission) => {
         setCurrentRunId(runId);
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
+
+        // 0. Resolve api_config from project environment (runtime, not stale copy)
+        let runtimeApiConfig = mission.api_config;
+        if (mission.project_id && mission.environment_id) {
+            const project = projects.find((p) => p.id === mission.project_id);
+            const env = project?.environments.find((e) => e.id === mission.environment_id);
+            if (env) {
+                runtimeApiConfig = env.api_config;
+            }
+        }
 
         // 1. Setup variables
         const resolvedVars = resolveVariables(mission.variables || {});
@@ -57,13 +74,13 @@ export const useEngineLoop = (mission: Mission) => {
         console.log('Tester Persona (Resolved):', testerPersona);
         console.log('Mission Goal (Resolved):', missionGoal);
 
-        // Pre-process API config with variables
+        // Pre-process API config with variables (uses runtime config from environment)
         const processedApiConfig = {
-            ...mission.api_config,
-            post_url: applyVariables(mission.api_config.post_url, contextVars),
-            get_url: applyVariables(mission.api_config.get_url, contextVars),
-            payload_template: applyVariables(mission.api_config.payload_template, contextVars),
-            auth_header: applyVariables(mission.api_config.auth_header, contextVars),
+            ...runtimeApiConfig,
+            post_url: applyVariables(runtimeApiConfig.post_url, contextVars),
+            get_url: applyVariables(runtimeApiConfig.get_url, contextVars),
+            payload_template: applyVariables(runtimeApiConfig.payload_template, contextVars),
+            auth_header: applyVariables(runtimeApiConfig.auth_header, contextVars),
         };
 
         console.log('Processed API Config:', processedApiConfig);
@@ -123,7 +140,7 @@ export const useEngineLoop = (mission: Mission) => {
                 // Poll for target response. Pass the pre-POST state so it knows which messages are actually new.
                 const preStateIds = await fetchPreStateIds(processedApiConfig, signal);
 
-                await sendTargetMessage(processedApiConfig, testerResult.message, signal);
+                await sendTargetMessage(processedApiConfig, testerResult.message, signal, appendDebugLog);
 
                 await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status) => {
                     const isProcessing = status === 'processing';
@@ -144,7 +161,7 @@ export const useEngineLoop = (mission: Mission) => {
                         chatHistory.push(newMsg);
                         addMessage(runId, newMsg);
                     }
-                }, signal);
+                }, signal, appendDebugLog);
 
                 currentTurn++;
             }
@@ -201,12 +218,14 @@ export const useEngineLoop = (mission: Mission) => {
         } finally {
             setIsRunning(false);
         }
-    }, [mission, geminiApiKey, addRun, updateRunStatus, addMessage, setEvaluation]);
+    }, [mission, geminiApiKey, projects, addRun, updateRunStatus, addMessage, setEvaluation]);
 
     return {
         startRun,
         stopRun,
         isRunning,
         currentRunId,
+        debugLogs,
+        clearDebugLogs: useCallback(() => setDebugLogs([]), []),
     };
 };

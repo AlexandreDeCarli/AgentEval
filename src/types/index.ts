@@ -14,8 +14,32 @@ export interface EvaluationCriterion {
     description: string;
 }
 
+export interface SystemPrompt {
+    id: string;
+    name: string;
+    content: string;
+}
+
+export interface Environment {
+    id: string;
+    name: string;
+    api_config: ApiConfig;
+}
+
+export interface Project {
+    id: string;
+    name: string;
+    description: string;
+    documentation: string;
+    system_prompts: SystemPrompt[];
+    environments: Environment[];
+}
+
 export interface Mission {
     id: string;
+    project_id?: string;
+    environment_id?: string;
+    system_prompt_id?: string;
     titulo: string;
     target_system_prompt: string;
     tester_persona: string;
@@ -59,6 +83,13 @@ export interface Evaluation {
     };
 }
 
+export interface DebugLogEntry {
+    timestamp: number;
+    type: 'request' | 'response' | 'error' | 'info';
+    label: string;
+    data: string;
+}
+
 export interface TestRun {
     id: string;
     mission_id: string;
@@ -66,6 +97,7 @@ export interface TestRun {
     chat_history: ChatMessage[];
     evaluation: Evaluation | null;
     resolved_variables: Record<string, any>;
+    debug_logs: DebugLogEntry[];
     created_at: number;
     updated_at: number;
     error?: string;

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { TestRun, ChatMessage, Evaluation } from '../types';
+import { fileStorage } from '../utils/fileStorage';
 
 interface TestRunState {
     runs: TestRun[];
@@ -54,6 +55,7 @@ export const useTestRunStore = create<TestRunState>()(
         }),
         {
             name: 'agent-qa-test-runs',
+            storage: createJSONStorage(() => fileStorage),
         }
     )
 );

@@ -2,37 +2,43 @@
 
 An automated end-to-end testing and evaluation platform for **any system that exposes a conversational HTTP API**.
 
-> **Important:** AgentEval does **not** test an LLM (Large Language Model) directly. It tests a **complete system** — your backend, your API, your business logic, and the AI layer together — by communicating with it through standard HTTP endpoints (`POST` to send messages, `GET` to poll responses). If your system has a chat API, AgentEval can test it.
-
-## 📸 Screenshots
-
-### Mission Board
-![Mission Board](docs/screenshot_mission_board.png)
-
-### Mission Editor
-![Mission Editor](docs/screenshot_mission_editor.png)
-
-### Test History
-![Test History](docs/screenshot_test_history.png)
-
-### Evaluation Report
-![Evaluation Report](docs/screenshot_evaluation_report.png)
-
-### Live Chat Log
-![Chat Log](docs/screenshot_chat_log.png)
-
-### Targeted Prompt Improvements
-![Prompt Improvements](docs/screenshot_prompt_improvements.png)
+> **What AgentEval tests:** Not an LLM in isolation — but your **complete system**: backend, API, business logic, and AI layer together. If your system has a chat API (POST to send, GET to poll), AgentEval can test it.
 
 ---
 
-## 🚀 How it Works
+## 📸 Screenshots
+
+### Projects Dashboard
+Organize your test suite by project. Each project holds documentation, system prompts, environments (dev/staging/prod), and missions.
+
+![Projects Dashboard](docs/demo_projects.png)
+
+### Mission Board — AI Generation
+Each project has a mission board. Click **Generate** to let Gemini analyze your project documentation and system prompts and produce a comprehensive test suite automatically.
+
+![Mission Board with AI Generation](docs/demo_project_missions.png)
+
+### Test History
+Every run is logged with status, number of turns, and AI evaluation score.
+
+![Test History](docs/demo_history.png)
+
+### Evaluation Report
+After each run, the Evaluator Agent produces a full report: overall score, per-criterion breakdown, response metrics, and targeted prompt improvement suggestions.
+
+![Evaluation Report](docs/demo_evaluation.png)
+
+> 📁 More screenshots (chat log, prompt improvements) available in [`docs/`](docs/).
+
+---
+
+## 🚀 How It Works
 
 AgentEval orchestrates a fully automated QA loop between three components:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      AgentEval                          │
+│                       AgentEval                         │
 │                                                         │
 │  ┌──────────────┐                  ┌──────────────────┐ │
 │  │ Tester Agent │  ── POST ──────► │  YOUR SYSTEM     │ │
@@ -41,160 +47,134 @@ AgentEval orchestrates a fully automated QA loop between three components:
 │         │                                               │
 │         ▼  (after mission ends)                         │
 │  ┌──────────────────┐                                   │
-│  │ Evaluator Agent   │                                  │
-│  │   (Gemini)        │ ──► Score + Report + Prompt Fixes│
+│  │ Evaluator Agent  │ ──► Score + Report + Prompt Fixes │
+│  │   (Gemini)       │                                   │
 │  └──────────────────┘                                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
-1.  **Tester Agent (Gemini)**: Acts as a simulated user with a specific persona and goal. It sends messages to your system via HTTP `POST` and reads responses via HTTP `GET`.
-2.  **Your System (Target)**: The system under test. It can be anything — a chatbot, a customer support platform, an AI assistant, a voice bot backend — as long as it exposes POST/GET HTTP endpoints for sending and receiving messages.
-3.  **Evaluator Agent (Gemini)**: After the conversation ends, it reviews the full chat log, grades the interaction against your custom criteria, and generates a detailed report with scores and actionable prompt improvement suggestions.
+1. **Tester Agent (Gemini)** acts as a simulated user with a specific persona and goal. Sends messages via HTTP `POST`, polls responses via HTTP `GET`.
+2. **Your System** is the target — any chatbot, AI assistant, or backend that exposes POST/GET HTTP chat endpoints.
+3. **Evaluator Agent (Gemini)** reviews the full conversation log, grades it against your criteria, and produces a detailed report with prompt improvement suggestions.
 
 ---
 
 ## 🎯 What Can Be Tested?
 
-AgentEval is **system-agnostic**. It can test any backend that communicates through text via HTTP. Examples:
+AgentEval is **system-agnostic**. Any backend that communicates through text over HTTP:
 
-| System Type                     | How it connects                                      |
-| ------------------------------- | ---------------------------------------------------- |
-| WhatsApp Bot (via webhook)      | POST to your webhook, GET to your chat history API   |
-| Customer Support Chatbot        | POST to your chat API, GET to poll conversation      |
-| Internal AI Assistant           | POST to your internal API, GET to fetch responses    |
-| Voice Bot (text interface)      | POST transcription text, GET bot reply               |
-| Any REST API with chat feature  | Configure POST/GET freely in the Mission Editor      |
+| System Type                    | How it connects                                    |
+| ------------------------------ | -------------------------------------------------- |
+| WhatsApp Bot (via webhook)     | POST to webhook, GET to chat history API           |
+| Customer Support Chatbot       | POST to chat API, GET to poll conversation         |
+| Internal AI Assistant          | POST to internal API, GET to fetch responses       |
+| Voice Bot (text interface)     | POST transcription text, GET bot reply             |
+| Any REST API with chat feature | Configure POST/GET freely per mission              |
 
 ---
 
 ## ✨ Core Features
 
--   **Mission Board**: Create, clone, import/export test scenarios ("Missions").
--   **Advanced Mission Editor**:
-    -   **Tester Personas**: Define how the simulated user should behave.
-    -   **Evaluation Criteria**: Set custom grading rules (e.g., "Tone", "Accuracy", "Safety").
-    -   **Variables & Permutations**: Run the same mission with randomized inputs (e.g., different names, IDs, or topics).
-    -   **Target System Prompt**: Paste the original system prompt to enable the evaluator to suggest improvements.
--   **Real-time Test Runner**: Watch the conversation happen live with polling indicators.
--   **Automated Evaluation Reports**:
-    -   Overall score (0–100)
-    -   Per-criterion breakdown (0–10 each)
-    -   Response time metrics
-    -   Targeted prompt fix suggestions with severity levels
--   **Test History**: Keep a record of every test run for regression analysis.
+### Projects & Environments
+Organize test suites by project. Each project holds:
+- **Documentation** (Markdown) — used by the AI to generate intelligent missions
+- **System Prompts** — the actual prompts from your target system, referenced by missions
+- **Environments** — separate configs for dev, staging, and production (URLs + auth only)
+
+### AI Mission Generation
+Point AgentEval at your project docs and system prompts. Click **Generate with AI** and Gemini 1.5 Pro analyzes your system and generates 8–15 structured test missions covering happy paths, edge cases, routing, error handling, and multi-turn flows.
+
+### Mission Editor
+- **Tester Personas** — define how the simulated user behaves
+- **Variables & Randomization** — run the same mission with different inputs (`{{name}}`, `{{order_id}}`, etc.)
+- **Evaluation Criteria** — custom grading rules per mission
+- **System Prompt Linking** — link to a project system prompt instead of copy-pasting
+
+### Real-time Test Runner
+Watch the conversation happen live. Polling indicators, turn-by-turn messages, and debug logs for inspecting raw API responses.
+
+### Automated Evaluation Reports
+- Overall score (0–100)
+- Per-criterion breakdown (0–10 each)
+- Response time metrics (first response + full completion)
+- Targeted prompt improvement suggestions with severity levels (`critical` / `important` / `suggestion`)
+
+### Persistent File Storage
+All data is stored in JSON files under `./data/` — not browser localStorage. Data survives cache clears, browser updates, and private mode.
 
 ---
 
 ## 🛠️ Target System Requirements
 
-Your system **must** expose two HTTP endpoints. AgentEval connects to them using the configuration you provide in the Mission Editor.
+Your system needs two HTTP endpoints:
 
-### Endpoint 1: Send Message — `POST`
+### POST — Send Message
 
-AgentEval sends user messages to this endpoint. You configure the **Payload Template** (a JSON string) in the Mission Editor. Use `{{message}}` as a placeholder for the tester's message.
+AgentEval sends user messages here. Configure a **Payload Template** using `{{message}}` as the placeholder.
 
-**Example Configuration:**
-| Field              | Example Value                                  |
-| ------------------ | ---------------------------------------------- |
-| POST URL           | `https://your-system.com/api/chat`             |
-| Authorization      | `Bearer your-api-token`                        |
-| Payload Template   | `{"userId": "test-user", "text": "{{message}}"}` |
-
-**What AgentEval does:**
 ```
 POST https://your-system.com/api/chat
-Authorization: Bearer your-api-token
+Authorization: Bearer your-token
 Content-Type: application/json
 
-{
-  "userId": "test-user",
-  "text": "Olá, preciso de ajuda"
-}
+{ "userId": "tester", "text": "{{message}}" }
 ```
 
-**Expected:** Any `2xx` status code. The response body is ignored.
+**Expected:** any `2xx` response. Body is ignored.
 
----
+### GET — Poll Response
 
-### Endpoint 2: Poll Responses — `GET`
+AgentEval polls this endpoint until a new response appears.
 
-Since your system may process messages asynchronously (e.g., AI inference, function calls), AgentEval **polls** this endpoint at a configurable interval until a new response appears or a timeout is reached.
+```
+GET https://your-system.com/api/chat/history/tester
+Authorization: Bearer your-token
+```
 
-**Example Configuration:**
-| Field              | Example Value                                      |
-| ------------------ | -------------------------------------------------- |
-| GET URL            | `https://your-system.com/api/chat/history/test-user` |
-| Polling Interval   | `3000` ms                                          |
-| Max Timeout        | `45` seconds                                       |
-| Response Path      | `data.messages`                                    |
-
-**Expected Response Format:**
-
-Your GET endpoint should return a JSON object or array containing the conversation messages. AgentEval understands the following structures:
+**Expected response formats:**
 
 ```jsonc
-// Option A: Root-level array
-[
-  { "id": 1, "role": "user", "content": "Hello" },
-  { "id": 2, "role": "model", "content": "Hi! How can I help?" }
-]
+// Root-level array
+[{ "id": 1, "role": "model", "content": "Hi! How can I help?" }]
 
-// Option B: Nested under "messages" or "data"
-{
-  "data": {
-    "messages": [
-      { "id": 1, "role": "user", "content": "Hello" },
-      { "id": 2, "role": "model", "content": "Hi! How can I help?" }
-    ]
-  }
-}
+// Or nested
+{ "data": { "messages": [{ "id": 1, "role": "model", "content": "..." }] } }
 ```
 
-**Message Schema:**
-
-| Field           | Required | Description                                                                 |
-| --------------- | -------- | --------------------------------------------------------------------------- |
-| `id`            | Recommended | Unique identifier. Used to detect new messages vs. old ones.             |
-| `role`          | **Yes**  | Must be `"model"` or `"target"` for your system's replies.                  |
-| `content`       | **Yes**  | The text content of the message (string).                                   |
-| `contentStatus` | Optional | If set to `"processing"` on a `user` message, AgentEval will keep polling.  |
-
-**Advanced: Structured Content**
-
-AgentEval can also extract text from more complex response formats:
--   **Gemini-style**: `{"parts": [{"text": "Hello"}]}`
--   **Structured output**: `{"userResponse": "Hello", "functionResult": {...}}`
+AgentEval also understands Gemini-style structured output:
+```jsonc
+{ "parts": [{ "text": "..." }] }
+{ "userResponse": "...", "functionToExecute": "..." }
+```
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Setup
 
-1.  **Gemini API Key**: Go to **Settings** and provide your [Google AI Studio](https://aistudio.google.com/apikey) API Key. It is stored **only in your browser's `localStorage`** and never sent to any server other than the Gemini API.
-2.  **Mission Setup**: In the Mission Editor, configure your target system's POST/GET URLs, authentication headers, payload template, and response path.
+### 1. Install & run
 
----
+```bash
+npm install
+npm run dev
+```
 
-## 🚀 Getting Started
+### 2. Add Gemini API Key
 
-1.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-2.  **Start the development server**:
-    ```bash
-    npm run dev
-    ```
-3.  **Try immediately**: The system comes pre-loaded with a **Mock** mission that simulates a target API locally. Click **Run Test** to see AgentEval in action without any external setup.
+Go to **Settings** and enter your [Google AI Studio](https://aistudio.google.com/apikey) API key. Stored in `./data/agent-qa-settings.json` on your machine — never sent anywhere except the Gemini API.
+
+### 3. Create a Project
+
+Click **New Project**, add your documentation and system prompts, configure an environment (URLs + auth), then click **Generate with AI** to create your first missions.
 
 ---
 
 ## 🧰 Tech Stack
 
-| Layer     | Technology                          |
-| --------- | ----------------------------------- |
-| Framework | React 18 + TypeScript               |
-| Bundler   | Vite                                |
-| Styling   | Tailwind CSS v4                     |
-| State     | Zustand (persisted in localStorage) |
-| AI        | Google Gemini API                   |
-| Icons     | Lucide React                        |
+| Layer       | Technology                                        |
+| ----------- | ------------------------------------------------- |
+| Framework   | React 18 + TypeScript                             |
+| Bundler     | Vite                                              |
+| Styling     | Tailwind CSS v4                                   |
+| State       | Zustand + file-based persistence (`./data/*.json`)|
+| AI          | Google Gemini API (generation + evaluation)       |
+| Icons       | Lucide React                                      |
