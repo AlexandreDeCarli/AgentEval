@@ -1,7 +1,11 @@
 import { ChatMessage, Evaluation, EvaluationCriterion } from '../types';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent';
-const GEMINI_EVAL_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent';
+const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const PRIMARY_TESTER_MODEL = 'gemini-3.1-flash-lite-preview';
+const FALLBACK_TESTER_MODEL = 'gemini-2.5-flash';
+const EVAL_MODEL = 'gemini-3.1-pro-preview';
+
+const GEMINI_EVAL_API_URL = `${GEMINI_API_BASE_URL}/${EVAL_MODEL}:generateContent`;
 
 export const generateTesterMessage = async (
     apiKey: string,
@@ -31,28 +35,44 @@ ${historyText || '(No messages yet)'}
 
 Based on the chat history, what is your next message to the TARGET?`.trim();
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "object",
-                    properties: {
-                        message: { type: "string" },
-                        missionCompleted: { type: "boolean" }
-                    },
-                    required: ["message", "missionCompleted"]
+    const attemptGeneration = async (model: string) => {
+        const url = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "object",
+                        properties: {
+                            message: { type: "string" },
+                            missionCompleted: { type: "boolean" }
+                        },
+                        required: ["message", "missionCompleted"]
+                    }
                 }
-            }
-        }),
-    });
+            }),
+        });
+        
+        if (!res.ok) {
+            const errorBody = await res.text();
+            throw new Error(`Gemini API Error (${model}): ${res.status} - ${errorBody}`);
+        }
+        return res;
+    };
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Gemini API Error: ${response.status} - ${errorBody}`);
+    let response: Response;
+    try {
+        response = await attemptGeneration(PRIMARY_TESTER_MODEL);
+    } catch (primaryError) {
+        console.warn(`Primary model (${PRIMARY_TESTER_MODEL}) failed, trying fallback (${FALLBACK_TESTER_MODEL})...`, primaryError);
+        try {
+            response = await attemptGeneration(FALLBACK_TESTER_MODEL);
+        } catch (fallbackError) {
+            throw new Error(`Both models failed. Primary Error: ${primaryError instanceof Error ? primaryError.message : String(primaryError)}. Fallback Error: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+        }
     }
 
     const data = await response.json();

@@ -36,8 +36,37 @@ export const useEngineLoop = (mission: Mission) => {
 
         // 1. Setup variables
         const resolvedVars = resolveVariables(mission.variables || {});
-        const testerPersona = applyVariables(mission.tester_persona, resolvedVars);
-        const missionGoal = applyVariables(mission.mission_goal, resolvedVars);
+        
+        console.log('--- STARTING MISSION RUN ---');
+        console.log('Mission ID:', mission.id);
+        console.log('Mission Title:', mission.titulo);
+        console.log('Resolved Variables:', resolvedVars);
+
+        // Add mission info to variables for replacement (e.g. {{target_system_prompt}})
+        const contextVars = {
+            ...resolvedVars,
+            target_system_prompt: mission.target_system_prompt,
+            mission_goal: mission.mission_goal,
+            tester_persona: mission.tester_persona,
+            titulo: mission.titulo
+        };
+
+        const testerPersona = applyVariables(mission.tester_persona, contextVars);
+        const missionGoal = applyVariables(mission.mission_goal, contextVars);
+        
+        console.log('Tester Persona (Resolved):', testerPersona);
+        console.log('Mission Goal (Resolved):', missionGoal);
+
+        // Pre-process API config with variables
+        const processedApiConfig = {
+            ...mission.api_config,
+            post_url: applyVariables(mission.api_config.post_url, contextVars),
+            get_url: applyVariables(mission.api_config.get_url, contextVars),
+            payload_template: applyVariables(mission.api_config.payload_template, contextVars),
+            auth_header: applyVariables(mission.api_config.auth_header, contextVars),
+        };
+
+        console.log('Processed API Config:', processedApiConfig);
 
         const newRun: TestRun = {
             id: runId,
@@ -92,11 +121,11 @@ export const useEngineLoop = (mission: Mission) => {
                 if (signal.aborted) throw new Error('Test aborted by user');
 
                 // Poll for target response. Pass the pre-POST state so it knows which messages are actually new.
-                const preStateIds = await fetchPreStateIds(mission.api_config, signal);
+                const preStateIds = await fetchPreStateIds(processedApiConfig, signal);
 
-                await sendTargetMessage(mission.api_config, testerResult.message, signal);
+                await sendTargetMessage(processedApiConfig, testerResult.message, signal);
 
-                await pollTargetResponse(mission.api_config, preStateIds, (msgId, content, status) => {
+                await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status) => {
                     const isProcessing = status === 'processing';
 
                     const existingMsg = chatHistory.find((m) => m.id === msgId);
