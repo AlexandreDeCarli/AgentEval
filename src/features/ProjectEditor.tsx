@@ -49,6 +49,8 @@ export const ProjectEditor: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>('info');
     const [isGenerating, setIsGenerating] = useState(false);
     const [genError, setGenError] = useState('');
+    const [genPrompt, setGenPrompt] = useState('');
+    const [genCount, setGenCount] = useState(8);
     const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
     const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -168,7 +170,9 @@ export const ProjectEditor: React.FC = () => {
         try {
             const generated = await generateMissionsFromAI(
                 geminiApiKey,
-                project
+                project,
+                genPrompt.trim() || undefined,
+                genCount
             );
 
             generated.forEach((m) => addMission(m));
@@ -588,36 +592,65 @@ export const ProjectEditor: React.FC = () => {
             {activeTab === 'missions' && (
                 <div className="space-y-6">
                     {/* AI Generation */}
-                    <section className="border border-primary/30 bg-primary/5 p-6 rounded-xl">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold flex items-center gap-2">
-                                    <Sparkles className="w-5 h-5 text-primary" />
-                                    Generate Missions with AI
-                                </h3>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Uses Gemini 3.1 Pro to analyze project documentation and system
-                                    prompts to generate comprehensive test scenarios.
-                                </p>
-                            </div>
-                            <Button
-                                onClick={handleGenerateMissions}
-                                disabled={isGenerating}
-                                className="gap-2 shrink-0"
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <Spinner className="w-4 h-4" /> Generating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="w-4 h-4" /> Generate
-                                    </>
-                                )}
-                            </Button>
+                    <section className="border border-primary/30 bg-primary/5 p-6 rounded-xl space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-primary" />
+                                Generate Missions with AI
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Uses Gemini 3.1 Pro to analyze project documentation and system prompts to generate test scenarios.
+                            </p>
                         </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+                                    Directions for the AI <span className="font-normal normal-case">(optional)</span>
+                                </label>
+                                <textarea
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/60"
+                                    rows={3}
+                                    placeholder="Ex: Crie cenários de pagamento, a persona deve ser alguém conversando pelo WhatsApp com mensagens diretas e abreviações. Foque em casos de erro de chave PIX."
+                                    value={genPrompt}
+                                    onChange={(e) => setGenPrompt(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                        Quantity
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        value={genCount}
+                                        onChange={(e) => setGenCount(Math.max(1, Math.min(20, Number(e.target.value))))}
+                                        className="w-16 bg-background border border-border rounded-md px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={handleGenerateMissions}
+                                    disabled={isGenerating}
+                                    className="gap-2 ml-auto"
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Spinner className="w-4 h-4" /> Generating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4" /> Generate
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+
                         {genError && (
-                            <p className="text-sm text-destructive mt-3 bg-destructive/10 p-3 rounded-md">
+                            <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                                 {genError}
                             </p>
                         )}
