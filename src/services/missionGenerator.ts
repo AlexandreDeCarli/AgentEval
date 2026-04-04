@@ -5,7 +5,9 @@ const GENERATOR_MODEL = 'gemini-3.1-pro-preview';
 
 export const generateMissionsFromAI = async (
     apiKey: string,
-    project: Project
+    project: Project,
+    userPrompt?: string,
+    count?: number
 ): Promise<Mission[]> => {
     const promptsContext = project.system_prompts
         .map(
@@ -83,9 +85,10 @@ Example of good variable design:
 
 ### OUTPUT FORMAT:
 
-Generate between 8-20 missions depending on the complexity of the system. Each mission must have this exact structure. Do NOT include api_config in missions — the engine resolves it from the environment.
+Generate exactly **${count ?? 'between 8 and 12'}** missions. Each mission must have this exact structure. Do NOT include api_config in missions — the engine resolves it from the environment.
 
 Return a JSON array of mission objects.
+${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 `.trim();
 
     const url = `${GEMINI_API_BASE_URL}/${GENERATOR_MODEL}:generateContent?key=${apiKey}`;

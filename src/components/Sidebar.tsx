@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FolderOpen, LayoutDashboard, ListRestart, Settings, Bot } from 'lucide-react';
+import { FolderOpen, LayoutDashboard, ListRestart, Settings } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
     const links = [
@@ -13,7 +13,7 @@ export const Sidebar: React.FC = () => {
     return (
         <aside className="w-64 h-screen border-r border-border bg-card flex flex-col">
             <div className="p-6 flex items-center gap-3">
-                <Bot className="w-8 h-8 text-primary" />
+                <img src="/icon.png" alt="AgentEval Logo" className="w-8 h-8 rounded-lg shadow-sm" />
                 <h1 className="text-xl font-bold">AgentEval</h1>
             </div>
             <nav className="flex-1 px-4 space-y-2">
