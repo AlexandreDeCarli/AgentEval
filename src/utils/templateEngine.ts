@@ -1,7 +1,7 @@
-// templateEngine.ts
-
-export const resolveVariables = (variables: Record<string, any[]>): Record<string, any> => {
-    const resolved: Record<string, any> = {};
+export const resolveVariables = (
+    variables: Record<string, unknown[]>
+): Record<string, unknown> => {
+    const resolved: Record<string, unknown> = {};
     for (const [key, values] of Object.entries(variables)) {
         if (Array.isArray(values) && values.length > 0) {
             const randomIndex = Math.floor(Math.random() * values.length);
@@ -13,7 +13,10 @@ export const resolveVariables = (variables: Record<string, any[]>): Record<strin
     return resolved;
 };
 
-export const applyVariables = (text: string | undefined | null, resolved: Record<string, any>): string => {
+export const applyVariables = (
+    text: string | undefined | null,
+    resolved: Record<string, unknown>
+): string => {
     if (!text) return '';
     let result = text;
     for (const [key, value] of Object.entries(resolved)) {

@@ -24,7 +24,7 @@ export const DebugLogEntry_: React.FC<{ entry: DebugLogEntry }> = ({ entry }) =>
             </button>
             {expanded && (
                 <div className="border-t border-zinc-800 p-2 space-y-2">
-                    {entry.requestBody && (
+                    {entry.requestBody !== undefined && (
                         <div>
                             <div className="text-zinc-500 mb-1">Request Body:</div>
                             <pre className="text-zinc-300 whitespace-pre-wrap break-all leading-relaxed text-xs">

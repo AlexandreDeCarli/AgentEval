@@ -3,6 +3,7 @@ import { useMissionStore } from '../store/useMissionStore';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Play, Edit, Trash2, Copy, Download, Upload } from 'lucide-react';
+import { Mission } from '../types';
 
 export const MissionList: React.FC = () => {
     const { missions, deleteMission, addMission, importMissions } = useMissionStore();
@@ -40,22 +41,23 @@ export const MissionList: React.FC = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const imported = JSON.parse(event.target?.result as string);
+                const rawResult = event.target?.result;
+                const imported = JSON.parse(typeof rawResult === 'string' ? rawResult : 'null');
                 if (Array.isArray(imported)) {
-                    importMissions(imported);
+                    importMissions(imported as Mission[]);
                     alert(`${imported.length} missions imported successfully!`);
                 } else {
                     alert('Invalid file format. Expected a JSON array of missions.');
                 }
-            } catch (err) {
+            } catch {
                 alert('Error parsing JSON file.');
             }
         };
         reader.readAsText(file);
     };
 
-    const handleClone = (mission: any) => {
-        const cloned = {
+    const handleClone = (mission: Mission) => {
+        const cloned: Mission = {
             ...mission,
             id: crypto.randomUUID(),
             titulo: `${mission.titulo} (Cópia)`

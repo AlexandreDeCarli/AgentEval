@@ -1,7 +1,23 @@
 import { Mission, Project } from '../types';
 
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GENERATOR_MODEL = 'gemini-3.1-pro-preview';
+const GENERATOR_MODEL = 'gemini-2.5-pro';
+
+interface GeneratedCriterionPayload {
+    name: string;
+    description: string;
+}
+
+interface GeneratedMissionPayload {
+    titulo: string;
+    system_prompt_id?: string;
+    environment_id?: string;
+    tester_persona: string;
+    mission_goal: string;
+    variables: string | Record<string, unknown[]>;
+    max_turns?: number;
+    evaluation_criteria?: GeneratedCriterionPayload[];
+}
 
 export const generateMissionsFromAI = async (
     apiKey: string,
@@ -91,11 +107,14 @@ Return a JSON array of mission objects.
 ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 `.trim();
 
-    const url = `${GEMINI_API_BASE_URL}/${GENERATOR_MODEL}:generateContent?key=${apiKey}`;
+    const url = `${GEMINI_API_BASE_URL}/${GENERATOR_MODEL}:generateContent`;
 
     const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
             generationConfig: {
@@ -152,7 +171,7 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
-    const parsed: any[] = JSON.parse(rawText);
+    const parsed = JSON.parse(rawText) as GeneratedMissionPayload[];
 
     // Find the first environment to use as default
     const defaultEnvId = project.environments[0]?.id || '';
@@ -185,10 +204,10 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
             variables: typeof raw.variables === 'string' ? JSON.parse(raw.variables || '{}') : (raw.variables || {}),
             max_turns: raw.max_turns || 8,
             api_config: env?.api_config || defaultApiConfig,
-            evaluation_criteria: (raw.evaluation_criteria || []).map((c: any) => ({
+            evaluation_criteria: (raw.evaluation_criteria || []).map((criterion) => ({
                 id: `crit-${crypto.randomUUID().slice(0, 8)}`,
-                name: c.name,
-                description: c.description,
+                name: criterion.name,
+                description: criterion.description,
             })),
         } satisfies Mission;
     });

@@ -1,16 +1,22 @@
-// jsonPath.ts
+type JsonObject = Record<string, unknown>;
 
-export const extractByPath = (data: any, pathStr: string): any => {
+const isJsonObject = (value: unknown): value is JsonObject =>
+    typeof value === 'object' && value !== null;
+
+export const extractByPath = (data: unknown, pathStr: string): unknown => {
     if (!pathStr || !data) return undefined;
 
     // Split by dot but also handle array notation [index]
     // e.g., "messages[-1].content" -> ["messages", "-1", "content"]
     const parts = pathStr
-        .replace(/\[([^\[\]]*)\]/g, '.$1.')
+        .split('[')
+        .join('.')
+        .split(']')
+        .join('.')
         .split('.')
         .filter(Boolean);
 
-    let current = data;
+    let current: unknown = data;
     for (const part of parts) {
         if (current === null || current === undefined) {
             return undefined;
@@ -21,12 +27,17 @@ export const extractByPath = (data: any, pathStr: string): any => {
                 current = current[current.length - 1];
             } else if (part.startsWith('?')) {
                 const [filterKey, filterVal] = part.substring(1).split('=');
-                current = current.filter((item: any) => item[filterKey] === filterVal);
+                current = current.filter(
+                    (item): item is JsonObject =>
+                        isJsonObject(item) && item[filterKey] === filterVal
+                );
             } else {
-                current = (current as any)[part as any];
+                current = Reflect.get(current, part);
             }
-        } else {
+        } else if (isJsonObject(current)) {
             current = current[part];
+        } else {
+            return undefined;
         }
     }
 

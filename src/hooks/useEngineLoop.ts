@@ -4,8 +4,18 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { Mission, TestRun, ChatMessage } from '../types';
 import { resolveVariables, applyVariables } from '../utils/templateEngine';
-import { generateTesterMessage, generateEvaluation } from '../services/llm';
+import {
+    generateTesterMessage,
+    generateEvaluation,
+    generateGeminiTargetResponse,
+} from '../services/llm';
 import { sendTargetMessage, pollTargetResponse, fetchPreStateIds, DebugLogEntry } from '../services/targetApi';
+import {
+    getMissionGeminiModel,
+    getMissionTargetProvider,
+    getProjectGeminiModel,
+    getProjectTargetProvider,
+} from '../utils/missionTarget';
 
 export const useEngineLoop = (mission: Mission) => {
     const [isRunning, setIsRunning] = useState(false);
@@ -48,9 +58,17 @@ export const useEngineLoop = (mission: Mission) => {
         const signal = abortControllerRef.current.signal;
 
         // 0. Resolve api_config from project environment (runtime, not stale copy)
+        const project = mission.project_id
+            ? projects.find((candidate) => candidate.id === mission.project_id)
+            : undefined;
+        const targetProvider = project
+            ? getProjectTargetProvider(project, mission)
+            : getMissionTargetProvider(mission);
+        const targetGeminiModel = project
+            ? getProjectGeminiModel(project, mission)
+            : getMissionGeminiModel(mission);
         let runtimeApiConfig = mission.api_config;
-        if (mission.project_id && mission.environment_id) {
-            const project = projects.find((p) => p.id === mission.project_id);
+        if (targetProvider === 'http' && project && mission.environment_id) {
             const env = project?.environments.find((e) => e.id === mission.environment_id);
             if (env) {
                 runtimeApiConfig = env.api_config;
@@ -81,15 +99,22 @@ export const useEngineLoop = (mission: Mission) => {
         console.log('Mission Goal (Resolved):', missionGoal);
 
         // Pre-process API config with variables (uses runtime config from environment)
-        const processedApiConfig = {
-            ...runtimeApiConfig,
-            post_url: applyVariables(runtimeApiConfig.post_url, contextVars),
-            get_url: applyVariables(runtimeApiConfig.get_url, contextVars),
-            payload_template: applyVariables(runtimeApiConfig.payload_template, contextVars),
-            auth_header: applyVariables(runtimeApiConfig.auth_header, contextVars),
-        };
+        const processedApiConfig = targetProvider === 'http'
+            ? {
+                ...runtimeApiConfig,
+                post_url: applyVariables(runtimeApiConfig.post_url, contextVars),
+                get_url: applyVariables(runtimeApiConfig.get_url, contextVars),
+                payload_template: applyVariables(runtimeApiConfig.payload_template, contextVars),
+                auth_header: applyVariables(runtimeApiConfig.auth_header, contextVars),
+            }
+            : null;
 
-        console.log('Processed API Config:', processedApiConfig);
+        console.log('Target Provider:', targetProvider);
+        if (processedApiConfig) {
+            console.log('Processed API Config:', processedApiConfig);
+        } else {
+            console.log('Target Gemini Model:', targetGeminiModel);
+        }
 
         const newRun: TestRun = {
             id: runId,
@@ -107,7 +132,7 @@ export const useEngineLoop = (mission: Mission) => {
 
         let currentTurn = 0;
         let missionCompleted = false;
-        let chatHistory: ChatMessage[] = [];
+        const chatHistory: ChatMessage[] = [];
 
         try {
             while (currentTurn < mission.max_turns && !missionCompleted) {
@@ -144,31 +169,53 @@ export const useEngineLoop = (mission: Mission) => {
 
                 if (signal.aborted) throw new Error('Test aborted by user');
 
-                // Poll for target response. Pass the pre-POST state so it knows which messages are actually new.
-                const preStateIds = await fetchPreStateIds(processedApiConfig, signal);
+                if (targetProvider === 'gemini') {
+                    const targetResponse = await generateGeminiTargetResponse(
+                        geminiApiKey,
+                        targetGeminiModel,
+                        mission.target_system_prompt,
+                        chatHistory,
+                        signal,
+                        appendDebugLog
+                    );
 
-                await sendTargetMessage(processedApiConfig, testerResult.message, signal, appendDebugLog);
+                    const targetMsg: ChatMessage = {
+                        id: crypto.randomUUID(),
+                        role: 'target',
+                        content: targetResponse,
+                        timestamp: Date.now(),
+                        isProcessing: false,
+                    };
 
-                await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status) => {
-                    const isProcessing = status === 'processing';
+                    chatHistory.push(targetMsg);
+                    addMessage(runId, targetMsg);
+                } else if (processedApiConfig) {
+                    // Poll for target response. Pass the pre-POST state so it knows which messages are actually new.
+                    const preStateIds = await fetchPreStateIds(processedApiConfig, signal);
 
-                    const existingMsg = chatHistory.find((m) => m.id === msgId);
-                    if (existingMsg) {
-                        existingMsg.content = content;
-                        existingMsg.isProcessing = isProcessing;
-                        updateMessage(runId, msgId, existingMsg);
-                    } else {
-                        const newMsg: ChatMessage = {
-                            id: msgId,
-                            role: 'target',
-                            content,
-                            timestamp: Date.now(),
-                            isProcessing
-                        };
-                        chatHistory.push(newMsg);
-                        addMessage(runId, newMsg);
-                    }
-                }, signal, appendDebugLog);
+                    await sendTargetMessage(processedApiConfig, testerResult.message, signal, appendDebugLog);
+
+                    await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status) => {
+                        const isProcessing = status === 'processing';
+
+                        const existingMsg = chatHistory.find((m) => m.id === msgId);
+                        if (existingMsg) {
+                            existingMsg.content = content;
+                            existingMsg.isProcessing = isProcessing;
+                            updateMessage(runId, msgId, existingMsg);
+                        } else {
+                            const newMsg: ChatMessage = {
+                                id: msgId,
+                                role: 'target',
+                                content,
+                                timestamp: Date.now(),
+                                isProcessing
+                            };
+                            chatHistory.push(newMsg);
+                            addMessage(runId, newMsg);
+                        }
+                    }, signal, appendDebugLog);
+                }
 
                 currentTurn++;
             }
@@ -176,8 +223,8 @@ export const useEngineLoop = (mission: Mission) => {
             // ==== EVALUATION ====
             if (signal.aborted) throw new Error('Test aborted before evaluation');
 
-            let firstResponses: number[] = [];
-            let completeResponses: number[] = [];
+            const firstResponses: number[] = [];
+            const completeResponses: number[] = [];
 
             for (let i = 0; i < chatHistory.length; i++) {
                 if (chatHistory[i].role === 'tester') {
@@ -218,14 +265,25 @@ export const useEngineLoop = (mission: Mission) => {
             setEvaluation(runId, evalResult);
             updateRunStatus(runId, missionCompleted ? 'success' : 'failed');
 
-        } catch (e: any) {
-            if (e.message !== 'Test aborted by user') {
-                updateRunStatus(runId, 'failed', e.message);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            if (errorMessage !== 'Test aborted by user') {
+                updateRunStatus(runId, 'failed', errorMessage);
             }
         } finally {
             setIsRunning(false);
         }
-    }, [mission, geminiApiKey, projects, addRun, updateRunStatus, addMessage, setEvaluation]);
+    }, [
+        mission,
+        geminiApiKey,
+        projects,
+        addRun,
+        updateRunStatus,
+        addMessage,
+        updateMessage,
+        setEvaluation,
+        appendDebugLog,
+    ]);
 
     return {
         startRun,

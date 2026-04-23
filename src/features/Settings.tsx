@@ -30,7 +30,9 @@ export const Settings: React.FC = () => {
                         <Key className="w-5 h-5 text-primary" /> API Keys
                     </h2>
                     <p className="text-sm text-muted-foreground mb-4">
-                        The Tester and Evaluator agents use Gemini. Provide your Google AI Studio API key.
+                        The Tester and Evaluator agents use Gemini. If a project tests a Gemini
+                        model directly, AgentEval reuses this same Google AI Studio API key for the
+                        target call.
                     </p>
 
                     <div className="space-y-2">
@@ -47,7 +49,9 @@ export const Settings: React.FC = () => {
                                 {showKey ? 'Hide' : 'Show'}
                             </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">Stored locally in your browser's localStorage.</p>
+                        <p className="text-xs text-muted-foreground">
+                            Stored locally in AgentEval settings on this machine.
+                        </p>
                     </div>
                 </div>
 

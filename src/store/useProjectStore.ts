@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Project, SystemPrompt, Environment } from '../types';
 import { fileStorage } from '../utils/fileStorage';
 import { seedProject } from './seedData';
+import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 interface ProjectState {
     projects: Project[];
@@ -103,6 +104,21 @@ export const useProjectStore = create<ProjectState>()(
         {
             name: 'agent-qa-projects',
             storage: createJSONStorage(() => fileStorage),
+            merge: (persistedState, currentState) => {
+                const typedState = persistedState as Partial<ProjectState> | undefined;
+                const rawProjects = typedState?.projects ?? currentState.projects;
+
+                return {
+                    ...currentState,
+                    ...typedState,
+                    projects: rawProjects.map((project) => ({
+                        ...project,
+                        target_gemini_model:
+                            project.target_gemini_model?.trim() ||
+                            DEFAULT_GEMINI_TARGET_MODEL,
+                    })),
+                };
+            },
         }
     )
 );

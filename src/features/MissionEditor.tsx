@@ -5,9 +5,32 @@ import { useProjectStore } from '../store/useProjectStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Mission } from '../types';
+import { Mission, TargetProvider } from '../types';
 import { UnsavedChangesModal } from '../components/ui/UnsavedChangesModal';
 import { ArrowLeft, Save, Plus, Trash2, ExternalLink, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import {
+    DEFAULT_GEMINI_TARGET_MODEL,
+    getMissionGeminiModel,
+    getMissionTargetProvider,
+    getProjectGeminiModel,
+    getProjectTargetProvider,
+    SUGGESTED_GEMINI_TARGET_MODELS,
+} from '../utils/missionTarget';
+
+const normalizeMission = (mission: Mission): Mission => {
+    if (mission.project_id) {
+        const projectMission = { ...mission };
+        delete projectMission.target_provider;
+        delete projectMission.target_gemini_model;
+        return projectMission;
+    }
+
+    return {
+        ...mission,
+        target_provider: getMissionTargetProvider(mission),
+        target_gemini_model: getMissionGeminiModel(mission),
+    };
+};
 
 export const MissionEditor: React.FC = () => {
     const { id } = useParams();
@@ -24,6 +47,8 @@ export const MissionEditor: React.FC = () => {
         project_id: projectIdFromQuery,
         environment_id: '',
         system_prompt_id: '',
+        target_provider: 'http',
+        target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
         titulo: 'New Mission',
         target_system_prompt: '',
         tester_persona: '',
@@ -63,9 +88,10 @@ export const MissionEditor: React.FC = () => {
         if (!isNew && id) {
             const existing = missions.find((m) => m.id === id);
             if (existing) {
-                setFormData(existing);
-                setVariablesJson(JSON.stringify(existing.variables, null, 2));
-                savedDataRef.current = JSON.stringify(existing);
+                const normalizedMission = normalizeMission(existing);
+                setFormData(normalizedMission);
+                setVariablesJson(JSON.stringify(normalizedMission.variables, null, 2));
+                savedDataRef.current = JSON.stringify(normalizedMission);
             } else {
                 navigate('/');
             }
@@ -82,6 +108,8 @@ export const MissionEditor: React.FC = () => {
                 environment_id: defaultEnvId,
                 system_prompt_id: defaultPromptId,
                 target_system_prompt: defaultPrompt?.content || '',
+                target_provider: getMissionTargetProvider(prev),
+                target_gemini_model: getMissionGeminiModel(prev),
                 api_config: defaultEnv?.api_config || prev.api_config,
                 variables: defaultMockMission.variables,
             }));
@@ -93,7 +121,7 @@ export const MissionEditor: React.FC = () => {
     // Track dirty state
     useEffect(() => {
         if (savedDataRef.current) {
-            setIsDirty(JSON.stringify(formData) !== savedDataRef.current);
+            setIsDirty(JSON.stringify(normalizeMission(formData)) !== savedDataRef.current);
         } else if (isNew) {
             setIsDirty(true);
         }
@@ -132,12 +160,13 @@ export const MissionEditor: React.FC = () => {
 
     const handleSave = () => {
         if (jsonError) return alert('Fix JSON errors before saving');
+        const missionToSave = normalizeMission(formData);
         if (isNew) {
-            addMission(formData);
+            addMission(missionToSave);
         } else {
-            updateMission(formData.id, formData);
+            updateMission(formData.id, missionToSave);
         }
-        savedDataRef.current = JSON.stringify(formData);
+        savedDataRef.current = JSON.stringify(missionToSave);
         setIsDirty(false);
         if (formData.project_id) {
             navigate(`/projects/${formData.project_id}`);
@@ -151,7 +180,7 @@ export const MissionEditor: React.FC = () => {
             setPendingDestination(destination);
             setUnsavedModalOpen(true);
         } else {
-            if (typeof destination === 'number') navigate(destination as any);
+            if (typeof destination === 'number') navigate(destination);
             else navigate(destination);
         }
     };
@@ -162,13 +191,14 @@ export const MissionEditor: React.FC = () => {
             alert('Fix JSON errors before saving');
             return;
         }
-        if (isNew) addMission(formData);
-        else updateMission(formData.id, formData);
-        savedDataRef.current = JSON.stringify(formData);
+        const missionToSave = normalizeMission(formData);
+        if (isNew) addMission(missionToSave);
+        else updateMission(formData.id, missionToSave);
+        savedDataRef.current = JSON.stringify(missionToSave);
         setIsDirty(false);
         setUnsavedModalOpen(false);
         if (pendingDestination !== null) {
-            if (typeof pendingDestination === 'number') navigate(pendingDestination as any);
+            if (typeof pendingDestination === 'number') navigate(pendingDestination);
             else navigate(pendingDestination);
         }
     };
@@ -176,7 +206,7 @@ export const MissionEditor: React.FC = () => {
     const doDiscardAndLeave = () => {
         setUnsavedModalOpen(false);
         if (pendingDestination !== null) {
-            if (typeof pendingDestination === 'number') navigate(pendingDestination as any);
+            if (typeof pendingDestination === 'number') navigate(pendingDestination);
             else navigate(pendingDestination);
         }
     };
@@ -216,6 +246,23 @@ export const MissionEditor: React.FC = () => {
         if (!auth) return '(empty)';
         if (auth.length <= 20) return '••••••••';
         return auth.substring(0, 15) + '••••••••';
+    };
+
+    const targetProvider = currentProject
+        ? getProjectTargetProvider(currentProject, formData)
+        : getMissionTargetProvider(formData);
+    const targetGeminiModel = currentProject
+        ? getProjectGeminiModel(currentProject, formData)
+        : getMissionGeminiModel(formData);
+
+    const handleTargetProviderChange = (value: TargetProvider) => {
+        setFormData((prev) => ({
+            ...prev,
+            target_provider: value,
+            target_gemini_model: value === 'gemini'
+                ? getMissionGeminiModel(prev)
+                : prev.target_gemini_model,
+        }));
     };
 
     return (
@@ -303,11 +350,12 @@ export const MissionEditor: React.FC = () => {
                     </section>
                 )}
 
-                {/* Environment / API Config Selection */}
-                {currentProject && (
-                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">API Integration</h2>
+                <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold">
+                            {currentProject ? 'Project Target Integration' : 'Target Integration'}
+                        </h2>
+                        {currentProject && (
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -318,110 +366,213 @@ export const MissionEditor: React.FC = () => {
                             >
                                 <ExternalLink className="w-3 h-3" /> Edit in Project
                             </Button>
-                        </div>
+                        )}
+                    </div>
 
-                        <select
-                            className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            value={formData.environment_id || ''}
-                            onChange={(e) => handleEnvironmentChange(e.target.value)}
-                        >
-                            <option value="">-- Select an environment --</option>
-                            {availableEnvs.map((env) => (
-                                <option key={env.id} value={env.id}>
-                                    {env.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        {selectedEnv && (
-                            <div>
-                                <button
-                                    onClick={() => setShowApiPreview(!showApiPreview)}
-                                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    {currentProject ? (
+                        targetProvider === 'gemini' ? (
+                            <div className="space-y-3">
+                                <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                    <p className="text-sm font-medium">Gemini project target</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        This mission will run directly against Gemini using the
+                                        project configuration.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Model: <span className="font-mono">{targetGeminiModel}</span>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        AgentEval reuses the Gemini API key configured in Settings
+                                        for the target call.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                    <p className="text-sm font-medium">HTTP project target</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        The provider is configured at the project level. This mission
+                                        only selects which environment should be used.
+                                    </p>
+                                </div>
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={formData.environment_id || ''}
+                                    onChange={(e) => handleEnvironmentChange(e.target.value)}
                                 >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    {showApiPreview ? 'Hide' : 'Preview'} API configuration
-                                    {showApiPreview ? (
-                                        <ChevronUp className="w-3.5 h-3.5" />
-                                    ) : (
-                                        <ChevronDown className="w-3.5 h-3.5" />
-                                    )}
-                                </button>
-                                {showApiPreview && (
-                                    <div className="mt-3 p-4 bg-muted rounded-lg border border-border space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                    POST URL
-                                                </span>
-                                                <p className="text-xs font-mono mt-0.5 break-all">
-                                                    {selectedEnv.api_config.post_url || '(empty)'}
-                                                </p>
+                                    <option value="">-- Select an environment --</option>
+                                    {availableEnvs.map((env) => (
+                                        <option key={env.id} value={env.id}>
+                                            {env.name}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {selectedEnv && (
+                                    <div>
+                                        <button
+                                            onClick={() => setShowApiPreview(!showApiPreview)}
+                                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <Eye className="w-3.5 h-3.5" />
+                                            {showApiPreview ? 'Hide' : 'Preview'} API configuration
+                                            {showApiPreview ? (
+                                                <ChevronUp className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <ChevronDown className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                        {showApiPreview && (
+                                            <div className="mt-3 p-4 bg-muted rounded-lg border border-border space-y-3">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                            POST URL
+                                                        </span>
+                                                        <p className="text-xs font-mono mt-0.5 break-all">
+                                                            {selectedEnv.api_config.post_url || '(empty)'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                            GET URL
+                                                        </span>
+                                                        <p className="text-xs font-mono mt-0.5 break-all">
+                                                            {selectedEnv.api_config.get_url || '(empty)'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                        Auth Header
+                                                    </span>
+                                                    <p className="text-xs font-mono mt-0.5">
+                                                        {maskAuth(selectedEnv.api_config.auth_header)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                        Payload Template
+                                                    </span>
+                                                    <pre className="text-xs font-mono mt-0.5 bg-background p-2 rounded border border-border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                        {selectedEnv.api_config.payload_template}
+                                                    </pre>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div>
+                                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                            Response Path
+                                                        </span>
+                                                        <p className="text-xs font-mono mt-0.5">
+                                                            {selectedEnv.api_config.response_path || '(auto)'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                            Polling
+                                                        </span>
+                                                        <p className="text-xs font-mono mt-0.5">
+                                                            {selectedEnv.api_config.polling_interval}ms
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                            Timeout
+                                                        </span>
+                                                        <p className="text-xs font-mono mt-0.5">
+                                                            {selectedEnv.api_config.max_timeout}s
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                    GET URL
-                                                </span>
-                                                <p className="text-xs font-mono mt-0.5 break-all">
-                                                    {selectedEnv.api_config.get_url || '(empty)'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                Auth Header
-                                            </span>
-                                            <p className="text-xs font-mono mt-0.5">
-                                                {maskAuth(selectedEnv.api_config.auth_header)}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                Payload Template
-                                            </span>
-                                            <pre className="text-xs font-mono mt-0.5 bg-background p-2 rounded border border-border whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                                {selectedEnv.api_config.payload_template}
-                                            </pre>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                    Response Path
-                                                </span>
-                                                <p className="text-xs font-mono mt-0.5">
-                                                    {selectedEnv.api_config.response_path || '(auto)'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                    Polling
-                                                </span>
-                                                <p className="text-xs font-mono mt-0.5">
-                                                    {selectedEnv.api_config.polling_interval}ms
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                                    Timeout
-                                                </span>
-                                                <p className="text-xs font-mono mt-0.5">
-                                                    {selectedEnv.api_config.max_timeout}s
-                                                </p>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        {!selectedEnv && formData.environment_id === '' && (
+                                {!selectedEnv && formData.environment_id === '' && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Select an environment to define where the test agent will
+                                        send messages.
+                                    </p>
+                                )}
+                            </>
+                        )
+                    ) : targetProvider === 'gemini' ? (
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">
+                                    Target Provider
+                                </label>
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={targetProvider}
+                                    onChange={(e) =>
+                                        handleTargetProviderChange(e.target.value as TargetProvider)
+                                    }
+                                >
+                                    <option value="http">HTTP API</option>
+                                    <option value="gemini">Gemini</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">
+                                    Gemini Model
+                                </label>
+                                <Input
+                                    list="gemini-model-suggestions"
+                                    value={targetGeminiModel}
+                                    onChange={(e) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            target_gemini_model: e.target.value,
+                                        }))
+                                    }
+                                    placeholder={DEFAULT_GEMINI_TARGET_MODEL}
+                                    className="font-mono"
+                                />
+                                <datalist id="gemini-model-suggestions">
+                                    {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
+                                        <option key={model} value={model} />
+                                    ))}
+                                </datalist>
+                            </div>
+                            <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                <p className="text-sm font-medium">Standalone Gemini target mode</p>
+                                <p className="text-xs text-muted-foreground">
+                                    AgentEval will reuse the same Gemini API key configured in
+                                    Settings for the target call.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    The selected target system prompt will be sent as the Gemini
+                                    system instruction for the model under test.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">
+                                    Target Provider
+                                </label>
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={targetProvider}
+                                    onChange={(e) =>
+                                        handleTargetProviderChange(e.target.value as TargetProvider)
+                                    }
+                                >
+                                    <option value="http">HTTP API</option>
+                                    <option value="gemini">Gemini</option>
+                                </select>
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                                Select an environment to define where the test agent will send
-                                messages.
+                                Link this mission to a project environment if you want to run it
+                                against an HTTP target.
                             </p>
-                        )}
-                    </section>
-                )}
+                        </>
+                    )}
+                </section>
 
                 {/* General Info */}
                 <section className="space-y-4 border border-border p-6 rounded-xl bg-card">

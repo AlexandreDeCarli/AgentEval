@@ -8,6 +8,8 @@ export interface ApiConfig {
     max_timeout: number;
 }
 
+export type TargetProvider = 'http' | 'gemini';
+
 export interface EvaluationCriterion {
     id: string;
     name: string;
@@ -31,6 +33,8 @@ export interface Project {
     name: string;
     description: string;
     documentation: string;
+    target_provider?: TargetProvider;
+    target_gemini_model?: string;
     system_prompts: SystemPrompt[];
     environments: Environment[];
 }
@@ -40,11 +44,13 @@ export interface Mission {
     project_id?: string;
     environment_id?: string;
     system_prompt_id?: string;
+    target_provider?: TargetProvider;
+    target_gemini_model?: string;
     titulo: string;
     target_system_prompt: string;
     tester_persona: string;
     mission_goal: string;
-    variables: Record<string, any[]>;
+    variables: Record<string, unknown[]>;
     max_turns: number;
     api_config: ApiConfig;
     evaluation_criteria?: EvaluationCriterion[];
@@ -90,8 +96,8 @@ export interface DebugLogEntry {
     url: string;
     status: number;
     duration: number;
-    requestBody?: any;
-    response: any;
+    requestBody?: unknown;
+    response: unknown;
 }
 
 export interface TestRun {
@@ -100,7 +106,7 @@ export interface TestRun {
     status: 'running' | 'success' | 'failed';
     chat_history: ChatMessage[];
     evaluation: Evaluation | null;
-    resolved_variables: Record<string, any>;
+    resolved_variables: Record<string, unknown>;
     debug_logs: DebugLogEntry[];
     created_at: number;
     updated_at: number;

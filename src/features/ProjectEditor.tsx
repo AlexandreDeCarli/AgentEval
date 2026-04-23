@@ -7,8 +7,15 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Spinner } from '../components/ui/Spinner';
-import { Project, SystemPrompt, Environment, ApiConfig } from '../types';
+import { Project, SystemPrompt, Environment, ApiConfig, TargetProvider } from '../types';
 import { generateMissionsFromAI } from '../services/missionGenerator';
+import {
+    DEFAULT_GEMINI_TARGET_MODEL,
+    getProjectGeminiModel,
+    getProjectTargetProvider,
+    normalizeProjectTargetConfig,
+    SUGGESTED_GEMINI_TARGET_MODELS,
+} from '../utils/missionTarget';
 import {
     ArrowLeft,
     Save,
@@ -20,7 +27,6 @@ import {
     Sparkles,
     ChevronDown,
     ChevronUp,
-    Copy,
     Pencil,
     Check,
     AlertCircle,
@@ -58,13 +64,13 @@ export const ProjectEditor: React.FC = () => {
     useEffect(() => {
         const found = projects.find((p) => p.id === id);
         if (found) {
-            setProject({
+            setProject(normalizeProjectTargetConfig({
                 ...found,
                 documentation: found.documentation || '',
                 description: found.description || '',
                 system_prompts: found.system_prompts || [],
                 environments: found.environments || [],
-            });
+            }));
         } else {
             navigate('/projects');
         }
@@ -73,6 +79,8 @@ export const ProjectEditor: React.FC = () => {
     if (!project) return null;
 
     const projectMissions = missions.filter((m) => m.project_id === project.id);
+    const targetProvider = getProjectTargetProvider(project);
+    const targetGeminiModel = getProjectGeminiModel(project);
 
     const handleSave = () => {
         try {
@@ -123,7 +131,11 @@ export const ProjectEditor: React.FC = () => {
         setExpandedEnv(newEnv.id);
     };
 
-    const handleUpdateEnv = (envId: string, field: string, value: any) => {
+    const handleUpdateEnv = (
+        envId: string,
+        field: 'name',
+        value: Environment['name']
+    ) => {
         setProject({
             ...project,
             environments: project.environments.map((e) =>
@@ -132,7 +144,11 @@ export const ProjectEditor: React.FC = () => {
         });
     };
 
-    const handleUpdateEnvApiConfig = (envId: string, field: keyof ApiConfig, value: any) => {
+    const handleUpdateEnvApiConfig = (
+        envId: string,
+        field: keyof ApiConfig,
+        value: ApiConfig[keyof ApiConfig]
+    ) => {
         setProject({
             ...project,
             environments: project.environments.map((e) =>
@@ -148,6 +164,21 @@ export const ProjectEditor: React.FC = () => {
             ...project,
             environments: project.environments.filter((e) => e.id !== envId),
         });
+    };
+
+    const handleTargetProviderChange = (value: TargetProvider) => {
+        setProject((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      target_provider: value,
+                      target_gemini_model:
+                          value === 'gemini'
+                              ? getProjectGeminiModel(prev)
+                              : prev.target_gemini_model,
+                  }
+                : prev
+        );
     };
 
     // --- AI Mission Generation ---
@@ -177,8 +208,8 @@ export const ProjectEditor: React.FC = () => {
 
             generated.forEach((m) => addMission(m));
             setActiveTab('missions');
-        } catch (e: any) {
-            setGenError(e.message || 'Failed to generate missions');
+        } catch (error) {
+            setGenError(error instanceof Error ? error.message : 'Failed to generate missions');
         } finally {
             setIsGenerating(false);
         }
@@ -281,6 +312,83 @@ export const ProjectEditor: React.FC = () => {
                                 }
                             />
                         </div>
+                    </section>
+
+                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
+                        <h2 className="text-xl font-semibold border-b border-border pb-2">
+                            Target Integration
+                        </h2>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1 block">
+                                Project Target Provider
+                            </label>
+                            <select
+                                className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                value={targetProvider}
+                                onChange={(e) =>
+                                    handleTargetProviderChange(e.target.value as TargetProvider)
+                                }
+                            >
+                                <option value="http">HTTP API</option>
+                                <option value="gemini">Gemini</option>
+                            </select>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                This setting applies to all missions in the project. Missions only
+                                choose which prompt to test and, for HTTP projects, which
+                                environment to use.
+                            </p>
+                        </div>
+
+                        {targetProvider === 'gemini' ? (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">
+                                        Gemini Model
+                                    </label>
+                                    <Input
+                                        list="project-gemini-model-suggestions"
+                                        value={targetGeminiModel}
+                                        onChange={(e) =>
+                                            setProject({
+                                                ...project,
+                                                target_gemini_model: e.target.value,
+                                            })
+                                        }
+                                        placeholder={DEFAULT_GEMINI_TARGET_MODEL}
+                                        className="font-mono"
+                                    />
+                                    <datalist id="project-gemini-model-suggestions">
+                                        {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
+                                            <option key={model} value={model} />
+                                        ))}
+                                    </datalist>
+                                </div>
+                                <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                    <p className="text-sm font-medium">Gemini project mode</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        AgentEval will reuse the Gemini API key configured in
+                                        Settings for the target call.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Project environments stay available for future HTTP runs,
+                                        but they are ignored while the project target is Gemini.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                <p className="text-sm font-medium">HTTP project mode</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Missions in this project will run against one of the
+                                    environments configured in the Environments tab.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Each mission can still pick which environment should be used at
+                                    runtime.
+                                </p>
+                            </div>
+                        )}
                     </section>
 
                     <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
@@ -593,14 +701,17 @@ export const ProjectEditor: React.FC = () => {
                 <div className="space-y-6">
                     {/* AI Generation */}
                     <section className="border border-primary/30 bg-primary/5 p-6 rounded-xl space-y-4">
-                        <div>
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-primary" />
-                                Generate Missions with AI
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Uses Gemini 3.1 Pro to analyze project documentation and system prompts to generate test scenarios.
-                            </p>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-primary" />
+                                    Generate Missions with AI
+                                </h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Uses Gemini 2.5 Pro to analyze project documentation and system
+                                    prompts to generate comprehensive test scenarios.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="space-y-3">
@@ -683,7 +794,11 @@ export const ProjectEditor: React.FC = () => {
                                                     {prompt.name}
                                                 </Badge>
                                             )}
-                                            {env && (
+                                            {targetProvider === 'gemini' ? (
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    Gemini · {targetGeminiModel}
+                                                </Badge>
+                                            ) : env && (
                                                 <Badge variant="outline" className="text-[10px]">
                                                     {env.name}
                                                 </Badge>

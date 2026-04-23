@@ -13,7 +13,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
   state: { error: Error | null } = { error: null };
   static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error.message, error.stack);
+    console.error('ErrorBoundary caught:', error.message, error.stack, info.componentStack);
   }
   render() {
     if (this.state.error) {

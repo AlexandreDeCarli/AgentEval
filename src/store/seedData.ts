@@ -1,5 +1,6 @@
 import { Project } from '../types';
 import { Mission } from '../types';
+import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 // ─── ShopAssist AI — Demo Project ────────────────────────────────────────────
 // Shown to first-time users so they have a working example right away.
@@ -60,6 +61,8 @@ ShopAssist AI is a conversational customer support assistant for mid-size e-comm
 - Live inventory checks (product availability is simulated)
 - Payment method changes after order placement
 - Real-time chat handoff (escalation creates a ticket, not instant transfer)`,
+    target_provider: 'http',
+    target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
     system_prompts: [
         {
             id: 'sp-shop-general',

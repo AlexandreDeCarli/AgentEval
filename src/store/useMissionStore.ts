@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Mission } from '../types';
 import { fileStorage } from '../utils/fileStorage';
 import { seedMissions } from './seedData';
+import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 interface MissionState {
     missions: Mission[];
@@ -14,6 +15,8 @@ interface MissionState {
 
 export const defaultMockMission: Mission = {
     id: 'mock-1',
+    target_provider: 'http',
+    target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
     titulo: 'Interação Básica (Mock)',
     target_system_prompt: 'Você é um assistente virtual prestativo e educado. Sua função é responder dúvidas gerais de forma clara.',
     tester_persona: 'Você é um usuário testando as capacidades de resposta do sistema. Sua meta é extrair informações sobre {{topic}}.',
@@ -40,6 +43,8 @@ export const defaultMockMission: Mission = {
 
 export const genericMission: Mission = {
     id: 'generic-1',
+    target_provider: 'http',
+    target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
     titulo: 'Agente de Exemplo (Produção)',
     target_system_prompt: 'Você é um assistente virtual prestativo configurado para responder perguntas gerais de suporte da plataforma.',
     tester_persona: 'Você é um usuário em busca de uma informação específica. Sua meta é interagir com o assistente para extrair uma resposta sobre o funcionamento do portal. Seja direto e educado. Se precisar fornecer um código de identificação, use "ID-999-ABC".',
