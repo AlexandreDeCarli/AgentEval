@@ -168,8 +168,8 @@ export const MissionEditor: React.FC = () => {
         }
         savedDataRef.current = JSON.stringify(missionToSave);
         setIsDirty(false);
-        if (formData.project_id) {
-            navigate(`/projects/${formData.project_id}`);
+        if (projectMissionsUrl) {
+            navigate(projectMissionsUrl);
         } else {
             navigate('/');
         }
@@ -254,6 +254,9 @@ export const MissionEditor: React.FC = () => {
     const targetGeminiModel = currentProject
         ? getProjectGeminiModel(currentProject, formData)
         : getMissionGeminiModel(formData);
+    const projectMissionsUrl = formData.project_id
+        ? `/projects/${formData.project_id}?tab=missions`
+        : null;
 
     const handleTargetProviderChange = (value: TargetProvider) => {
         setFormData((prev) => ({
@@ -268,7 +271,11 @@ export const MissionEditor: React.FC = () => {
     return (
         <div className="p-8 max-w-4xl mx-auto pb-24">
             <div className="flex items-center gap-4 mb-8">
-                <Button variant="ghost" size="sm" onClick={() => requestNavigate(-1)}>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => requestNavigate(projectMissionsUrl || -1)}
+                >
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
                 <h1 className="text-3xl font-bold tracking-tight">

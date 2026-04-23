@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -47,6 +47,7 @@ const defaultApiConfig: ApiConfig = {
 export const ProjectEditor: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { projects, updateProject } = useProjectStore();
     const { missions, addMission } = useMissionStore();
     const { geminiApiKey } = useSettingsStore();
@@ -60,6 +61,7 @@ export const ProjectEditor: React.FC = () => {
     const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
     const [expandedEnv, setExpandedEnv] = useState<string | null>(null);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+    const tabFromQuery = searchParams.get('tab');
 
     useEffect(() => {
         const found = projects.find((p) => p.id === id);
@@ -76,11 +78,38 @@ export const ProjectEditor: React.FC = () => {
         }
     }, [id, projects, navigate]);
 
+    useEffect(() => {
+        if (
+            tabFromQuery === 'info' ||
+            tabFromQuery === 'prompts' ||
+            tabFromQuery === 'environments' ||
+            tabFromQuery === 'missions'
+        ) {
+            setActiveTab(tabFromQuery);
+            return;
+        }
+
+        setActiveTab('info');
+    }, [tabFromQuery]);
+
     if (!project) return null;
 
     const projectMissions = missions.filter((m) => m.project_id === project.id);
     const targetProvider = getProjectTargetProvider(project);
     const targetGeminiModel = getProjectGeminiModel(project);
+
+    const handleTabChange = (tab: Tab) => {
+        setActiveTab(tab);
+
+        const nextSearchParams = new URLSearchParams(searchParams);
+        if (tab === 'info') {
+            nextSearchParams.delete('tab');
+        } else {
+            nextSearchParams.set('tab', tab);
+        }
+
+        setSearchParams(nextSearchParams, { replace: true });
+    };
 
     const handleSave = () => {
         try {
@@ -207,7 +236,7 @@ export const ProjectEditor: React.FC = () => {
             );
 
             generated.forEach((m) => addMission(m));
-            setActiveTab('missions');
+            handleTabChange('missions');
         } catch (error) {
             setGenError(error instanceof Error ? error.message : 'Failed to generate missions');
         } finally {
@@ -272,7 +301,7 @@ export const ProjectEditor: React.FC = () => {
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
+                        onClick={() => handleTabChange(tab.key)}
                         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                             activeTab === tab.key
                                 ? 'border-primary text-primary'
