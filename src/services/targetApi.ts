@@ -3,24 +3,97 @@ import { injectMessage } from '../utils/templateEngine';
 
 export type { DebugLogEntry };
 
-const getNestedValue = (obj: any, path: string) => {
-    if (!path || !obj) return obj;
-    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+type UnknownRecord = Record<string, unknown>;
+type TargetItem = UnknownRecord & {
+    id?: unknown;
+    role?: unknown;
+    content?: unknown;
+    parts?: unknown;
+    data?: unknown;
+    messages?: unknown;
+    contentStatus?: unknown;
 };
 
-const normalizeItems = (data: any, path?: string): any[] => {
+const isRecord = (value: unknown): value is UnknownRecord =>
+    typeof value === 'object' && value !== null;
+
+const toTargetItemArray = (value: unknown): TargetItem[] => {
+    if (!Array.isArray(value)) return [];
+    return value.filter(isRecord) as TargetItem[];
+};
+
+const getNestedValue = (obj: unknown, path: string): unknown => {
+    if (!path || obj === null || obj === undefined) return obj;
+
+    return path.split('.').reduce<unknown>((acc, part) => {
+        if (Array.isArray(acc)) {
+            const index = Number(part);
+            if (Number.isInteger(index)) {
+                return acc[index];
+            }
+            return Reflect.get(acc, part);
+        }
+
+        if (isRecord(acc) && acc[part] !== undefined) {
+            return acc[part];
+        }
+
+        return undefined;
+    }, obj);
+};
+
+const parseJsonString = (value: string): unknown => {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return undefined;
+    }
+};
+
+const extractGeminiPartsText = (value: unknown): string | undefined => {
+    if (!isRecord(value)) return undefined;
+    const parts = value.parts;
+    if (!Array.isArray(parts) || !isRecord(parts[0])) return undefined;
+    const text = parts[0].text;
+    return typeof text === 'string' ? text : undefined;
+};
+
+const extractUserResponse = (value: unknown): string | undefined => {
+    if (!isRecord(value)) return undefined;
+
+    const userResponse = value.userResponse;
+    if (typeof userResponse === 'string' && userResponse !== '') {
+        return userResponse;
+    }
+
+    const functionResult = value.functionResult;
+    if (!isRecord(functionResult)) return undefined;
+    const data = functionResult.data;
+    return typeof data === 'string' ? data : undefined;
+};
+
+const getSortableId = (value: unknown): number | null => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const normalizeItems = (data: unknown, path?: string): TargetItem[] => {
     if (!data) return [];
 
-    let extracted = data;
+    let extracted: unknown = data;
     if (path) {
         extracted = getNestedValue(data, path);
     }
 
-    if (Array.isArray(extracted)) return extracted;
+    if (Array.isArray(extracted)) return toTargetItemArray(extracted);
 
-    if (extracted && typeof extracted === 'object') {
-        if (extracted.messages && Array.isArray(extracted.messages)) return extracted.messages;
-        if (extracted.data && Array.isArray(extracted.data)) return extracted.data;
+    if (isRecord(extracted)) {
+        if (Array.isArray(extracted.messages)) return toTargetItemArray(extracted.messages);
+        if (Array.isArray(extracted.data)) return toTargetItemArray(extracted.data);
         if (extracted.role || extracted.content || extracted.parts) {
             return [extracted];
         }
@@ -36,10 +109,10 @@ export const sendTargetMessage = async (
     onDebugLog?: (entry: DebugLogEntry) => void
 ): Promise<void> => {
     const payloadStr = injectMessage(apiConfig.payload_template, testerMessage);
-    let payload;
+    let payload: unknown;
     try {
         payload = JSON.parse(payloadStr);
-    } catch (e) {
+    } catch {
         throw new Error('Invalid JSON payload after template injection:\n' + payloadStr);
     }
 
@@ -59,11 +132,13 @@ export const sendTargetMessage = async (
     });
 
     const duration = Date.now() - t0;
-    let responseBody: any = null;
+    let responseBody: unknown = null;
     try {
         const text = await response.clone().text();
-        try { responseBody = JSON.parse(text); } catch { responseBody = text; }
-    } catch { /* ignore */ }
+        responseBody = parseJsonString(text) ?? text;
+    } catch {
+        responseBody = null;
+    }
 
     onDebugLog?.({
         id: crypto.randomUUID(),
@@ -82,7 +157,10 @@ export const sendTargetMessage = async (
     }
 };
 
-export const fetchPreStateIds = async (apiConfig: ApiConfig, signal?: AbortSignal): Promise<Set<any>> => {
+export const fetchPreStateIds = async (
+    apiConfig: ApiConfig,
+    signal?: AbortSignal
+): Promise<Set<unknown>> => {
     try {
         const headers: Record<string, string> = {};
         if (apiConfig.auth_header) {
@@ -94,24 +172,24 @@ export const fetchPreStateIds = async (apiConfig: ApiConfig, signal?: AbortSigna
             signal,
         });
         if (!response.ok) return new Set();
-        const data = await response.json();
+        const data: unknown = await response.json();
 
-        const ids = new Set<any>();
+        const ids = new Set<unknown>();
         const items = normalizeItems(data, apiConfig.response_path);
 
-        items.forEach((item: any) => {
+        items.forEach((item) => {
             if (item.id !== undefined) ids.add(item.id);
             else ids.add(JSON.stringify(item));
         });
         return ids;
-    } catch (e) {
+    } catch {
         return new Set();
     }
 };
 
 export const pollTargetResponse = async (
     apiConfig: ApiConfig,
-    preStateIds: Set<any>,
+    preStateIds: Set<unknown>,
     onMessage: (msgId: string, content: string, status: string) => void,
     signal?: AbortSignal,
     onDebugLog?: (entry: DebugLogEntry) => void
@@ -124,7 +202,7 @@ export const pollTargetResponse = async (
         headers['Authorization'] = apiConfig.auth_header;
     }
 
-    const knownStatus = new Map<any, string>();
+    const knownStatus = new Map<unknown, string>();
 
     while (Date.now() - startTime < timeoutMs) {
         if (signal?.aborted) throw new Error('Polling aborted');
@@ -143,7 +221,7 @@ export const pollTargetResponse = async (
                 throw new Error(`Target API GET Error (${response.status})`);
             }
 
-            const data = await response.json();
+            const data: unknown = await response.json();
 
             onDebugLog?.({
                 id: crypto.randomUUID(),
@@ -158,14 +236,21 @@ export const pollTargetResponse = async (
             const items = normalizeItems(data, apiConfig.response_path);
 
             // Only consider target/model messages
-            const targetItems = items.filter((i: any) => i.role === 'model' || i.role === 'target');
+            const targetItems = items.filter(
+                (item) => item.role === 'model' || item.role === 'target'
+            );
 
             // Turn is complete when no MODEL/TARGET message is still processing
             // (user messages may stay 'processing' after the model replies — ignore them)
             const anyStillProcessing = targetItems.some(
-                (i: any) => i.contentStatus === 'processing'
+                (item) => item.contentStatus === 'processing'
             );
-            targetItems.sort((a: any, b: any) => (a.id && b.id ? a.id - b.id : 0));
+            targetItems.sort((a, b) => {
+                const aId = getSortableId(a.id);
+                const bId = getSortableId(b.id);
+                if (aId === null || bId === null) return 0;
+                return aId - bId;
+            });
 
             for (const item of targetItems) {
                 const itemKey = item.id !== undefined ? item.id : JSON.stringify(item);
@@ -175,27 +260,26 @@ export const pollTargetResponse = async (
                     continue;
                 }
 
-                let extracted = typeof item.content === 'string' ? item.content : JSON.stringify(item);
+                let extracted: unknown =
+                    typeof item.content === 'string' ? item.content : item.content ?? item;
 
                 // Unwrap: {"role":"model","parts":[{"text":"..."}]}
-                try {
-                    const parsed = JSON.parse(extracted);
-                    if (parsed.parts && parsed.parts[0]?.text) {
-                        extracted = parsed.parts[0].text;
+                if (typeof extracted === 'string') {
+                    const parsed = parseJsonString(extracted);
+                    const partsText = extractGeminiPartsText(parsed);
+                    if (partsText) {
+                        extracted = partsText;
                     }
-                } catch (e) { }
+                }
 
                 // Unwrap: {"userResponse":"...","functionToExecute":"..."}
-                try {
-                    if (typeof extracted === 'string') {
-                        const innerJson = JSON.parse(extracted);
-                        if (innerJson.userResponse && innerJson.userResponse !== '') {
-                            extracted = innerJson.userResponse;
-                        } else if (innerJson.functionResult?.data) {
-                            extracted = innerJson.functionResult.data;
-                        }
+                if (typeof extracted === 'string') {
+                    const innerJson = parseJsonString(extracted);
+                    const userResponse = extractUserResponse(innerJson);
+                    if (userResponse) {
+                        extracted = userResponse;
                     }
-                } catch (e) { }
+                }
 
                 const finalStr = typeof extracted === 'string' ? extracted : JSON.stringify(extracted);
                 const statusToReport = anyStillProcessing ? 'processing' : 'processed';
@@ -212,9 +296,12 @@ export const pollTargetResponse = async (
                 return;
             }
 
-        } catch (e: any) {
-            if (e.message === 'Polling aborted') throw e;
-            console.warn('Polling error:', e.message);
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Polling aborted') throw error;
+            console.warn(
+                'Polling error:',
+                error instanceof Error ? error.message : String(error)
+            );
         }
 
         await new Promise((resolve) => setTimeout(resolve, apiConfig.polling_interval));

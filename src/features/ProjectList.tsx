@@ -4,6 +4,7 @@ import { useMissionStore } from '../store/useMissionStore';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react';
+import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 export const ProjectList: React.FC = () => {
     const { projects, deleteProject, addProject } = useProjectStore();
@@ -17,6 +18,8 @@ export const ProjectList: React.FC = () => {
             name: 'Novo Projeto',
             description: '',
             documentation: '',
+            target_provider: 'http',
+            target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
             system_prompts: [],
             environments: [],
         });

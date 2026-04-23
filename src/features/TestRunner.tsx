@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMissionStore } from '../store/useMissionStore';
+import { useProjectStore } from '../store/useProjectStore';
 import { useEngineLoop } from '../hooks/useEngineLoop';
 import { useTestRunStore } from '../store/useTestRunStore';
 import { Button } from '../components/ui/Button';
@@ -10,19 +11,41 @@ import { ChatBubble } from '../components/ChatBubble';
 import { ArrowLeft, PlaySquare, Square, Terminal, X, Trash2 } from 'lucide-react';
 import { EvaluationReport } from './EvaluationReport';
 import { enableMockService, resetMockService } from '../services/mockService';
-import { DebugLogEntry } from '../services/targetApi';
 import { DebugLogEntry_ as DebugEntry } from '../components/DebugLogPanel';
+import {
+    getMissionGeminiModel,
+    getMissionTargetProvider,
+    getProjectGeminiModel,
+    getProjectTargetProvider,
+} from '../utils/missionTarget';
 
 export const TestRunner: React.FC = () => {
     const { missionId } = useParams();
     const navigate = useNavigate();
     const { missions } = useMissionStore();
+    const { projects } = useProjectStore();
     const mission = missions.find(m => m.id === missionId);
+    const project = mission?.project_id
+        ? projects.find((candidate) => candidate.id === mission.project_id)
+        : undefined;
 
     const { runs } = useTestRunStore();
+    const targetProvider = mission
+        ? project
+            ? getProjectTargetProvider(project, mission)
+            : getMissionTargetProvider(mission)
+        : 'http';
+    const targetLabel = mission && targetProvider === 'gemini'
+        ? `Gemini · ${
+            project
+                ? getProjectGeminiModel(project, mission)
+                : getMissionGeminiModel(mission)
+        }`
+        : 'HTTP API';
 
     const { startRun, stopRun, isRunning, currentRunId, debugLogs, clearDebugLogs } = useEngineLoop(mission!);
     const currentRun = runs.find(r => r.id === currentRunId);
+    const chatHistoryLength = currentRun?.chat_history.length ?? 0;
 
     const chatEndRef = useRef<HTMLDivElement>(null);
     const [showDebug, setShowDebug] = useState(false);
@@ -39,11 +62,11 @@ export const TestRunner: React.FC = () => {
     }, [debugLogs, showDebug]);
 
     useEffect(() => {
-        if (mission?.api_config.post_url.includes('/mock/api')) {
+        if (targetProvider === 'http' && mission?.api_config.post_url.includes('/mock/api')) {
             enableMockService();
         }
         return () => resetMockService();
-    }, [mission]);
+    }, [mission, targetProvider]);
 
     if (!mission) {
         return <div className="p-8">Mission not found. <Button onClick={() => navigate('/')}>Go back</Button></div>;
@@ -59,7 +82,9 @@ export const TestRunner: React.FC = () => {
                     </Button>
                     <div>
                         <h1 className="font-bold text-lg leading-tight">{mission.titulo}</h1>
-                        <span className="text-xs text-muted-foreground">Test Runner</span>
+                        <span className="text-xs text-muted-foreground">
+                            Test Runner · {targetLabel}
+                        </span>
                     </div>
                 </div>
                 <div>
@@ -87,6 +112,12 @@ export const TestRunner: React.FC = () => {
                                     <Badge variant={currentRun.status === 'success' ? 'success' : currentRun.status === 'failed' ? 'destructive' : 'default'}>
                                         {currentRun.status.toUpperCase()}
                                     </Badge>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground">Target</span>
+                                <div className="bg-card border border-border rounded-md p-3 text-xs font-mono break-all">
+                                    {targetLabel}
                                 </div>
                             </div>
                             <div className="space-y-1">
@@ -135,15 +166,17 @@ export const TestRunner: React.FC = () => {
                             );
                         })}
 
-                        {isRunning && currentRun?.chat_history.length! % 2 !== 0 && (
+                        {isRunning && chatHistoryLength % 2 !== 0 && (
                             <div className="flex justify-end mb-4">
                                 <div className="bg-muted text-muted-foreground text-sm rounded-lg p-3 flex items-center gap-3">
-                                    <Spinner className="w-4 h-4" /> Target is typing (Polling...)
+                                    <Spinner className="w-4 h-4" /> {targetProvider === 'gemini'
+                                        ? 'Gemini target is thinking...'
+                                        : 'Target is typing (Polling...)'}
                                 </div>
                             </div>
                         )}
 
-                        {isRunning && currentRun?.chat_history.length! % 2 === 0 && currentRun?.chat_history.length! > 0 && (
+                        {isRunning && chatHistoryLength % 2 === 0 && chatHistoryLength > 0 && (
                             <div className="flex justify-start mb-4">
                                 <div className="bg-muted text-muted-foreground text-sm rounded-lg p-3 flex items-center gap-3">
                                     <Spinner className="w-4 h-4" /> Tester is thinking...
