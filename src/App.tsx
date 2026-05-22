@@ -8,6 +8,9 @@ import { MissionEditor } from './features/MissionEditor';
 import { TestRunner } from './features/TestRunner';
 import { TestHistory } from './features/TestHistory';
 import { Settings } from './features/Settings';
+import { OnboardingTour } from './components/OnboardingTour';
+import { HelpMenu } from './components/HelpMenu';
+import { WelcomeModal } from './components/WelcomeModal';
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -52,8 +55,12 @@ const App: React.FC = () => {
           </ErrorBoundary>
         </main>
       </div>
+      <OnboardingTour />
+      <HelpMenu />
+      <WelcomeModal />
     </BrowserRouter>
   );
 };
 
 export default App;
+

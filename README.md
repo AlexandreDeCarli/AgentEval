@@ -4,30 +4,45 @@ An automated end-to-end testing and evaluation platform for **conversational sys
 
 > **What AgentEval tests:** Not an LLM in isolation — but your **complete system**: backend, API, business logic, and AI layer together. If your system has a chat API (POST to send, GET to poll), AgentEval can test it. If your target itself runs on Gemini, AgentEval can also execute it directly with the same project-level Gemini configuration.
 
-## 🌐 Live Demo
+## 🌐 Live Demo & Testing
 
-Try it online: [https://agenteval-zitp.onrender.com](https://agenteval-zitp.onrender.com)
+🚀 Try the live premium web application online: **[https://agenteval-zitp.onrender.com/](https://agenteval-zitp.onrender.com/)**
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots & Premium Interface
 
-### Projects Dashboard
+### 🌟 Secure Onboarding & Developer Welcome
+A multi-step onboarding wizard for first-time visitors that presents a personalized bio of the developer (Alexandre De Carli), presents a mandatory **Terms of Use** block detailing the non-collection of data (100% local operation), and walks the user through setting up their API key locally and securely.
+
+![Developer Welcome and Onboarding Setup](docs/welcome_modal.png)
+
+### 🛠️ Interactive Project Editor & Guided Tour
+A premium step-by-step interactive guided tour (powered by Driver.js) dynamically shows you how to edit projects, link system prompts, configure environments, generate test missions with AI, and run simulations.
+
+![Interactive Guided Tour](docs/project_tour.png)
+
+### 💡 Quick Help & Concept Learning
+A dynamic slide-out Help Panel is available on every screen, allowing you to instantly learn about key AgentEval concepts, read the developer bio, or trigger tours at any moment.
+
+![Help Menu & Knowledge Panel](docs/help_menu.png)
+
+### 📂 Projects Dashboard
 Organize your test suite by project. Each project holds documentation, system prompts, environments (dev/staging/prod), and missions.
 
 ![Projects Dashboard](docs/demo_projects.png)
 
-### Mission Board — AI Generation
+### 🎯 Mission Board — AI Generation
 Each project has a mission board. Click **Generate** to let Gemini analyze your project documentation and system prompts and produce a comprehensive test suite automatically.
 
 ![Mission Board with AI Generation](docs/demo_project_missions.png)
 
-### Test History
-Every run is logged with status, number of turns, and AI evaluation score.
+### 📋 Test History & Logs
+Every run is logged with status, number of turns, and AI evaluation score. You can view raw exchange data, timestamps, and LLM payloads.
 
 ![Test History](docs/demo_history.png)
 
-### Evaluation Report
+### 📊 Evaluation Report & Actionable Suggestions
 After each run, the Evaluator Agent produces a full report: overall score, per-criterion breakdown, response metrics, and targeted prompt improvement suggestions.
 
 ![Evaluation Report](docs/demo_evaluation.png)
@@ -108,8 +123,20 @@ Watch the conversation happen live. Polling indicators, turn-by-turn messages, a
 - Response time metrics (first response + full completion)
 - Targeted prompt improvement suggestions with severity levels (`critical` / `important` / `suggestion`)
 
-### Persistent File Storage
-All data is stored in JSON files under `./data/` — not browser localStorage. Data survives cache clears, browser updates, and private mode.
+### Persistent File Storage & Hybrid Fallback
+All data is stored in JSON files under `./data/` via our custom local server persistence layer. If running in a web sandbox (like our Render Live Demo), it seamlessly falls back to browser-synchronized `localStorage` to keep your workspace persistent across refreshes.
+
+### 🔒 Secure Multi-Byte Key Encryption
+To provide the highest level of privacy and corporate safety, your **Gemini API Key** is encrypted physically on disk (inside your browser's persistent files or settings JSON) using a multi-byte XOR streaming cipher with a dynamically generated random salt. This guarantees that your key is never stored in plain text and cannot be read directly from persistent storage files. Decryption occurs transparently only in memory during runtime.
+
+### 🛡️ Mandatory Consent & Terms of Use
+Compliance-first design requires every user to review and explicitly accept our Terms of Use (detailing that the application is free, open-source, operates 100% locally, and does not transmit any user prompts or keys to external servers) upon their first launch. The initial screen completely hides close buttons, making it a robust, secure gatekeeper.
+
+### 🤖 Interactive Visual Guides (Driver.js)
+No complex documentation reading required! AgentEval features two fully automated interactive guided tours (general dashboard tour and project editor tour) that step through the interface, highlight selectors, and click tabs programmatically to teach concepts dynamically.
+
+### ⚠️ Destructive Confirmation Dialogues
+Avoid any accidental losses of projects or valuable mission configs! All deletion actions are now protected by premium, glassmorphic popover scale-bounce styled confirmation modal windows, asking for direct verification before carrying out any deletes.
 
 ---
 
