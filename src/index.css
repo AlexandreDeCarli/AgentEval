@@ -60,3 +60,116 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Custom premium styling for Driver.js Popovers */
+.agent-eval-driver-popover {
+  background: rgba(13, 17, 30, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  color: #f8fafc !important;
+  font-family: inherit !important;
+  padding: 20px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  max-width: 360px !important;
+}
+
+.agent-eval-driver-popover .driver-popover-title {
+  color: #ffffff !important;
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 8px !important;
+  line-height: 1.4 !important;
+}
+
+.agent-eval-driver-popover .driver-popover-description {
+  color: #94a3b8 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+  margin-bottom: 16px !important;
+}
+
+.agent-eval-driver-popover .driver-popover-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 16px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding-top: 12px !important;
+}
+
+.agent-eval-driver-popover .driver-popover-progress-text {
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+.agent-eval-driver-popover .driver-popover-navigation-btns {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.agent-eval-driver-popover .driver-popover-prev-btn,
+.agent-eval-driver-popover .driver-popover-next-btn {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  text-shadow: none !important;
+}
+
+.agent-eval-driver-popover .driver-popover-prev-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #cbd5e1 !important;
+}
+
+.agent-eval-driver-popover .driver-popover-prev-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.agent-eval-driver-popover .driver-popover-next-btn {
+  background: #2563eb !important;
+  border: 1px solid #2563eb !important;
+  color: #ffffff !important;
+}
+
+.agent-eval-driver-popover .driver-popover-next-btn:hover {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+.agent-eval-driver-popover .driver-popover-close-btn {
+  color: #94a3b8 !important;
+  transition: color 0.2s ease !important;
+}
+
+.agent-eval-driver-popover .driver-popover-close-btn:hover {
+  color: #f1f5f9 !important;
+}
+
+/* Arrow customization if supported by Driver.js SVG renderer */
+.agent-eval-driver-popover .driver-popover-arrow {
+  border-color: rgba(13, 17, 30, 0.95) !important;
+}
+
+/* Custom premium spring/fade animations for modals and dialogs */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-modal-fade-in {
+  animation: modal-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-scale-in {
+  animation: modal-scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; /* Premium organic bounce */
+}

@@ -27,8 +27,14 @@ export function fileStorePlugin(dataDir = 'data'): Plugin {
                     const storeReq = req as unknown as StoreRequest;
                     const storeRes = res as unknown as StoreResponse;
 
-                // key = filename (sanitized to prevent path traversal)
-                    const rawKey = storeReq.url?.slice(1) ?? '';
+                    // Set no-cache headers for all store API responses to prevent Safari/browsers caching local data
+                    storeRes.setHeader?.('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+                    storeRes.setHeader?.('Pragma', 'no-cache');
+                    storeRes.setHeader?.('Expires', '0');
+
+                    // Strip any query parameters (like ?t=timestamp) to get clean raw URL path
+                    const urlPath = storeReq.url?.split('?')[0] ?? '';
+                    const rawKey = urlPath.slice(1);
                     const key = path.basename(rawKey);
                     if (!key) { next(); return; }
 
