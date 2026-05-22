@@ -23,7 +23,7 @@ export const useSettingsStore = create<SettingsState>()(
                     try {
                         const parsed = JSON.parse(value);
                         if (parsed.state && parsed.state.geminiApiKey) {
-                            parsed.state.geminiApiKey = decryptApiKey(parsed.state.geminiApiKey);
+                            parsed.state.geminiApiKey = await decryptApiKey(parsed.state.geminiApiKey);
                         }
                         return JSON.stringify(parsed);
                     } catch (e) {
@@ -35,7 +35,7 @@ export const useSettingsStore = create<SettingsState>()(
                     try {
                         const parsed = JSON.parse(value);
                         if (parsed.state && parsed.state.geminiApiKey) {
-                            parsed.state.geminiApiKey = encryptApiKey(parsed.state.geminiApiKey);
+                            parsed.state.geminiApiKey = await encryptApiKey(parsed.state.geminiApiKey);
                         }
                         await fileStorage.setItem(name, JSON.stringify(parsed));
                     } catch (e) {

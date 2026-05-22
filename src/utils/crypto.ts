@@ -1,88 +1,231 @@
 /**
  * Utilitários de criptografia e decodificação local para proteger chaves de API sensíveis.
- * Utiliza cifra XOR multi-byte com salt dinâmico (vetor aleatório) codificado em Base64.
+ * Utiliza a Web Crypto API nativa do navegador com algoritmo AES-GCM (256-bit) e
+ * chaves criptográficas não-extraíveis geradas dinamicamente na máquina do usuário e
+ * persistidas localmente no IndexedDB.
  * 
- * Isso garante que o valor persistido em disco (localStorage e arquivos JSON do servidor local)
- * não fique exposto em texto limpo, gerando uma string cifrada diferente a cada gravação.
+ * Isso garante o nível máximo de segurança em aplicações client-side (SPA):
+ * 1. Não há nenhuma chave secreta/estática exposta ("hardcoded") no bundle JavaScript.
+ * 2. A chave gerada é marcada como `extractable: false`, o que impede que qualquer script,
+ *    extensão ou inspeção via devtools consiga ler ou extrair os bytes brutos da chave.
+ * 3. Utiliza vetor de inicialização (IV) aleatório e criptograficamente seguro por gravação.
+ * 4. Mantém compatibilidade retroativa para decifrar chaves legadas gravadas no formato XOR antigo.
  */
 
-const SECRET_KEY = "AgentEvalSecretKeyForLocalEncryption!2026";
+const DB_NAME = 'AgentEvalCryptoDB';
+const STORE_NAME = 'KeyStore';
+const KEY_NAME = 'api-key-encryptor';
 
 /**
- * Criptografa uma string de texto usando uma cifra de fluxo XOR dinâmica com salt aleatório.
- * Retorna uma string segura prefixada com "enc:" codificada em Base64.
+ * Abre a conexão com o banco IndexedDB dedicado à criptografia
  */
-export function encryptApiKey(text: string): string {
+function openDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') {
+            reject(new Error('IndexedDB não é suportado neste ambiente.'));
+            return;
+        }
+        const request = indexedDB.open(DB_NAME, 1);
+        
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        
+        request.onsuccess = () => {
+            resolve(request.result);
+        };
+        
+        request.onerror = () => {
+            reject(request.error);
+        };
+    });
+}
+
+/**
+ * Recupera a CryptoKey não-extraível do IndexedDB
+ */
+function getCryptoKey(db: IDBDatabase): Promise<CryptoKey | null> {
+    return new Promise((resolve, reject) => {
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(KEY_NAME);
+            
+            request.onsuccess = () => {
+                resolve(request.result || null);
+            };
+            
+            request.onerror = () => {
+                reject(request.error);
+            };
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+/**
+ * Salva a CryptoKey não-extraível no IndexedDB
+ */
+function saveCryptoKey(db: IDBDatabase, key: CryptoKey): Promise<void> {
+    return new Promise((resolve, reject) => {
+        try {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.put(key, KEY_NAME);
+            
+            request.onsuccess = () => {
+                resolve();
+            };
+            
+            request.onerror = () => {
+                reject(request.error);
+            };
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+/**
+ * Obtém ou gera uma CryptoKey AES-GCM persistente de 256 bits não-extraível
+ */
+async function getOrCreateCryptoKey(): Promise<CryptoKey> {
+    const db = await openDB();
+    let key = await getCryptoKey(db);
+    
+    if (!key) {
+        key = await window.crypto.subtle.generateKey(
+            {
+                name: 'AES-GCM',
+                length: 256,
+            },
+            false, // extractable: false -> Crucial! Impede extração dos bytes do segredo via JS
+            ['encrypt', 'decrypt']
+        );
+        await saveCryptoKey(db, key);
+    }
+    
+    return key;
+}
+
+/**
+ * Criptografa uma string usando AES-GCM com uma chave não-extraível do IndexedDB.
+ * Retorna uma string segura prefixada com "enc2:" codificada em Base64 (contendo IV + Cifrado).
+ */
+export async function encryptApiKey(text: string): Promise<string> {
     if (!text) return '';
     
     try {
-        // Gerar um salt aleatório de 8 bytes
-        const saltBytes = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256));
-        const textBytes = Array.from(new TextEncoder().encode(text));
+        const key = await getOrCreateCryptoKey();
         
-        const keyBytes = Array.from(new TextEncoder().encode(SECRET_KEY));
-        const encryptedBytes: number[] = [];
+        // Gerar um IV (vetor de inicialização) aleatório de 12 bytes para AES-GCM
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const textBytes = new TextEncoder().encode(text);
         
-        // Insere o salt no início do payload
-        encryptedBytes.push(...saltBytes);
+        // Executar criptografia AES-GCM
+        const encryptedBuffer = await window.crypto.subtle.encrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv,
+            },
+            key,
+            textBytes
+        );
         
-        // Cifra os bytes do texto usando XOR triplo (texto ^ chave ^ salt)
-        for (let i = 0; i < textBytes.length; i++) {
-            const keyChar = keyBytes[i % keyBytes.length];
-            const saltChar = saltBytes[i % saltBytes.length];
-            encryptedBytes.push(textBytes[i] ^ keyChar ^ saltChar);
-        }
+        const encryptedBytes = new Uint8Array(encryptedBuffer);
         
-        // Converte os bytes para string binária segura
-        const binString = String.fromCharCode(...encryptedBytes);
+        // Payload final: IV (12 bytes) + bytes criptografados
+        const combined = new Uint8Array(iv.length + encryptedBytes.length);
+        combined.set(iv, 0);
+        combined.set(encryptedBytes, iv.length);
         
-        // Retorna com prefixo enc: para diferenciar de chaves brutas legadas
-        return 'enc:' + btoa(binString);
+        // Converte os bytes combinados para string binária e codifica em Base64
+        const binString = Array.from(combined, (b) => String.fromCharCode(b)).join('');
+        return 'enc2:' + btoa(binString);
     } catch (e) {
-        console.error('[crypto] Erro ao criptografar chave:', e);
-        return text; // Fallback seguro
+        console.error('[crypto] Erro ao criptografar chave com AES-GCM:', e);
+        return text; // Fallback seguro para retrocompatibilidade em ambientes limitados
     }
 }
 
 /**
- * Descriptografa uma string contendo o prefixo "enc:".
- * Caso não possua o prefixo, retorna a própria string bruta (retrocompatibilidade).
+ * Descriptografa uma string que possui prefixo "enc2:" (AES-GCM moderno) ou "enc:" (XOR legado).
+ * Se não possuir prefixo, retorna a própria string em texto limpo.
  */
-export function decryptApiKey(encrypted: string): string {
+export async function decryptApiKey(encrypted: string): Promise<string> {
     if (!encrypted) return '';
     
-    // Se não for uma chave criptografada por esta versão, retorna o texto puro (compatibilidade retroativa)
-    if (!encrypted.startsWith('enc:')) {
-        return encrypted;
-    }
-    
-    try {
-        const base64Payload = encrypted.substring(4);
-        const binString = atob(base64Payload);
-        const encryptedBytes = Array.from(binString, (c) => c.charCodeAt(0));
-        
-        if (encryptedBytes.length < 8) {
+    // Formato AES-GCM Moderno
+    if (encrypted.startsWith('enc2:')) {
+        try {
+            const base64Payload = encrypted.substring(5);
+            const binString = atob(base64Payload);
+            const combined = new Uint8Array(Array.from(binString, (c) => c.charCodeAt(0)));
+            
+            if (combined.length < 12) {
+                return '';
+            }
+            
+            // Extrai o IV (primeiros 12 bytes) e a carga cifrada
+            const iv = combined.slice(0, 12);
+            const encryptedBytes = combined.slice(12);
+            
+            const key = await getOrCreateCryptoKey();
+            
+            // Executa decodificação AES-GCM
+            const decryptedBuffer = await window.crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: iv,
+                },
+                key,
+                encryptedBytes
+            );
+            
+            return new TextDecoder().decode(decryptedBuffer);
+        } catch (e) {
+            console.error('[crypto] Erro ao descriptografar chave com AES-GCM:', e);
             return '';
         }
-        
-        // Extrai o salt dos primeiros 8 bytes
-        const saltBytes = encryptedBytes.slice(0, 8);
-        const textBytesPayload = encryptedBytes.slice(8);
-        
-        const keyBytes = Array.from(new TextEncoder().encode(SECRET_KEY));
-        const decryptedBytes: number[] = [];
-        
-        // Decifra realizando a mesma operação XOR tripla (cifrado ^ chave ^ salt)
-        for (let i = 0; i < textBytesPayload.length; i++) {
-            const keyChar = keyBytes[i % keyBytes.length];
-            const saltChar = saltBytes[i % saltBytes.length];
-            decryptedBytes.push(textBytesPayload[i] ^ keyChar ^ saltChar);
-        }
-        
-        // Decodifica a string UTF-8 a partir dos bytes originais
-        return new TextDecoder().decode(new Uint8Array(decryptedBytes));
-    } catch (e) {
-        console.error('[crypto] Erro ao descriptografar chave:', e);
-        return '';
     }
+    
+    // Retrocompatibilidade com o formato XOR antigo (prefixo "enc:")
+    if (encrypted.startsWith('enc:')) {
+        try {
+            const base64Payload = encrypted.substring(4);
+            const binString = atob(base64Payload);
+            const encryptedBytes = Array.from(binString, (c) => c.charCodeAt(0));
+            
+            if (encryptedBytes.length < 8) {
+                return '';
+            }
+            
+            // Extrai o salt dos primeiros 8 bytes
+            const saltBytes = encryptedBytes.slice(0, 8);
+            const textBytesPayload = encryptedBytes.slice(8);
+            
+            // Chave estática legada apenas para restaurar o estado existente
+            const legacySecret = "AgentEvalSecretKeyForLocalEncryption!2026";
+            const keyBytes = Array.from(new TextEncoder().encode(legacySecret));
+            const decryptedBytes: number[] = [];
+            
+            for (let i = 0; i < textBytesPayload.length; i++) {
+                const keyChar = keyBytes[i % keyBytes.length];
+                const saltChar = saltBytes[i % saltBytes.length];
+                decryptedBytes.push(textBytesPayload[i] ^ keyChar ^ saltChar);
+            }
+            
+            return new TextDecoder().decode(new Uint8Array(decryptedBytes));
+        } catch (e) {
+            console.error('[crypto] Erro ao descriptografar chave legada XOR:', e);
+            return '';
+        }
+    }
+    
+    // Retorna a própria string se não tiver nenhum prefixo de criptografia
+    return encrypted;
 }
