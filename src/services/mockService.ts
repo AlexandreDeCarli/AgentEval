@@ -20,11 +20,11 @@ export const enableMockService = () => {
                 // Simulate async processing...
                 setTimeout(() => {
                     const fakeTargetResponse = [
-                        "Olá! Como posso te ajudar hoje?",
-                        "Temos várias opções disponíveis. Qual seu orçamento?",
-                        "Entendido. Vou verificar essa informação para você.",
-                        "Desculpe, não entendi. Pode reformular?",
-                        "O processo foi concluído com sucesso. Algo mais?"
+                        "Hello! How can I help you today?",
+                        "We have several options available. What is your budget?",
+                        "Got it. I'll verify this information for you.",
+                        "Sorry, I didn't understand. Can you rephrase?",
+                        "The process was successfully completed. Anything else?"
                     ][Math.floor(Math.random() * 5)];
 
                     mockMessages.push({ role: 'assistant', content: fakeTargetResponse });

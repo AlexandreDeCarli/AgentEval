@@ -27,26 +27,42 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 215 20.2% 65.1%;
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --primary: 217 91% 60%;
+    --background: 218 17% 9%; /* #13161B - bg-base */
+    --foreground: 210 20% 98%; /* #F9FAFB - text-primary */
+    --muted: 214 15% 18%; /* #272D35 - bg-surface-elevated */
+    --muted-foreground: 218 11% 65%; /* #9CA3AF - text-secondary */
+    --popover: 216 15% 13%; /* #1C2026 - bg-surface */
+    --popover-foreground: 210 20% 98%;
+    --card: 216 15% 13%; /* #1C2026 - bg-surface */
+    --card-foreground: 210 20% 98%;
+    --border: 220 9% 19%; /* #2D3036 - border-subtle */
+    --input: 214 15% 18%; /* #272D35 - bg-surface-elevated */
+    --primary: 227 100% 65%; /* #4A72FF - accent-primary */
     --primary-foreground: 0 0% 100%;
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 216 34% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 216 34% 17%;
-    --radius: 0.5rem;
+    --secondary: 214 15% 18%; /* #272D35 - bg-surface-elevated */
+    --secondary-foreground: 210 20% 98%;
+    --accent: 214 15% 18%; /* #272D35 - bg-surface-elevated */
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 227 100% 65%; /* #4A72FF - accent-primary */
+    --radius: 0.75rem; /* Curvatura moderna de cantos (12px) */
+  }
+}
+
+@layer base {
+  textarea, select {
+    background-color: hsl(var(--input)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+    border-radius: var(--radius) !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  textarea:focus, select:focus {
+    outline: none !important;
+    border-color: hsl(var(--ring)) !important;
+    box-shadow: 0 0 0 2px rgba(74, 114, 255, 0.25) !important;
   }
 }
 

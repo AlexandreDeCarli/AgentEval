@@ -11,6 +11,7 @@ import { Settings } from './features/Settings';
 import { OnboardingTour } from './components/OnboardingTour';
 import { HelpMenu } from './components/HelpMenu';
 import { WelcomeModal } from './components/WelcomeModal';
+import { TestExecutionWidget } from './components/TestExecutionWidget';
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -58,6 +59,7 @@ const App: React.FC = () => {
       <OnboardingTour />
       <HelpMenu />
       <WelcomeModal />
+      <TestExecutionWidget />
     </BrowserRouter>
   );
 };

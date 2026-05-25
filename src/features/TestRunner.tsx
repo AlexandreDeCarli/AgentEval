@@ -200,7 +200,7 @@ export const TestRunner: React.FC = () => {
                                     <button
                                         onClick={() => clearDebugLogs()}
                                         className="p-1 hover:text-zinc-100 text-zinc-500 transition-colors"
-                                        title="Limpar logs"
+                                        title="Clear logs"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -214,7 +214,7 @@ export const TestRunner: React.FC = () => {
                             </div>
                             <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                 {debugLogs.length === 0 && (
-                                    <div className="text-zinc-600 p-2 font-sans">Nenhuma requisição ainda. Inicie um teste.</div>
+                                    <div className="text-zinc-600 p-2 font-sans">No requests yet. Start a test.</div>
                                 )}
                                 {debugLogs.map((entry) => (
                                     <DebugEntry key={entry.id} entry={entry} />

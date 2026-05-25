@@ -7,14 +7,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ({ className = '', variant = 'primary', size = 'md', ...props }, ref) => {
-        const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none ring-offset-background';
+        const baseStyles = 'inline-flex items-center justify-center rounded-lg font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer';
 
         const variants = {
-            primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-            secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-            destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-            outline: 'border border-input hover:bg-accent hover:text-accent-foreground',
-            ghost: 'hover:bg-accent hover:text-accent-foreground',
+            primary: 'bg-[#4A72FF] text-white hover:bg-[#395CE6] shadow-[0_4px_14px_rgba(74,114,255,0.3)] border border-[#4A72FF]/20',
+            secondary: 'bg-white text-black hover:bg-white/90 shadow-md border border-white/10',
+            destructive: 'bg-gradient-to-r from-red-600 to-rose-500 text-white hover:from-red-500 hover:to-rose-400 shadow-[0_4px_12px_rgba(220,38,38,0.2)]',
+            outline: 'border border-[#2D3036] bg-[#1C2026] text-[#4A72FF] hover:bg-[#272D35] hover:text-[#4A72FF]',
+            ghost: 'text-[#4A72FF] hover:bg-white/[0.04]',
         };
 
         const sizes = {
