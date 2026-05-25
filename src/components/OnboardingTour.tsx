@@ -16,9 +16,12 @@ export const OnboardingTour: React.FC = () => {
         setHasCompletedOnboarding, 
         hasCompletedProjectOnboarding,
         setHasCompletedProjectOnboarding,
+        hasCompletedMissionOnboarding,
+        setHasCompletedMissionOnboarding,
         hasCompletedWelcomeModal,
         tourTriggerCount,
         projectTourTriggerCount,
+        missionTourTriggerCount,
         isHydrated,
         setDashboardTourCurrentStep
     } = useOnboardingStore();
@@ -31,10 +34,12 @@ export const OnboardingTour: React.FC = () => {
     // Tracks if auto-start has already run during this component session to prevent duplicates
     const hasAutoStartedDashboard = useRef(false);
     const hasAutoStartedProject = useRef(false);
+    const hasAutoStartedMission = useRef(false);
 
     // Track the last handled manual triggers to prevent navigation loop re-triggers
     const lastHandledDashboardTrigger = useRef(0);
     const lastHandledProjectTrigger = useRef(0);
+    const lastHandledMissionTrigger = useRef(0);
 
     // Active Driver.js instance ref to allow cleanup on navigation
     const activeDriverRef = useRef<any>(null);
@@ -197,9 +202,14 @@ export const OnboardingTour: React.FC = () => {
             popoverClass: 'agent-eval-driver-popover',
             onHighlighted: () => {
                 const element = driverObj.getActiveElement();
-                // Se o elemento destacado for uma das abas do projeto, ativa-a programaticamente
+                // If it is a project tab element, click it programmatically to activate
                 if (element && element.id && element.id.startsWith('project-tab-')) {
                     (element as HTMLElement).click();
+                }
+                // If it is the mission list card, activate the missions tab automatically
+                if (element && element.id === 'project-missions-list') {
+                    const missionsTab = document.getElementById('project-tab-missions');
+                    if (missionsTab) missionsTab.click();
                 }
             },
             onDestroyed: () => {
@@ -218,10 +228,46 @@ export const OnboardingTour: React.FC = () => {
                     }
                 },
                 {
+                    element: '#project-tab-dashboard',
+                    popover: {
+                        title: '📊 Project Dashboard',
+                        description: 'Welcome to your analytical hub! View real-time agent performance trend charts, success rates, key metrics, and inspect the details of past runs with a single click.',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#project-tab-missions',
+                    popover: {
+                        title: '🎯 Missions',
+                        description: 'A Mission defines the test scenario: the conversation goal, variables, and validation criteria. You can run individual missions or execute all of them in parallel!',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#project-tab-settings',
+                    popover: {
+                        title: '⚙️ Settings Tab',
+                        description: 'This tab houses all the configuration options for your project, now clean and separated into dedicated sub-tabs.',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
                     element: '#project-tab-info',
                     popover: {
-                        title: '📝 Info & Docs (Basic Info)',
-                        description: 'Define the project\'s name and description. Configure if the agent is exposed via an HTTP API or if you want to test it directly by connecting to Gemini. Paste your system\'s documentation here so the AI can generate realistic test scenarios!',
+                        title: '📝 Basic Info',
+                        description: 'Configure your project\'s basic details, name, and target provider (HTTP API or direct Gemini integration).',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#project-tab-docs',
+                    popover: {
+                        title: '📖 Project Documentation',
+                        description: 'Write or paste the project documentation in Markdown. The evaluator will automatically read this context to verify if your agent respects domain rules and requirements.',
                         side: 'bottom',
                         align: 'center'
                     }
@@ -230,7 +276,7 @@ export const OnboardingTour: React.FC = () => {
                     element: '#project-tab-prompts',
                     popover: {
                         title: '🎭 System Prompts',
-                        description: 'Configure the guidelines and system instructions (System Prompts) that define your AI agent\'s persona and behavior. You can add multiple prompts to test different variations!',
+                        description: 'Configure the guidelines and system instructions that define your AI agent\'s persona and behavior. You can add multiple prompts to test different variations!',
                         side: 'bottom',
                         align: 'center'
                     }
@@ -245,28 +291,10 @@ export const OnboardingTour: React.FC = () => {
                     }
                 }] : []),
                 {
-                    element: '#project-tab-missions',
-                    popover: {
-                        title: '🎯 Missions',
-                        description: 'Here is the <strong>Test Missions</strong> tab! A mission defines the test scenario: the conversation goal, the variables to test, and the validation criteria the intelligent evaluator will check.',
-                        side: 'bottom',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#project-mission-generator',
-                    popover: {
-                        title: '🤖 AI Mission Generator',
-                        description: 'This is the AI creation hub! Fill in optional guidelines (e.g., "ask tricky questions", "speak informally") and click <strong>Generate</strong> for Gemini Pro to read your documentation and automatically generate complex test scenarios with variables and approval criteria!',
-                        side: 'bottom',
-                        align: 'center'
-                    }
-                },
-                {
                     element: '#project-missions-list',
                     popover: {
-                        title: '📋 Dashboard and Test Execution',
-                        description: 'Here you view all registered missions. Click <strong>Run</strong> to start the automated simulation where the evaluator chats with your agent in real time and inspects whether all goals were successfully met!',
+                        title: '📋 Test Execution & Stability',
+                        description: 'Here is your list of missions. Each card displays colored score pills representing the last 3 test runs to analyze agent stability over time at a glance. Click Run to execute!',
                         side: 'top',
                         align: 'center'
                     }
@@ -290,6 +318,103 @@ export const OnboardingTour: React.FC = () => {
 
         runProjectDriver();
     }, [location.pathname, runProjectDriver]);
+
+
+    // --- MISSION EDITOR TOUR ---
+    const runMissionDriver = useCallback(() => {
+        const driverObj = driver({
+            showProgress: true,
+            animate: true,
+            doneBtnText: 'Finish Onboarding 🚀',
+            nextBtnText: 'Next →',
+            prevBtnText: '← Back',
+            popoverClass: 'agent-eval-driver-popover',
+            onHighlighted: () => {
+                const element = driverObj.getActiveElement();
+                // If it is a mission tab element, click it programmatically to activate
+                if (element && element.id && element.id.startsWith('mission-tab-')) {
+                    (element as HTMLElement).click();
+                }
+            },
+            onDestroyed: () => {
+                globalTourActive = false;
+                activeDriverRef.current = null;
+                setHasCompletedMissionOnboarding(true);
+            },
+            steps: [
+                {
+                    element: '#mission-editor-header',
+                    popover: {
+                        title: '🎯 Mission Editor',
+                        description: 'Welcome to the Mission Editor! Here you define specific goals, variables, and evaluation criteria for testing your AI agent.',
+                        side: 'bottom',
+                        align: 'start'
+                    }
+                },
+                {
+                    element: '#mission-tab-goal',
+                    popover: {
+                        title: '📝 Mission Goal',
+                        description: 'Define the objective that the AI agent needs to achieve during the conversation (e.g. negotiating a discount).',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#mission-tab-integration',
+                    popover: {
+                        title: '🔌 Integration Setup',
+                        description: 'Select which System Prompt to apply and which Environments are active for this specific test scenario.',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#mission-tab-variables',
+                    popover: {
+                        title: '🎭 Dynamic Variables',
+                        description: 'Define variables that will be dynamically injected into the mission prompt, enabling you to test multiple permutations and inputs.',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#mission-tab-criteria',
+                    popover: {
+                        title: '✅ Approval Criteria',
+                        description: 'Establish strict rules that the evaluator will use to grade the agent\'s conversation transcript (e.g. ensuring it didn\'t leak secrets).',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#mission-save-button',
+                    popover: {
+                        title: '💾 Save Mission',
+                        description: 'Save your configuration here, ready to run your automated AI evaluation tests!',
+                        side: 'bottom',
+                        align: 'center'
+                    }
+                }
+            ]
+        });
+
+        activeDriverRef.current = driverObj;
+        driverObj.drive();
+    }, [setHasCompletedMissionOnboarding]);
+
+    const startMissionTour = useCallback(() => {
+        if (globalTourActive) return;
+        globalTourActive = true;
+
+        // Ensure we are inside a mission route
+        if (!location.pathname.includes('/missions/')) {
+            globalTourActive = false;
+            return;
+        }
+
+        runMissionDriver();
+    }, [location.pathname, runMissionDriver]);
 
 
     // Cleanup active driver when route changes to prevent overlay staying active or double triggering
@@ -349,6 +474,33 @@ export const OnboardingTour: React.FC = () => {
         }
     }, [isHydrated, location.pathname, hasCompletedProjectOnboarding, startProjectTour]);
 
+    // 3. Mission Auto-Start (includes element checking for the manual creation method screen)
+    useEffect(() => {
+        const isMissionRoute = location.pathname.includes('/missions/');
+        const forceStart = sessionStorage.getItem('autoStartMissionTour') === 'true';
+        
+        if (isHydrated && isMissionRoute) {
+            if (forceStart || (!hasCompletedMissionOnboarding && !hasAutoStartedMission.current)) {
+                // We check if the manual editor is in the DOM (checking #mission-editor-header)
+                const checkInterval = setInterval(() => {
+                    const headerElement = document.getElementById('mission-editor-header');
+                    if (headerElement) {
+                        clearInterval(checkInterval);
+                        sessionStorage.removeItem('autoStartMissionTour');
+                        hasAutoStartedMission.current = true;
+                        
+                        // Small delay to let React fully render the tab elements
+                        setTimeout(() => {
+                            startMissionTour();
+                        }, 500);
+                    }
+                }, 200);
+
+                return () => clearInterval(checkInterval);
+            }
+        }
+    }, [isHydrated, location.pathname, hasCompletedMissionOnboarding, startMissionTour]);
+
 
     // --- EFFECTS FOR MANUAL TRIGGER ---
 
@@ -367,6 +519,16 @@ export const OnboardingTour: React.FC = () => {
             startProjectTour();
         }
     }, [isHydrated, projectTourTriggerCount, startProjectTour]);
+
+    // 3. Mission Manual Trigger
+    useEffect(() => {
+        if (isHydrated && missionTourTriggerCount > lastHandledMissionTrigger.current) {
+            lastHandledMissionTrigger.current = missionTourTriggerCount;
+            // Force start flag to override auto-start refs
+            sessionStorage.setItem('autoStartMissionTour', 'true');
+            startMissionTour();
+        }
+    }, [isHydrated, missionTourTriggerCount, startMissionTour]);
 
     return null;
 };
