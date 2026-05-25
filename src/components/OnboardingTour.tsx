@@ -23,7 +23,7 @@ export const OnboardingTour: React.FC = () => {
         setDashboardTourCurrentStep
     } = useOnboardingStore();
     
-    const { addProject } = useProjectStore();
+    const { addProject, projects } = useProjectStore();
     
     const navigate = useNavigate();
     const location = useLocation();
@@ -45,9 +45,9 @@ export const OnboardingTour: React.FC = () => {
         const driverObj = driver({
             showProgress: true,
             animate: true,
-            doneBtnText: 'Finalizar 🎉',
-            nextBtnText: 'Avançar →',
-            prevBtnText: '← Voltar',
+            doneBtnText: 'Finish 🎉',
+            nextBtnText: 'Next →',
+            prevBtnText: '← Back',
             popoverClass: 'agent-eval-driver-popover',
             onHighlighted: () => {
                 const activeIndex = driverObj.getActiveIndex();
@@ -71,8 +71,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-header',
                     popover: {
-                        title: '🚀 Bem-vindo ao AgentEval!',
-                        description: 'O AgentEval é uma plataforma premium para testar e avaliar agentes de IA (LLMs) de forma automatizada. Deixe-nos te mostrar como funciona!',
+                        title: '🚀 Welcome to AgentEval!',
+                        description: 'AgentEval is a premium platform to automatically test and evaluate AI agents (LLMs). Let us show you how it works!',
                         side: 'right',
                         align: 'start'
                     }
@@ -80,8 +80,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-projects',
                     popover: {
-                        title: '📂 Projetos & Configurações',
-                        description: 'Aqui você gerencia seus Projetos. Cada projeto organiza seus ambientes de teste (endpoints do agente) e os Prompts de Sistema que definem a persona do seu agente.',
+                        title: '📂 Projects & Settings',
+                        description: 'Here you manage your Projects. Each project organizes your test environments (agent endpoints) and System Prompts defining your agent\'s persona.',
                         side: 'right',
                         align: 'start'
                     }
@@ -89,15 +89,15 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#new-project-button',
                     popover: {
-                        title: '➕ Crie seu Primeiro Projeto',
-                        description: 'Clique no botão "New Project" para criar un novo projeto, ou clique em "Avançar" para criarmos um para você e iniciarmos o tutorial das abas!',
+                        title: '➕ Create your First Project',
+                        description: 'Click "New Project" to create a new project, or click "Next" so we can create one for you and start the tabs tutorial!',
                         side: 'bottom',
                         align: 'center',
                         onNextClick: (_element, _step, { driver }) => {
                             const newId = crypto.randomUUID();
                             addProject({
                                 id: newId,
-                                name: 'Novo Projeto',
+                                name: 'New Project',
                                 description: '',
                                 documentation: '',
                                 target_provider: 'http',
@@ -126,8 +126,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-missions',
                     popover: {
-                        title: '🎯 Quadro de Missões',
-                        description: 'Uma Missão define o cenário de teste. Você estipula o que o agente deve realizar, quais as variáveis de teste e os critérios de validação que o avaliador utilizará.',
+                        title: '🎯 Mission Board',
+                        description: 'A Mission defines the test scenario. You specify what the agent should accomplish, the test variables, and the validation criteria the evaluator will use.',
                         side: 'right',
                         align: 'start'
                     }
@@ -135,8 +135,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-history',
                     popover: {
-                        title: '📊 Histórico de Testes',
-                        description: 'Acompanhe o resultado das execuções passadas. Visualize conversas completas entre o avaliador e o agente, analise erros e confira as métricas de sucesso.',
+                        title: '📊 Test History',
+                        description: 'Track the results of past runs. View full conversations between the evaluator and the agent, analyze errors, and check success metrics.',
                         side: 'right',
                         align: 'start'
                     }
@@ -144,8 +144,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-settings',
                     popover: {
-                        title: '⚙️ Configurações Gerais',
-                        description: 'Antes de começar a rodar testes, você precisará configurar sua Gemini API Key aqui. Ela serve para alimentar o Avaliador Inteligente (Gemini).',
+                        title: '⚙️ General Settings',
+                        description: 'Before you start running tests, you will need to configure your Gemini API Key here. It powers the Intelligent Evaluator (Gemini).',
                         side: 'right',
                         align: 'start'
                     }
@@ -153,8 +153,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#sidebar-help-button',
                     popover: {
-                        title: '💡 Central de Ajuda',
-                        description: 'Ficou com alguma dúvida ou quer rever os conceitos? Clique a qualquer momento no botão de Ajuda para abrir o menu de documentação rápida ou reiniciar este tour!',
+                        title: '💡 Help Center',
+                        description: 'Have questions or want to review concepts? Click the Help button at any time to open the quick documentation menu or restart this tour!',
                         side: 'right',
                         align: 'start'
                     }
@@ -183,12 +183,17 @@ export const OnboardingTour: React.FC = () => {
 
     // --- PROJECT EDITOR TOUR ---
     const runProjectDriver = useCallback(() => {
+        const projectIdMatch = location.pathname.match(/\/projects\/([^\/]+)/);
+        const projectId = projectIdMatch ? projectIdMatch[1] : null;
+        const project = projects.find(p => p.id === projectId);
+        const isGemini = project?.target_provider === 'gemini';
+
         const driverObj = driver({
             showProgress: true,
             animate: true,
-            doneBtnText: 'Finalizar Onboarding 🚀',
-            nextBtnText: 'Avançar →',
-            prevBtnText: '← Voltar',
+            doneBtnText: 'Finish Onboarding 🚀',
+            nextBtnText: 'Next →',
+            prevBtnText: '← Back',
             popoverClass: 'agent-eval-driver-popover',
             onHighlighted: () => {
                 const element = driverObj.getActiveElement();
@@ -206,8 +211,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#project-editor-header',
                     popover: {
-                        title: '🛠️ Edição do Projeto',
-                        description: 'Esta é a página de configuração do seu projeto. Aqui você define tudo que a IA precisa para interagir e avaliar seu agente. Lembre-se de clicar em "Save" para persistir as alterações!',
+                        title: '🛠️ Project Editor',
+                        description: 'This is your project\'s configuration page. Here you define everything the AI needs to interact with and evaluate your agent. Remember to click "Save" to persist changes!',
                         side: 'bottom',
                         align: 'start'
                     }
@@ -215,8 +220,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#project-tab-info',
                     popover: {
-                        title: '📝 Info & Docs (Informações Básicas)',
-                        description: 'Defina o nome e a descrição do projeto. Configure também se o agente é exposto por uma API HTTP ou se deseja testá-lo diretamente conectando ao Gemini. Cole a documentação do seu sistema aqui para que a IA gere cenários de teste realistas!',
+                        title: '📝 Info & Docs (Basic Info)',
+                        description: 'Define the project\'s name and description. Configure if the agent is exposed via an HTTP API or if you want to test it directly by connecting to Gemini. Paste your system\'s documentation here so the AI can generate realistic test scenarios!',
                         side: 'bottom',
                         align: 'center'
                     }
@@ -224,26 +229,26 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#project-tab-prompts',
                     popover: {
-                        title: '🎭 System Prompts (Prompts de Sistema)',
-                        description: 'Configure as diretrizes e instruções de sistema (System Prompts) que definem a persona e comportamento do seu agente de IA. Você pode adicionar múltiplos prompts para testar diferentes variações!',
+                        title: '🎭 System Prompts',
+                        description: 'Configure the guidelines and system instructions (System Prompts) that define your AI agent\'s persona and behavior. You can add multiple prompts to test different variations!',
                         side: 'bottom',
                         align: 'center'
                     }
                 },
-                {
+                ...(!isGemini ? [{
                     element: '#project-tab-environments',
                     popover: {
-                        title: '🌐 Ambientes (Environments)',
-                        description: 'Configure as URLs e chaves de autenticação das APIs do seu agente para diferentes ambientes (ex: Staging, Production). Indispensável quando o projeto usa o modo HTTP API!',
+                        title: '🌐 Environments',
+                        description: 'Configure URLs and authentication keys of your agent\'s APIs for different environments (e.g., Staging, Production). Indispensable when the project uses the HTTP API mode!',
                         side: 'bottom',
                         align: 'center'
                     }
-                },
+                }] : []),
                 {
                     element: '#project-tab-missions',
                     popover: {
-                        title: '🎯 Missões (Missions)',
-                        description: 'Aqui está a aba de <strong>Missões de Teste</strong>! Uma missão define o cenário do teste: o objetivo da conversa, as variáveis a testar e os critérios de validação que o avaliador inteligente verificará.',
+                        title: '🎯 Missions',
+                        description: 'Here is the <strong>Test Missions</strong> tab! A mission defines the test scenario: the conversation goal, the variables to test, and the validation criteria the intelligent evaluator will check.',
                         side: 'bottom',
                         align: 'center'
                     }
@@ -251,8 +256,8 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#project-mission-generator',
                     popover: {
-                        title: '🤖 Gerador de Missões com IA',
-                        description: 'Esta é a central de criação com IA! Preencha diretrizes opcionais (ex: "faça perguntas capciosas", "fale de forma informal") e clique em <strong>Generate</strong> para o Gemini Pro ler sua documentação e gerar cenários de teste complexos automaticamente com variáveis e critérios de aprovação!',
+                        title: '🤖 AI Mission Generator',
+                        description: 'This is the AI creation hub! Fill in optional guidelines (e.g., "ask tricky questions", "speak informally") and click <strong>Generate</strong> for Gemini Pro to read your documentation and automatically generate complex test scenarios with variables and approval criteria!',
                         side: 'bottom',
                         align: 'center'
                     }
@@ -260,18 +265,18 @@ export const OnboardingTour: React.FC = () => {
                 {
                     element: '#project-missions-list',
                     popover: {
-                        title: '📋 Painel e Execução de Testes',
-                        description: 'Aqui você visualiza todas as missões cadastradas. Clique em <strong>Run</strong> para iniciar a simulação automatizada onde o avaliador conversa com seu agente em tempo real e inspeciona se todas as metas foram cumpridas com sucesso!',
+                        title: '📋 Dashboard and Test Execution',
+                        description: 'Here you view all registered missions. Click <strong>Run</strong> to start the automated simulation where the evaluator chats with your agent in real time and inspects whether all goals were successfully met!',
                         side: 'top',
                         align: 'center'
                     }
                 }
-            ]
+            ] as any
         });
 
         activeDriverRef.current = driverObj;
         driverObj.drive();
-    }, [setHasCompletedProjectOnboarding]);
+    }, [setHasCompletedProjectOnboarding, projects, location.pathname]);
 
     const startProjectTour = useCallback(() => {
         if (globalTourActive) return;

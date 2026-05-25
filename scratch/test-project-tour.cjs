@@ -40,20 +40,20 @@ async function runTests() {
 
         // 2. Passar pelo WelcomeModal obrigatoriamente
         console.log('✨ Detectando exibição do WelcomeModal obrigatório no primeiro acesso...');
-        const welcomeTitle = page.locator('text=Sobre o Projeto');
+        const welcomeTitle = page.locator('text=About the Project');
         if (await welcomeTitle.isVisible()) {
             console.log('👉 Modal de Boas-Vindas detectado. Avançando Etapa 1...');
-            await page.click('text=Iniciar Tutorial');
+            await page.click('text=Get Started');
             await sleep(800);
 
             console.log('👉 Aceitando Termos de Uso (Etapa 2)...');
             await page.click('#accept-terms-checkbox');
             await sleep(300);
-            await page.click('text=Aceitar e Avançar');
+            await page.click('text=Accept and Proceed');
             await sleep(800);
 
             console.log('👉 Pulando API Key na Etapa 3...');
-            await page.click('text=Pular por enquanto / Configurar depois');
+            await page.click('text=Skip for now / Configure later');
             await sleep(1500); // Aguardar fechamento físico e início do tour
         }
 
@@ -132,7 +132,7 @@ async function runTests() {
             // Validar que a aba Missions foi ativada de forma programática
             const activeTabButton = page.locator('#project-tab-missions');
             const classAttribute = await activeTabButton.getAttribute('class');
-            if (classAttribute.includes('border-primary') || classAttribute.includes('text-foreground')) {
+            if (classAttribute.includes('border-primary') || classAttribute.includes('text-foreground') || classAttribute.includes('from-[#4A72FF]')) {
                 console.log('✅ PASS: Aba "Missions" foi ativada de forma 100% programática pelo tour!');
             } else {
                 console.error('❌ FAIL: Aba "Missions" não foi ativada pelo clique automático.');
@@ -141,7 +141,7 @@ async function runTests() {
             // Salvar captura da Aba de Missões em destaque
             const pathTab = path.join(SCREENSHOT_DIR, '06_onboarding_projeto_passo2.png');
             await page.screenshot({ path: pathTab });
-            console.log(`   📸 Captura da aba de missões ativa salva: ${pathTab}`);
+            console.log(`   📸 Captura da aba de missões activa salva: ${pathTab}`);
 
             // Avançar para Passo 6 (Gerador de Missões com IA)
             console.log('👉 Avançando para o Passo 6 (Gerador de Missões IA)...');
@@ -175,7 +175,7 @@ async function runTests() {
             await helpBtn.click();
             await sleep(500);
 
-            const helpMenuTitle = await page.locator('h2:has-text("Ajuda & Aprendizado")');
+            const helpMenuTitle = await page.locator('h2:has-text("Help & Learning")');
             if (await helpMenuTitle.isVisible()) {
                 console.log('✅ PASS: Menu de ajuda abriu dentro da página de projetos.');
 
@@ -185,7 +185,7 @@ async function runTests() {
 
                 // Reiniciar o Onboarding do Projeto
                 console.log('🔄 Testando reinício do Onboarding do Projeto...');
-                const restartProjectBtn = page.locator('button:has-text("Iniciar Tour do Projeto")');
+                const restartProjectBtn = page.locator('button:has-text("Start Project Tour")');
                 if (await restartProjectBtn.isVisible()) {
                     await restartProjectBtn.click();
                     await sleep(1000);
@@ -200,7 +200,7 @@ async function runTests() {
                         console.error('❌ FAIL: Popover do projeto não reabriu.');
                     }
                 } else {
-                    console.error('❌ FAIL: Botão "Iniciar Tour do Projeto" não encontrado no Menu de Ajuda.');
+                    console.error('❌ FAIL: Botão "Start Project Tour" não encontrado no Menu de Ajuda.');
                 }
             } else {
                 console.error('❌ FAIL: Menu de ajuda lateral não abriu.');

@@ -55,7 +55,7 @@ export const MissionList: React.FC = () => {
         const cloned: Mission = {
             ...mission,
             id: crypto.randomUUID(),
-            titulo: `${mission.titulo} (Cópia)`
+            titulo: `${mission.titulo} (Copy)`
         };
         addMission(cloned);
     };
@@ -154,9 +154,9 @@ export const MissionList: React.FC = () => {
                         
                         {/* Texto descritivo principal */}
                         <div className="space-y-2">
-                            <h3 className="text-xl font-bold tracking-tight text-white">Excluir Missão?</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-white">Delete Mission?</h3>
                             <p className="text-sm text-slate-400 leading-relaxed">
-                                Você está prestes a excluir permanentemente a missão:
+                                You are about to permanently delete the mission:
                             </p>
                             <div className="inline-block font-semibold text-white bg-slate-900/60 border border-white/5 px-3 py-1 rounded-lg text-sm max-w-full truncate shadow-inner">
                                 "{missionToDelete.titulo}"
@@ -165,9 +165,9 @@ export const MissionList: React.FC = () => {
 
                         {/* Card de Aviso Crítico com design moderno */}
                         <div className="bg-red-500/[0.03] border-l-2 border-red-500/60 p-4 rounded-r-lg text-left space-y-1">
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Ação Irreversível</span>
+                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Irreversible Action</span>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                O cenário da missão, os parâmetros de comportamento e todo o histórico de execuções de testes associados serão **deletados para sempre**.
+                                The mission scenario, behavior parameters, and all associated test execution histories will be **permanently deleted**.
                             </p>
                         </div>
                         
@@ -177,7 +177,7 @@ export const MissionList: React.FC = () => {
                                 onClick={() => setMissionToDelete(null)}
                                 className="flex-1 px-4 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white font-semibold text-xs tracking-wide uppercase transition-all duration-200 cursor-pointer active:scale-[0.98] border-b-[2px] border-b-black/20 hover:border-white/[0.12]"
                             >
-                                Cancelar
+                                Cancel
                             </button>
                             <button
                                 onClick={() => {
@@ -186,7 +186,7 @@ export const MissionList: React.FC = () => {
                                 }}
                                 className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-bold text-xs tracking-wide uppercase shadow-[0_4px_12px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0"
                             >
-                                Sim, Excluir
+                                Yes, Delete
                             </button>
                         </div>
                     </div>

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useTestExecutionStore } from '../store/useTestExecutionStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -30,9 +31,11 @@ import {
     Pencil,
     Check,
     AlertCircle,
+    Info,
+    Play,
 } from 'lucide-react';
 
-type Tab = 'info' | 'prompts' | 'environments' | 'missions';
+type Tab = 'info' | 'docs' | 'prompts' | 'environments' | 'missions';
 
 const defaultApiConfig: ApiConfig = {
     post_url: '',
@@ -51,6 +54,7 @@ export const ProjectEditor: React.FC = () => {
     const { projects, updateProject } = useProjectStore();
     const { missions, addMission, deleteMission } = useMissionStore();
     const { geminiApiKey } = useSettingsStore();
+    const { startExecution } = useTestExecutionStore();
 
     const [project, setProject] = useState<Project | null>(null);
     const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
@@ -82,6 +86,7 @@ export const ProjectEditor: React.FC = () => {
     useEffect(() => {
         if (
             tabFromQuery === 'info' ||
+            tabFromQuery === 'docs' ||
             tabFromQuery === 'prompts' ||
             tabFromQuery === 'environments' ||
             tabFromQuery === 'missions'
@@ -98,6 +103,16 @@ export const ProjectEditor: React.FC = () => {
     const projectMissions = missions.filter((m) => m.project_id === project.id);
     const targetProvider = getProjectTargetProvider(project);
     const targetGeminiModel = getProjectGeminiModel(project);
+
+    const handleRunAllMissions = () => {
+        if (!geminiApiKey) {
+            alert('Configure your Gemini API Key in Settings first.');
+            return;
+        }
+        projectMissions.forEach((mission) => {
+            startExecution(mission, geminiApiKey);
+        });
+    };
 
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
@@ -246,19 +261,20 @@ export const ProjectEditor: React.FC = () => {
     };
 
     const tabs: { key: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
-        { key: 'info', label: 'Info & Docs', icon: <FileText className="w-4 h-4" /> },
+        { key: 'info', label: 'Basic Info', icon: <Info className="w-4 h-4" /> },
+        { key: 'docs', label: 'Documentation', icon: <FileText className="w-4 h-4" /> },
         {
             key: 'prompts',
             label: 'System Prompts',
             icon: <FileText className="w-4 h-4" />,
             count: project.system_prompts.length,
         },
-        {
-            key: 'environments',
+        ...(targetProvider !== 'gemini' ? [{
+            key: 'environments' as Tab,
             label: 'Environments',
             icon: <Server className="w-4 h-4" />,
             count: project.environments.length,
-        },
+        }] : []),
         {
             key: 'missions',
             label: 'Missions',
@@ -268,7 +284,7 @@ export const ProjectEditor: React.FC = () => {
     ];
 
     return (
-        <div className="p-8 max-w-5xl mx-auto pb-24">
+        <div className="p-6 md:p-8 w-full max-w-[1600px] mx-auto pb-24">
             {/* Header */}
             <div id="project-editor-header" className="flex items-center gap-4 mb-6">
                 <Button variant="ghost" size="sm" onClick={() => navigate('/projects')}>
@@ -297,149 +313,159 @@ export const ProjectEditor: React.FC = () => {
                 </Button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 border-b border-border mb-6">
+            {/* Tabs com pílulas premium de gradiente roxo/azul */}
+            <div className="flex flex-wrap gap-2.5 mb-8 p-1.5 bg-[#1C2026] rounded-xl border border-border/50 select-none">
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
                         id={`project-tab-${tab.key}`}
                         onClick={() => handleTabChange(tab.key)}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                        className={`flex items-center gap-2.5 px-4 py-2.5 text-xs uppercase tracking-wider font-bold transition-all duration-300 rounded-lg cursor-pointer ${
                             activeTab === tab.key
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                                ? 'bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white shadow-[0_4px_15px_rgba(74,114,255,0.3)] border border-white/[0.1] scale-[1.02]'
+                                : 'border border-transparent text-muted-foreground hover:text-foreground hover:bg-[#272D35]/60 hover:scale-[1.01]'
                         }`}
                     >
                         {tab.icon}
-                        {tab.label}
+                        <span>{tab.label}</span>
                         {tab.count !== undefined && (
-                            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
+                            <span className={`ml-1.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                                activeTab === tab.key
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-[#272D35] text-muted-foreground border border-border/40'
+                            }`}>
                                 {tab.count}
-                            </Badge>
+                            </span>
                         )}
                     </button>
                 ))}
             </div>
 
-            {/* Tab: Info & Docs */}
+            {/* Tab: Basic Info (Lado a Lado para melhor aproveitamento horizontal) */}
             {activeTab === 'info' && (
-                <div className="space-y-6">
-                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
-                        <h2 className="text-xl font-semibold border-b border-border pb-2">Project Info</h2>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">Name</label>
-                            <Input
-                                value={project.name}
-                                onChange={(e) => setProject({ ...project, name: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">Description</label>
-                            <textarea
-                                className="w-full h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                value={project.description}
-                                onChange={(e) =>
-                                    setProject({ ...project, description: e.target.value })
-                                }
-                            />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                    {/* Project Info Card */}
+                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card flex flex-col justify-between">
+                        <div className="space-y-4">
+                            <h2 className="text-xl font-semibold border-b border-border pb-2">Project Info</h2>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Name</label>
+                                <Input
+                                    value={project.name}
+                                    onChange={(e) => setProject({ ...project, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">Description</label>
+                                <textarea
+                                    className="w-full h-32 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={project.description}
+                                    onChange={(e) =>
+                                        setProject({ ...project, description: e.target.value })
+                                    }
+                                />
+                            </div>
                         </div>
                     </section>
 
-                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
-                        <h2 className="text-xl font-semibold border-b border-border pb-2">
-                            Target Integration
-                        </h2>
+                    {/* Target Integration Card */}
+                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card flex flex-col justify-between">
+                        <div className="space-y-4">
+                            <h2 className="text-xl font-semibold border-b border-border pb-2">
+                                Target Integration
+                            </h2>
 
-                        <div>
-                            <label className="text-sm font-medium mb-1 block">
-                                Project Target Provider
-                            </label>
-                            <select
-                                className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                value={targetProvider}
-                                onChange={(e) =>
-                                    handleTargetProviderChange(e.target.value as TargetProvider)
-                                }
-                            >
-                                <option value="http">HTTP API</option>
-                                <option value="gemini">Gemini</option>
-                            </select>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                This setting applies to all missions in the project. Missions only
-                                choose which prompt to test and, for HTTP projects, which
-                                environment to use.
-                            </p>
-                        </div>
+                            <div>
+                                <label className="text-sm font-medium mb-1.5 block">
+                                    Project Target Provider
+                                </label>
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    value={targetProvider}
+                                    onChange={(e) =>
+                                        handleTargetProviderChange(e.target.value as TargetProvider)
+                                    }
+                                >
+                                    <option value="http">HTTP API</option>
+                                    <option value="gemini">Gemini</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    This setting applies to all missions in the project. Missions only
+                                    choose which prompt to test and, for HTTP projects, which
+                                    environment to use.
+                                </p>
+                            </div>
 
-                        {targetProvider === 'gemini' ? (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="text-sm font-medium mb-1 block">
-                                        Gemini Model
-                                    </label>
-                                    <Input
-                                        list="project-gemini-model-suggestions"
-                                        value={targetGeminiModel}
-                                        onChange={(e) =>
-                                            setProject({
-                                                ...project,
-                                                target_gemini_model: e.target.value,
-                                            })
-                                        }
-                                        placeholder={DEFAULT_GEMINI_TARGET_MODEL}
-                                        className="font-mono"
-                                    />
-                                    <datalist id="project-gemini-model-suggestions">
-                                        {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
-                                            <option key={model} value={model} />
-                                        ))}
-                                    </datalist>
+                            {targetProvider === 'gemini' ? (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-sm font-medium mb-1 block">
+                                            Gemini Model
+                                        </label>
+                                        <Input
+                                            list="project-gemini-model-suggestions"
+                                            value={targetGeminiModel}
+                                            onChange={(e) =>
+                                                setProject({
+                                                    ...project,
+                                                    target_gemini_model: e.target.value,
+                                                })
+                                            }
+                                            placeholder={DEFAULT_GEMINI_TARGET_MODEL}
+                                            className="font-mono"
+                                        />
+                                        <datalist id="project-gemini-model-suggestions">
+                                            {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
+                                                <option key={model} value={model} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                        <p className="text-sm font-medium">Gemini project mode</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            AgentEval will reuse the Gemini API key configured in
+                                            Settings for the target call.
+                                        </p>
+                                    </div>
                                 </div>
+                            ) : (
                                 <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
-                                    <p className="text-sm font-medium">Gemini project mode</p>
+                                    <p className="text-sm font-medium">HTTP project mode</p>
                                     <p className="text-xs text-muted-foreground">
-                                        AgentEval will reuse the Gemini API key configured in
-                                        Settings for the target call.
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Project environments stay available for future HTTP runs,
-                                        but they are ignored while the project target is Gemini.
+                                        Missions in this project will run against one of the
+                                        environments configured in the Environments tab.
                                     </p>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
-                                <p className="text-sm font-medium">HTTP project mode</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Missions in this project will run against one of the
-                                    environments configured in the Environments tab.
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Each mission can still pick which environment should be used at
-                                    runtime.
-                                </p>
-                            </div>
-                        )}
-                    </section>
-
-                    <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
-                        <h2 className="text-xl font-semibold border-b border-border pb-2">
-                            Project Documentation (Markdown)
-                        </h2>
-                        <p className="text-xs text-muted-foreground">
-                            Paste the full documentation of the target system here. The AI will use
-                            it to generate intelligent test missions.
-                        </p>
-                        <textarea
-                            className="w-full h-96 font-mono rounded-md border border-input bg-muted px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            value={project.documentation}
-                            onChange={(e) =>
-                                setProject({ ...project, documentation: e.target.value })
-                            }
-                            placeholder="# System Documentation&#10;&#10;Paste the complete documentation of the target system here..."
-                        />
+                            )}
+                        </div>
                     </section>
                 </div>
+            )}
+
+            {/* Tab: Documentation (Markdown em tela cheia na aba dedicada) */}
+            {activeTab === 'docs' && (
+                <section className="space-y-4 border border-border p-6 rounded-xl bg-card">
+                    <div className="flex justify-between items-center border-b border-border pb-2 mb-2">
+                        <h2 className="text-xl font-semibold">
+                            Project Documentation (Markdown)
+                        </h2>
+                        <span className="text-xs text-muted-foreground bg-[#272D35] px-2.5 py-1 rounded border border-border font-mono">
+                            {project.documentation?.length || 0} chars
+                        </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Paste the full documentation of the target system here. The AI will use
+                        it to generate intelligent test missions.
+                    </p>
+                    <textarea
+                        className="w-full h-[62vh] font-mono rounded-lg border border-[#2D3036] bg-input px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] leading-relaxed"
+                        value={project.documentation}
+                        onChange={(e) =>
+                            setProject({ ...project, documentation: e.target.value })
+                        }
+                        placeholder="# System Documentation&#10;&#10;Paste the complete documentation of the target system here..."
+                    />
+                </section>
             )}
 
             {/* Tab: System Prompts */}
@@ -753,7 +779,7 @@ export const ProjectEditor: React.FC = () => {
                                 <textarea
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/60"
                                     rows={3}
-                                    placeholder="Ex: Crie cenários de pagamento, a persona deve ser alguém conversando pelo WhatsApp com mensagens diretas e abreviações. Foque em casos de erro de chave PIX."
+                                    placeholder="Ex: Create payment scenarios, the persona should be someone chatting on WhatsApp with direct messages and abbreviations. Focus on PIX key error cases."
                                     value={genPrompt}
                                     onChange={(e) => setGenPrompt(e.target.value)}
                                 />
@@ -774,6 +800,7 @@ export const ProjectEditor: React.FC = () => {
                                     />
                                 </div>
                                 <Button
+                                    variant="primary"
                                     onClick={handleGenerateMissions}
                                     disabled={isGenerating}
                                     className="gap-2 ml-auto"
@@ -799,6 +826,20 @@ export const ProjectEditor: React.FC = () => {
                     </section>
 
                     {/* Mission List */}
+                    {projectMissions.length > 0 && (
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Target className="w-5 h-5 text-primary" />
+                                Missions ({projectMissions.length})
+                            </h3>
+                            <Button
+                                onClick={handleRunAllMissions}
+                                className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
+                            >
+                                <Play className="w-4 h-4 fill-current" /> Run All Missions
+                            </Button>
+                        </div>
+                    )}
                     <div id="project-missions-list" className="space-y-3">
                         {projectMissions.map((mission) => {
                             const prompt = (project.system_prompts || []).find(
@@ -918,9 +959,9 @@ export const ProjectEditor: React.FC = () => {
                         
                         {/* Texto descritivo principal */}
                         <div className="space-y-2">
-                            <h3 className="text-xl font-bold tracking-tight text-white">Excluir Missão?</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-white">Delete Mission?</h3>
                             <p className="text-sm text-slate-400 leading-relaxed">
-                                Você está prestes a excluir permanentemente a missão:
+                                You are about to permanently delete the mission:
                             </p>
                             <div className="inline-block font-semibold text-white bg-slate-900/60 border border-white/5 px-3 py-1 rounded-lg text-sm max-w-full truncate shadow-inner">
                                 "{missionToDelete.titulo}"
@@ -929,9 +970,9 @@ export const ProjectEditor: React.FC = () => {
 
                         {/* Card de Aviso Crítico com design moderno */}
                         <div className="bg-red-500/[0.03] border-l-2 border-red-500/60 p-4 rounded-r-lg text-left space-y-1">
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Ação Irreversível</span>
+                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Irreversible Action</span>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                O cenário da missão, os parâmetros de comportamento e todo o histórico de execuções de testes associados serão **deletados para sempre**.
+                                The mission scenario, behavior parameters, and all associated test execution histories will be **permanently deleted**.
                             </p>
                         </div>
                         
@@ -941,7 +982,7 @@ export const ProjectEditor: React.FC = () => {
                                 onClick={() => setMissionToDelete(null)}
                                 className="flex-1 px-4 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white font-semibold text-xs tracking-wide uppercase transition-all duration-200 cursor-pointer active:scale-[0.98] border-b-[2px] border-b-black/20 hover:border-white/[0.12]"
                             >
-                                Cancelar
+                                Cancel
                             </button>
                             <button
                                 onClick={() => {
@@ -950,7 +991,7 @@ export const ProjectEditor: React.FC = () => {
                                 }}
                                 className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-bold text-xs tracking-wide uppercase shadow-[0_4px_12px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0"
                             >
-                                Sim, Excluir
+                                Yes, Delete
                             </button>
                         </div>
                     </div>

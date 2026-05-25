@@ -17,7 +17,7 @@ export const ProjectList: React.FC = () => {
         const id = crypto.randomUUID();
         addProject({
             id,
-            name: 'Novo Projeto',
+            name: 'New Project',
             description: '',
             documentation: '',
             target_provider: 'http',
@@ -91,9 +91,10 @@ export const ProjectList: React.FC = () => {
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                                 <Button
+                                    variant="secondary"
                                     size="sm"
                                     onClick={() => navigate(`/projects/${project.id}`)}
-                                    className="gap-1"
+                                    className="gap-1 font-semibold"
                                 >
                                     <Edit className="w-4 h-4" /> Open
                                 </Button>
@@ -133,9 +134,9 @@ export const ProjectList: React.FC = () => {
                         
                         {/* Texto descritivo principal */}
                         <div className="space-y-2">
-                            <h3 className="text-xl font-bold tracking-tight text-white">Excluir Projeto?</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-white">Delete Project?</h3>
                             <p className="text-sm text-slate-400 leading-relaxed">
-                                Você está prestes a excluir permanentemente o projeto:
+                                You are about to permanently delete the project:
                             </p>
                             <div className="inline-block font-semibold text-white bg-slate-900/60 border border-white/5 px-3 py-1 rounded-lg text-sm max-w-full truncate shadow-inner">
                                 "{projectToDelete.name}"
@@ -144,9 +145,9 @@ export const ProjectList: React.FC = () => {
 
                         {/* Card de Aviso Crítico com design moderno */}
                         <div className="bg-red-500/[0.03] border-l-2 border-red-500/60 p-4 rounded-r-lg text-left space-y-1">
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Ação Irreversível</span>
+                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Irreversible Action</span>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                Todas as missões associadas, prompts personalizados, configurações de ambiente e logs de execução serão **excluídos permanentemente** do servidor e do localStorage.
+                                All associated missions, custom prompts, environment configurations, and execution logs will be **permanently deleted** from the server and localStorage.
                             </p>
                         </div>
                         
@@ -156,7 +157,7 @@ export const ProjectList: React.FC = () => {
                                 onClick={() => setProjectToDelete(null)}
                                 className="flex-1 px-4 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white font-semibold text-xs tracking-wide uppercase transition-all duration-200 cursor-pointer active:scale-[0.98] border-b-[2px] border-b-black/20 hover:border-white/[0.12]"
                             >
-                                Cancelar
+                                Cancel
                             </button>
                             <button
                                 onClick={() => {
@@ -165,7 +166,7 @@ export const ProjectList: React.FC = () => {
                                 }}
                                 className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-bold text-xs tracking-wide uppercase shadow-[0_4px_12px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0"
                             >
-                                Sim, Excluir
+                                Yes, Delete
                             </button>
                         </div>
                     </div>
