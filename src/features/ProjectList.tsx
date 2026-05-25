@@ -3,7 +3,7 @@ import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
 import { Button } from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react';
 import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 import { Project } from '../types';
 
@@ -36,13 +36,17 @@ export const ProjectList: React.FC = () => {
     };
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-8 max-w-6xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center mb-8 select-none">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-                    <p className="text-muted-foreground mt-1">Organize missions by project and environment.</p>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-white uppercase">Projects</h1>
+                    <p className="text-xs text-muted-foreground mt-1 tracking-wider font-bold uppercase">Organize missions by project and environment.</p>
                 </div>
-                <Button id="new-project-button" onClick={handleNew} className="gap-2">
+                <Button 
+                    id="new-project-button" 
+                    onClick={handleNew} 
+                    className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-white font-bold text-xs uppercase shadow-lg shadow-[#4A72FF]/10 cursor-pointer"
+                >
                     <Plus className="w-4 h-4" /> New Project
                 </Button>
             </div>
@@ -53,60 +57,71 @@ export const ProjectList: React.FC = () => {
                     return (
                         <div
                             key={project.id}
-                            className="border border-border bg-card text-card-foreground rounded-xl shadow-sm overflow-hidden flex flex-col"
+                            className="border border-border/50 bg-[#1C2026] rounded-2xl p-6 hover:border-[#4A72FF]/40 hover:bg-[#272D35]/25 transition-all duration-300 shadow-sm flex flex-col justify-between group h-full relative overflow-hidden"
                         >
-                            <div className="p-6 flex-1">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <FolderOpen className="w-5 h-5 text-primary" />
-                                    <h3 className="text-lg font-semibold leading-none">{project.name}</h3>
+                            {/* Accent Glow Line */}
+                            <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#8B5CF6]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#4A72FF] group-hover:scale-105 transition-transform duration-200">
+                                        <FolderOpen className="w-5 h-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-base font-bold text-white leading-tight truncate group-hover:text-[#4A72FF] transition-colors duration-200">{project.name}</h3>
+                                        <span className="text-[9px] text-muted-foreground font-bold tracking-wider uppercase">Active Project</span>
+                                    </div>
                                 </div>
-                                {project.description && (
-                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                                        {project.description}
-                                    </p>
-                                )}
-                                <div className="flex gap-4 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                        <FileText className="w-3.5 h-3.5" />
-                                        {project.system_prompts.length} prompts
+                                
+                                <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed min-h-[48px]">
+                                    {project.description || 'No description provided. Define system prompts and environments to start evaluating your agents.'}
+                                </p>
+                                
+                                <div className="flex flex-wrap gap-2 pt-2 select-none">
+                                    <span className="flex items-center gap-1.5 bg-[#272D35]/50 border border-white/[0.04] text-slate-300 text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-lg">
+                                        <FileText className="w-3.5 h-3.5 text-zinc-500" />
+                                        {project.system_prompts.length} Prompts
                                     </span>
-                                    <span className="flex items-center gap-1">
-                                        <Server className="w-3.5 h-3.5" />
-                                        {project.environments.length} envs
+                                    <span className="flex items-center gap-1.5 bg-[#272D35]/50 border border-white/[0.04] text-slate-300 text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-lg">
+                                        <Server className="w-3.5 h-3.5 text-zinc-500" />
+                                        {project.environments.length} Envs
                                     </span>
-                                    <span className="flex items-center gap-1">
-                                        <Target className="w-3.5 h-3.5" />
-                                        {projectMissions.length} missions
+                                    <span className="flex items-center gap-1.5 bg-[#272D35]/50 border border-white/[0.04] text-slate-300 text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-lg">
+                                        <Target className="w-3.5 h-3.5 text-zinc-500" />
+                                        {projectMissions.length} Missions
                                     </span>
                                 </div>
                             </div>
-                            <div className="bg-muted p-4 border-t border-border flex items-center justify-between">
+                            
+                            <div className="flex items-center justify-between pt-6 border-t border-white/[0.04] mt-6 select-none">
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setProjectToDelete(project)}
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                                    title="Delete"
+                                    className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer h-9 w-9 p-0 flex items-center justify-center rounded-lg transition-all duration-200"
+                                    title="Delete Project"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                                 <Button
-                                    variant="secondary"
-                                    size="sm"
                                     onClick={() => navigate(`/projects/${project.id}`)}
-                                    className="gap-1 font-semibold"
+                                    className="gap-1.5 bg-white/[0.04] hover:bg-gradient-to-r hover:from-[#4A72FF] hover:to-[#8B5CF6] border border-white/[0.08] hover:border-transparent text-white font-bold text-xs uppercase px-4 py-2 rounded-lg cursor-pointer active:scale-[0.97] transition-all duration-200 shadow-sm"
                                 >
-                                    <Edit className="w-4 h-4" /> Open
+                                    Open Project
                                 </Button>
                             </div>
                         </div>
                     );
                 })}
                 {projects.length === 0 && (
-                    <div className="col-span-full py-12 text-center border-2 border-dashed border-border rounded-xl">
-                        <p className="text-muted-foreground mb-4">No projects yet. Create one to organize your missions.</p>
-                        <Button onClick={handleNew} variant="outline">
-                            Create your first Project
+                    <div className="col-span-full py-16 text-center border-2 border-dashed border-border/50 bg-[#1C2026]/40 rounded-2xl select-none animate-fade-in">
+                        <FolderOpen className="w-12 h-12 text-zinc-600 mx-auto mb-4 opacity-50" />
+                        <p className="text-muted-foreground mb-4 text-xs font-semibold">No projects yet. Create one to organize your missions.</p>
+                        <Button 
+                            onClick={handleNew} 
+                            className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-bold text-xs uppercase px-4 py-2 rounded-lg shadow-md cursor-pointer"
+                        >
+                            <Plus className="w-4 h-4" /> Create your first Project
                         </Button>
                     </div>
                 )}

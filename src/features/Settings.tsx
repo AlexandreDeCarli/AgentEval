@@ -19,9 +19,9 @@ export const Settings: React.FC = () => {
 
     return (
         <div className="p-8 max-w-3xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground mt-1">Configure global application settings.</p>
+            <div className="mb-8 select-none">
+                <h1 className="text-3xl font-extrabold tracking-tight text-white uppercase">Settings</h1>
+                <p className="text-xs text-muted-foreground mt-1 tracking-wider font-bold uppercase">Configure global application settings.</p>
             </div>
 
             <div className="border border-border bg-card rounded-xl shadow-sm p-6 space-y-6">

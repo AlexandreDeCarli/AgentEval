@@ -184,6 +184,10 @@ async function runTests() {
                 console.log(`   📸 Captura de tela do menu de ajuda salva: ${path3}`);
 
                 // Reiniciar o Onboarding do Projeto
+                console.log('🔄 Alternando para a aba de Interactive Tours no Menu de Ajuda...');
+                await page.click('button:has-text("Interactive Tours")');
+                await sleep(500);
+
                 console.log('🔄 Testando reinício do Onboarding do Projeto...');
                 const restartProjectBtn = page.locator('button:has-text("Start Project Tour")');
                 if (await restartProjectBtn.isVisible()) {

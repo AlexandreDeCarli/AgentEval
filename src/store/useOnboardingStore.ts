@@ -7,6 +7,8 @@ interface OnboardingState {
     setHasCompletedOnboarding: (val: boolean) => void;
     hasCompletedProjectOnboarding: boolean;
     setHasCompletedProjectOnboarding: (val: boolean) => void;
+    hasCompletedMissionOnboarding: boolean;
+    setHasCompletedMissionOnboarding: (val: boolean) => void;
     showHelpMenu: boolean;
     setShowHelpMenu: (val: boolean) => void;
     hasCompletedWelcomeModal: boolean;
@@ -17,6 +19,8 @@ interface OnboardingState {
     triggerTour: () => void;
     projectTourTriggerCount: number;
     triggerProjectTour: () => void;
+    missionTourTriggerCount: number;
+    triggerMissionTour: () => void;
     isHydrated: boolean;
     setIsHydrated: (val: boolean) => void;
     dashboardTourCurrentStep: number;
@@ -30,6 +34,8 @@ export const useOnboardingStore = create<OnboardingState>()(
             setHasCompletedOnboarding: (val) => set({ hasCompletedOnboarding: val }),
             hasCompletedProjectOnboarding: false,
             setHasCompletedProjectOnboarding: (val) => set({ hasCompletedProjectOnboarding: val }),
+            hasCompletedMissionOnboarding: false,
+            setHasCompletedMissionOnboarding: (val) => set({ hasCompletedMissionOnboarding: val }),
             showHelpMenu: false,
             setShowHelpMenu: (val) => set({ showHelpMenu: val }),
             hasCompletedWelcomeModal: false,
@@ -40,6 +46,8 @@ export const useOnboardingStore = create<OnboardingState>()(
             triggerTour: () => set((state) => ({ tourTriggerCount: state.tourTriggerCount + 1 })),
             projectTourTriggerCount: 0,
             triggerProjectTour: () => set((state) => ({ projectTourTriggerCount: state.projectTourTriggerCount + 1 })),
+            missionTourTriggerCount: 0,
+            triggerMissionTour: () => set((state) => ({ missionTourTriggerCount: state.missionTourTriggerCount + 1 })),
             isHydrated: false,
             setIsHydrated: (val) => set({ isHydrated: val }),
             dashboardTourCurrentStep: 0,
@@ -51,6 +59,7 @@ export const useOnboardingStore = create<OnboardingState>()(
             partialize: (state) => ({
                 hasCompletedOnboarding: state.hasCompletedOnboarding,
                 hasCompletedProjectOnboarding: state.hasCompletedProjectOnboarding,
+                hasCompletedMissionOnboarding: state.hasCompletedMissionOnboarding,
                 hasCompletedWelcomeModal: state.hasCompletedWelcomeModal,
                 dashboardTourCurrentStep: state.dashboardTourCurrentStep,
             }),
