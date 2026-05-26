@@ -7,12 +7,32 @@ const PORT = 5173;
 const URL = `http://localhost:${PORT}`;
 const SCREENSHOT_DIR = '/Users/alexandre/.gemini/antigravity/brain/440d8562-527c-49ae-bbc4-b40fbc05c8ae';
 
+const net = require('net');
+
+function isPortOpen(port) {
+    return new Promise((resolve) => {
+        const socket = new net.Socket();
+        const onError = () => {
+            socket.destroy();
+            resolve(false);
+        };
+        socket.setTimeout(1000);
+        socket.on('error', onError);
+        socket.on('timeout', onError);
+        socket.connect(port, 'localhost', () => {
+            socket.end();
+            resolve(true);
+        });
+    });
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function runTests() {
     console.log('🚀 Iniciando Teste de Interface E2E...');
+    let hasFailed = false;
 
     // Limpar estado do onboarding anterior para simular o primeiro acesso real
     const onboardingFile = path.join(__dirname, '../data/agent-qa-onboarding.json');
@@ -21,21 +41,18 @@ async function runTests() {
         fs.unlinkSync(onboardingFile);
     }
 
-    // 1. Iniciar Vite Dev Server
-    console.log('📦 Inicializando o servidor de desenvolvimento da Vite...');
-    const serverProcess = exec('npm run dev', { cwd: '/Users/alexandre/Documents/ProjetosAntigravity/testadordeagentes' });
-
-    // Monitorar logs do servidor
-    serverProcess.stdout.on('data', (data) => {
-        // console.log(`[Vite Server] ${data.trim()}`);
-    });
-
-    serverProcess.stderr.on('data', (data) => {
-        console.error(`[Vite Error] ${data.trim()}`);
-    });
-
-    // Aguardar o servidor inicializar
-    await sleep(4000);
+    const portActive = await isPortOpen(PORT);
+    let serverProcess;
+    if (!portActive) {
+        console.log('📦 Inicializando o servidor de desenvolvimento da Vite...');
+        serverProcess = exec('npm run dev', { cwd: '/Users/alexandre/Documents/ProjetosAntigravity/testadordeagentes' });
+        serverProcess.stderr.on('data', (data) => {
+            console.error(`[Vite Error] ${data.trim()}`);
+        });
+        await sleep(4000);
+    } else {
+        console.log('✨ Servidor Vite já está ativo na porta 5173. Pulando inicialização...');
+    }
 
     let browser;
     try {
@@ -52,8 +69,28 @@ async function runTests() {
 
         // 3. Acessar a aplicação
         console.log(`🔗 Navegando para ${URL}...`);
-        await page.goto(URL, { waitUntil: 'networkidle' });
+        await page.goto(URL, { waitUntil: 'domcontentloaded' });
         await sleep(2000); // Aguardar o delay do Onboarding (1000ms)
+
+        // Detectar e passar pelo WelcomeModal se estiver visível
+        console.log('✨ Detectando exibição do WelcomeModal obrigatório...');
+        const welcomeTitle = page.locator('text=About the Project');
+        const isWelcomeVisible = await welcomeTitle.isVisible();
+        if (isWelcomeVisible) {
+            console.log('👉 Modal de Boas-Vindas detectado. Avançando Etapa 1...');
+            await page.click('text=Get Started');
+            await sleep(800);
+            
+            console.log('👉 Aceitando Termos de Uso (Etapa 2)...');
+            await page.click('#accept-terms-checkbox');
+            await sleep(300);
+            await page.click('text=Accept and Proceed');
+            await sleep(800);
+            
+            console.log('👉 Pulando API Key na Etapa 3...');
+            await page.click('text=Skip for now / Configure later');
+            await sleep(1500);
+        }
 
         // 4. Testar o Onboarding Tour (Auto-start)
         console.log('✨ Verificando exibição automática do Onboarding Tour...');
@@ -107,7 +144,7 @@ async function runTests() {
             console.log('✅ PASS: Botão de ajuda clicado.');
 
             // Verificar se o Menu de Ajuda está visível
-            const helpMenuTitle = await page.locator('h2:has-text("Ajuda & Aprendizado")');
+            const helpMenuTitle = await page.locator('h2:has-text("Help & Learning Center")');
             if (await helpMenuTitle.isVisible()) {
                 console.log('✅ PASS: Menu de ajuda abriu perfeitamente na lateral direita.');
 
@@ -118,7 +155,7 @@ async function runTests() {
 
                 // Testar a troca de abas no Menu de Ajuda
                 console.log('🔀 Testando navegação nas abas do Menu de Ajuda...');
-                const tabs = ['Conceitos', 'Dicas & Variáveis', 'Perguntas Frequentes'];
+                const tabs = ['Concepts Directory', 'Tips & Variables', 'FAQ'];
                 for (const tabName of tabs) {
                     const tabButton = page.locator(`button:has-text("${tabName}")`);
                     if (await tabButton.isVisible()) {
@@ -130,11 +167,11 @@ async function runTests() {
 
                 // Reiniciar o Onboarding pelo Menu de Ajuda
                 console.log('🔄 Testando o reinício do Onboarding através do Menu de Ajuda...');
-                // Voltar para a aba principal para clicar no botão de reiniciar
-                await page.locator('button:has-text("Guia Rápido")').click();
+                // Ir para a aba de tours para clicar no botão de reiniciar
+                await page.locator('button:has-text("Interactive Tours")').click();
                 await sleep(300);
 
-                const restartTourBtn = page.locator('button:has-text("Iniciar Tour Guiado")');
+                const restartTourBtn = page.locator('button:has-text("Start General Tour")');
                 if (await restartTourBtn.isVisible()) {
                     await restartTourBtn.click();
                     await sleep(1000); // Aguardar o tour iniciar
@@ -148,30 +185,37 @@ async function runTests() {
                         console.log(`   📸 Captura de tela salva: ${path4}`);
                     } else {
                         console.error('❌ FAIL: Tour não reabriu ao clicar no botão de reinício.');
+                        hasFailed = true;
                     }
                 } else {
                     console.error('❌ FAIL: Botão de reiniciar tour não encontrado.');
+                    hasFailed = true;
                 }
             } else {
                 console.error('❌ FAIL: Menu de ajuda não ficou visível.');
+                hasFailed = true;
             }
         } else {
             console.error('❌ FAIL: Botão de ajuda no sidebar (#sidebar-help-button) não foi encontrado.');
+            hasFailed = true;
         }
 
         console.log('\n🌟 TODOS OS TESTES DE INTERFACE DE E2E FORAM CONCLUÍDOS COM SUCESSO! 🌟\n');
 
     } catch (e) {
         console.error('❌ Ocorreu um erro durante o teste de interface:', e);
+        hasFailed = true;
     } finally {
         // 6. Tear down
         if (browser) {
             console.log('🔌 Fechando navegador...');
             await browser.close();
         }
-        console.log('🛑 Parando o servidor Vite...');
-        serverProcess.kill('SIGINT');
-        process.exit(0);
+        if (serverProcess) {
+            console.log('🛑 Parando o servidor Vite...');
+            serverProcess.kill('SIGINT');
+        }
+        process.exit(hasFailed ? 1 : 0);
     }
 }
 
