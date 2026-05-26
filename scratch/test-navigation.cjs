@@ -43,9 +43,20 @@ async function runTest() {
     }
 
     // Now go to a project
-    console.log('📂 Clicking on project "Open"...');
-    const projectCard = page.locator('div.border-border.bg-card').first();
-    await projectCard.locator('button:has-text("Open")').click();
+    console.log('📂 Verificando projetos existentes...');
+    const openProjectBtn = page.locator('button:has-text("Open Project")').first();
+    if (await openProjectBtn.isVisible()) {
+        console.log('👉 Clicando no "Open Project" do primeiro projeto existente...');
+        await openProjectBtn.click();
+    } else {
+        console.log('➕ Nenhum projeto encontrado. Criando um novo...');
+        const newProjBtn = page.locator('#new-project-button');
+        if (await newProjBtn.isVisible()) {
+            await newProjBtn.click();
+        } else {
+            throw new Error('Não foi possível encontrar ou criar um projeto.');
+        }
+    }
     await page.waitForTimeout(2000);
 
     // Check if project onboarding opened
@@ -60,19 +71,35 @@ async function runTest() {
     }
 
     // Now, navigate the menus!
-    // Let's click on the tabs: System Prompts, Environments, Missions, Info & Docs
-    const tabs = ['System Prompts', 'Environments', 'Missions', 'Info & Docs'];
-    for (const tab of tabs) {
-        console.log(`👉 Clicking tab: ${tab}...`);
+    // We navigate the new unified main tabs first: Testing Missions, Analytics Dashboard, Workspace Settings
+    const mainTabs = ['Testing Missions', 'Analytics Dashboard', 'Workspace Settings'];
+    for (const tab of mainTabs) {
+        console.log(`👉 Clicking main tab: ${tab}...`);
         await page.click(`button:has-text("${tab}")`);
         await page.waitForTimeout(1000);
         
         if (await popover.isVisible()) {
-            console.log(`🚨 BUG! Project tour opened when clicking tab ${tab}!`);
+            console.log(`🚨 BUG! Project tour opened when clicking main tab ${tab}!`);
             const title = await page.locator('.driver-popover-title').textContent();
             console.log(`   Popover title: "${title}"`);
         } else {
-            console.log(`✅ OK: Tab ${tab} clicked without triggering tour.`);
+            console.log(`✅ OK: Main tab ${tab} clicked without triggering tour.`);
+        }
+    }
+
+    // Now, navigate the Settings sub-tabs since we are currently on the Workspace Settings tab
+    const subTabs = ['Basic Info', 'Documentation', 'System Prompts', 'Environments'];
+    for (const tab of subTabs) {
+        console.log(`👉 Clicking settings sub-tab: ${tab}...`);
+        await page.click(`button:has-text("${tab}")`);
+        await page.waitForTimeout(1000);
+        
+        if (await popover.isVisible()) {
+            console.log(`🚨 BUG! Project tour opened when clicking settings sub-tab ${tab}!`);
+            const title = await page.locator('.driver-popover-title').textContent();
+            console.log(`   Popover title: "${title}"`);
+        } else {
+            console.log(`✅ OK: Settings sub-tab ${tab} clicked without triggering tour.`);
         }
     }
 
@@ -106,7 +133,7 @@ async function runTest() {
         // If we are back on dashboard, let's go back into the project
         if (link.name === 'Projects') {
             console.log('📂 Going back into project...');
-            await projectCard.locator('button:has-text("Open")').click();
+            await page.locator('button:has-text("Open Project")').first().click();
             await page.waitForTimeout(2000);
             
             if (await popover.isVisible()) {

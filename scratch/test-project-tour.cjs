@@ -21,6 +21,7 @@ async function runTests() {
     }
 
     let browser;
+    let page;
     try {
         console.log('🌐 Iniciando navegador Chromium (Playwright)...');
         browser = await chromium.launch({ 
@@ -30,7 +31,7 @@ async function runTests() {
         const context = await browser.newContext({
             viewport: { width: 1280, height: 800 }
         });
-        const page = await context.newPage();
+        page = await context.newPage();
 
         // 1. Acessar a aplicação
         console.log(`🔗 Navegando para ${URL}...`);
@@ -70,10 +71,10 @@ async function runTests() {
 
         // 3. Acessar ou Criar um projeto
         console.log('📂 Verificando projetos existentes...');
-        const projectCard = page.locator('div.border-border.bg-card').first();
-        if (await projectCard.isVisible()) {
-            console.log('👉 Clicando no "Open" do primeiro projeto existente...');
-            await projectCard.locator('button:has-text("Open")').click();
+        const openProjectBtn = page.locator('button:has-text("Open Project")').first();
+        if (await openProjectBtn.isVisible()) {
+            console.log('👉 Clicando no "Open Project" do primeiro projeto existente...');
+            await openProjectBtn.click();
         } else {
             console.log('➕ Nenhum projeto encontrado. Criando um novo...');
             const newProjBtn = page.locator('#new-project-button');
@@ -102,37 +103,24 @@ async function runTests() {
             await page.screenshot({ path: path1 });
             console.log(`   📸 Captura do Passo 1 salva: ${path1}`);
 
-            // Avançar pelas abas: Info, Prompts, Environments, Missions Tab
             const nextBtn = page.locator('.driver-popover-next-btn');
             
-            // Avançar para Passo 2 (Info)
+            // Avançar para Passo 2 (Project Dashboard)
             console.log('👉 Avançando para o Passo 2...');
             await nextBtn.click();
             await sleep(500);
             console.log(`   📝 Passo 2: "${await page.locator('.driver-popover-title').textContent()}"`);
 
-            // Avançar para Passo 3 (Prompts)
+            // Avançar para Passo 3 (Missions Tab)
             console.log('👉 Avançando para o Passo 3...');
             await nextBtn.click();
-            await sleep(500);
+            await sleep(800); // Aguardar render/clique automático da aba
             console.log(`   📝 Passo 3: "${await page.locator('.driver-popover-title').textContent()}"`);
 
-            // Avançar para Passo 4 (Environments)
-            console.log('👉 Avançando para o Passo 4...');
-            await nextBtn.click();
-            await sleep(500);
-            console.log(`   📝 Passo 4: "${await page.locator('.driver-popover-title').textContent()}"`);
-
-            // Avançar para Passo 5 (Missions Tab)
-            console.log('👉 Avançando para o Passo 5 (Aba de Missões)...');
-            await nextBtn.click();
-            await sleep(800); // Aguardar render/clique automático da aba
-            console.log(`   📝 Passo 5: "${await page.locator('.driver-popover-title').textContent()}"`);
-
-            // Validar que a aba Missions foi ativada de forma programática
+            // Validar que a aba Missions foi ativada de forma programática pelo tour
             const activeTabButton = page.locator('#project-tab-missions');
             const classAttribute = await activeTabButton.getAttribute('class');
-            if (classAttribute.includes('border-primary') || classAttribute.includes('text-foreground') || classAttribute.includes('from-[#4A72FF]')) {
+            if (classAttribute.includes('bg-[#272D35]') || classAttribute.includes('text-white')) {
                 console.log('✅ PASS: Aba "Missions" foi ativada de forma 100% programática pelo tour!');
             } else {
                 console.error('❌ FAIL: Aba "Missions" não foi ativada pelo clique automático.');
@@ -143,17 +131,41 @@ async function runTests() {
             await page.screenshot({ path: pathTab });
             console.log(`   📸 Captura da aba de missões activa salva: ${pathTab}`);
 
-            // Avançar para Passo 6 (Gerador de Missões com IA)
-            console.log('👉 Avançando para o Passo 6 (Gerador de Missões IA)...');
+            // Avançar para Passo 4 (Settings Tab)
+            console.log('👉 Avançando para o Passo 4 (Aba de Configurações)...');
+            await nextBtn.click();
+            await sleep(800); // Aguardar clique programático da aba settings
+            console.log(`   📝 Passo 4: "${await page.locator('.driver-popover-title').textContent()}"`);
+
+            // Avançar para Passo 5 (Basic Info sub-tab)
+            console.log('👉 Avançando para o Passo 5 (Basic Info)...');
+            await nextBtn.click();
+            await sleep(500);
+            console.log(`   📝 Passo 5: "${await page.locator('.driver-popover-title').textContent()}"`);
+
+            // Avançar para Passo 6 (Project Documentation sub-tab)
+            console.log('👉 Avançando para o Passo 6 (Docs)...');
             await nextBtn.click();
             await sleep(500);
             console.log(`   📝 Passo 6: "${await page.locator('.driver-popover-title').textContent()}"`);
             
-            // Avançar para Passo 7 (Lista de Missões / Execução)
-            console.log('👉 Avançando para o Passo 7 (Lista de Missões)...');
+            // Avançar para Passo 7 (System Prompts sub-tab)
+            console.log('👉 Avançando para o Passo 7 (System Prompts)...');
             await nextBtn.click();
             await sleep(500);
             console.log(`   📝 Passo 7: "${await page.locator('.driver-popover-title').textContent()}"`);
+
+            // Avançar para Passo 8 (Environments sub-tab if not Gemini)
+            console.log('👉 Avançando para o Passo 8 (Environments)...');
+            await nextBtn.click();
+            await sleep(500);
+            console.log(`   📝 Passo 8: "${await page.locator('.driver-popover-title').textContent()}"`);
+
+            // Avançar para Passo 9 (Lista de Missões / Execução)
+            console.log('👉 Avançando para o Passo 9 (Lista de Missões)...');
+            await nextBtn.click();
+            await sleep(800); // Aguardar clique programático de volta para missions
+            console.log(`   📝 Passo 9: "${await page.locator('.driver-popover-title').textContent()}"`);
 
             // Finalizar o tour
             console.log('👉 Finalizando o Tour...');
@@ -215,6 +227,18 @@ async function runTests() {
 
     } catch (e) {
         console.error('❌ Erro durante o teste E2E do projeto:', e);
+        if (typeof page !== 'undefined' && page) {
+            try {
+                console.log('📍 FAIL URL:', page.url());
+                const bodyHtml = await page.locator('body').innerHTML();
+                console.log('📄 PAGE BODY HTML AT FAILURE:\n', bodyHtml.substring(0, 10000));
+                const failPath = path.join(SCREENSHOT_DIR, 'failure_screenshot.png');
+                await page.screenshot({ path: failPath });
+                console.log(`📸 Failure screenshot saved at: ${failPath}`);
+            } catch (err) {
+                console.error('Failed to get page debug info:', err);
+            }
+        }
     } finally {
         if (browser) {
             console.log('🔌 Fechando navegador...');

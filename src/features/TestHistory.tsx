@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTestRunStore } from '../store/useTestRunStore';
 import { useMissionStore } from '../store/useMissionStore';
+import { useProjectStore } from '../store/useProjectStore';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import { EvaluationReport } from './EvaluationReport';
@@ -12,6 +13,7 @@ import { Trash2, ExternalLink, TrendingUp, Target, Server, Clock } from 'lucide-
 export const TestHistory: React.FC = () => {
     const { runs, deleteRun } = useTestRunStore();
     const { missions } = useMissionStore();
+    const { projects } = useProjectStore();
 
     const [selectedRun, setSelectedRun] = useState<TestRun | null>(null);
     const [detailTab, setDetailTab] = useState<'score' | 'chat' | 'logs'>('score');
@@ -27,7 +29,7 @@ export const TestHistory: React.FC = () => {
 
     return (
         <div className="p-8 max-w-6xl mx-auto animate-fade-in">
-            {/* Header Section */}
+            {/* Header Section (aligned exactly with Projects & All Missions) */}
             <div className="flex justify-between items-center mb-8 select-none">
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight text-white uppercase">Test History</h1>
@@ -47,6 +49,7 @@ export const TestHistory: React.FC = () => {
                 <div className="space-y-4">
                     {runs.map((run) => {
                         const mission = missions.find(m => m.id === run.mission_id);
+                        const project = projects.find(p => p.id === mission?.project_id);
                         const missionTitle = mission?.titulo || 'Unknown Mission';
                         const missionGoal = mission?.mission_goal || 'No description available for this test scenario.';
                         const dateStr = new Date(run.created_at).toLocaleString();
@@ -55,14 +58,24 @@ export const TestHistory: React.FC = () => {
                         return (
                             <div
                                 key={run.id}
-                                className="border border-border/50 rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20 transition-all duration-300 shadow-sm gap-4"
+                                className="border border-border/50 rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20 transition-all duration-300 shadow-sm gap-4 relative overflow-hidden"
                             >
+                                {/* Accent Line */}
+                                <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#4A72FF]/20 to-transparent opacity-10" />
+
                                 <div className="flex-1 min-w-0">
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <h4 className="font-bold text-sm text-white truncate" title={missionTitle}>
+                                        <h4 className="font-bold text-sm text-white break-words" title={missionTitle}>
                                             {missionTitle}
                                         </h4>
                                         
+                                        {/* Project Tag */}
+                                        {project && (
+                                            <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700/60 font-semibold select-none">
+                                                {project.name}
+                                            </span>
+                                        )}
+
                                         {/* Evaluation overall score badge */}
                                         {run.evaluation ? (
                                             <span className="text-[10px] bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#4A72FF] px-2.5 py-0.5 rounded font-extrabold select-none">
@@ -86,21 +99,21 @@ export const TestHistory: React.FC = () => {
                                         </span>
                                     </div>
                                     
-                                    <p className="text-xs text-muted-foreground line-clamp-1 mt-1.5 leading-relaxed">
+                                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
                                         {missionGoal}
                                     </p>
 
                                     <div className="flex flex-wrap gap-2 mt-3 select-none">
-                                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold bg-[#272D35] text-slate-300 px-2.5 py-0.5 rounded border border-white/[0.04]">
-                                            <Clock className="w-3 h-3 text-[#4A72FF]" />
+                                        <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-extrabold bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04]">
+                                            <Clock className="w-3.5 h-3.5 text-[#4A72FF]" />
                                             Ran on: {dateStr}
                                         </span>
-                                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold border border-slate-700 bg-slate-800/40 text-slate-400 px-2.5 py-0.5 rounded">
-                                            <Target className="w-3 h-3 text-[#8B5CF6]" />
+                                        <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-extrabold bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04]">
+                                            <Target className="w-3.5 h-3.5 text-[#8B5CF6]" />
                                             {turnsSpent} turns
                                         </span>
                                         {run.resolved_variables && Object.keys(run.resolved_variables).length > 0 && (
-                                            <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold border border-slate-700 bg-slate-800/40 text-slate-400 px-2.5 py-0.5 rounded">
+                                            <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-extrabold bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04]">
                                                 {Object.keys(run.resolved_variables).length} vars
                                             </span>
                                         )}
@@ -110,7 +123,7 @@ export const TestHistory: React.FC = () => {
                                 <div className="flex items-center gap-2 self-end sm:self-center ml-0 sm:ml-4 select-none">
                                     <Button 
                                         onClick={() => setSelectedRun(run)}
-                                        className="gap-1 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white font-bold text-xs uppercase h-8 px-4 rounded-lg cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-md shadow-[#4A72FF]/10 flex items-center"
+                                        className="gap-1.5 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white font-bold text-xs uppercase h-9 px-4 rounded-lg cursor-pointer transition-all duration-200 shadow-md shadow-[#4A72FF]/10 flex items-center"
                                     >
                                         <ExternalLink className="w-3.5 h-3.5" /> Details
                                     </Button>
@@ -118,10 +131,10 @@ export const TestHistory: React.FC = () => {
                                         variant="ghost" 
                                         size="sm" 
                                         onClick={() => setRunToDelete(run)} 
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer h-8 w-8 p-0"
+                                        className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer h-9 w-9 p-0 flex items-center justify-center rounded-lg transition-all duration-200"
                                         title="Delete History Record"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </div>
@@ -159,7 +172,7 @@ export const TestHistory: React.FC = () => {
                             <div className="inline-block font-semibold text-white bg-slate-900/60 border border-white/5 px-3 py-1 rounded-lg text-sm max-w-full truncate shadow-inner">
                                 "{getMissionTitle(runToDelete.mission_id)}"
                             </div>
-                            <span className="text-[10px] text-slate-500 block">
+                            <span className="text-[10px] text-slate-500 block mt-1">
                                 Executed on: {new Date(runToDelete.created_at).toLocaleString()}
                             </span>
                         </div>

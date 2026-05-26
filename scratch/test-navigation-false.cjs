@@ -41,8 +41,7 @@ async function runTest() {
 
     // Now go to project editor by clicking "Open"
     console.log('📂 Clicking on project "Open"...');
-    const projectCard = page.locator('div.border-border.bg-card').first();
-    await projectCard.locator('button:has-text("Open")').click({ force: true });
+    await page.locator('button:has-text("Open Project")').first().click({ force: true });
     await page.waitForTimeout(2000);
 
     // Let's see if project tour opened

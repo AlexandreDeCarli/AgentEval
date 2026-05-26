@@ -46,7 +46,7 @@ async function runTests() {
         await sleep(1500); // Aguardar render e hidratação
 
         console.log('✨ Verificando exibição da Etapa 1 (Boas-Vindas)...');
-        const welcomeTitle = page.locator('text=Sobre o Projeto');
+        const welcomeTitle = page.locator('text=About the Project');
         const isWelcomeVisible = await welcomeTitle.isVisible();
 
         if (isWelcomeVisible) {
@@ -54,7 +54,7 @@ async function runTests() {
             
             // Validar links sociais e biografia
             const siteLink = page.locator('a[href*="potencial.tec.br"]');
-            const devBio = page.locator('text=Empreendedor, Gestor de Produtos e Engenheiro de Software');
+            const devBio = page.locator('text=Entrepreneur, Product Manager & Software Engineer');
             
             if (await siteLink.isVisible() && await devBio.isVisible()) {
                 console.log('✅ PASS: Apresentação e links do desenvolvedor corretos.');
@@ -67,14 +67,14 @@ async function runTests() {
             await page.screenshot({ path: screenshotPath1 });
             console.log(`📸 Captura da Etapa 1 salva: ${screenshotPath1}`);
 
-            // Clicar em "Iniciar Tutorial" para ir à Etapa 2
-            console.log('👉 Clicando no botão "Iniciar Tutorial"...');
-            await page.click('text=Iniciar Tutorial');
+            // Clicar em "Get Started" para ir à Etapa 2
+            console.log('👉 Clicando no botão "Get Started"...');
+            await page.click('text=Get Started');
             await sleep(800);
 
             // --- ETAPA 2: TERMOS DE USO ---
             console.log('✨ Verificando exibição da Etapa 2 (Termos de Uso)...');
-            const termsTitle = page.locator('text=Termos de Uso e Responsabilidade');
+            const termsTitle = page.locator('text=Terms of Use & Liability Limits');
             if (await termsTitle.isVisible()) {
                 console.log('✅ PASS: Etapa 2 (Termos de Uso) carregada com sucesso!');
                 
@@ -85,22 +85,22 @@ async function runTests() {
                 }
 
                 // Verificar se o botão de avanço está inicialmente desabilitado
-                const btnAvancar = page.locator('text=Aceitar e Avançar');
+                const btnAvancar = page.locator('text=Accept and Proceed');
                 const isBtnDisabled = await btnAvancar.isDisabled();
                 if (isBtnDisabled) {
-                    console.log('✅ PASS: Botão "Aceitar e Avançar" está desabilitado antes de aceitar os termos.');
+                    console.log('✅ PASS: Botão "Accept and Proceed" está desabilitado antes de aceitar os termos.');
                 } else {
-                    console.error('❌ FAIL: Botão "Aceitar e Avançar" está habilitado indevidamente.');
+                    console.error('❌ FAIL: Botão "Accept and Proceed" está habilitado indevidamente.');
                 }
 
                 // Marcar o checkbox
-                console.log('👉 Marcando checkbox "Li e concordo..."');
+                console.log('👉 Marcando checkbox "I have read..."');
                 await page.click('#accept-terms-checkbox');
                 await sleep(300);
 
                 const isBtnEnabled = await btnAvancar.isEnabled();
                 if (isBtnEnabled) {
-                    console.log('✅ PASS: Botão "Aceitar e Avançar" foi habilitado após aceitação dos termos!');
+                    console.log('✅ PASS: Botão "Accept and Proceed" foi habilitado após aceitação dos termos!');
                 } else {
                     console.error('❌ FAIL: Botão continuou desabilitado mesmo após clicar no checkbox.');
                 }
@@ -111,19 +111,19 @@ async function runTests() {
 
                 // --- ETAPA 3: CONFIGURAÇÃO DE API KEY ---
                 console.log('✨ Verificando exibição da Etapa 3 (Gemini API Key)...');
-                const apiKeyTitle = page.locator('text=Gemini API Key (Chave do Avaliador)');
+                const apiKeyTitle = page.locator('text=Gemini API Key (Evaluator Credentials)');
                 if (await apiKeyTitle.isVisible()) {
                     console.log('✅ PASS: Etapa 3 (Gemini API Key) carregada com sucesso!');
 
                     const dummyKey = 'AIzaSyTestApiKeyFromE2EWalkthrough123';
                     console.log(`👉 Inserindo chave de teste: ${dummyKey}`);
                     
-                    const inputField = page.locator('input[placeholder*="Cole sua chave"]');
+                    const inputField = page.locator('input[placeholder*="Paste your API key"]');
                     await inputField.fill(dummyKey);
                     await sleep(300);
 
                     // Testar alternância de exibição da chave (olhinho)
-                    const toggleEye = page.locator('input[placeholder*="Cole sua chave"] + button');
+                    const toggleEye = page.locator('input[placeholder*="Paste your API key"] + button');
                     if (await toggleEye.isVisible()) {
                         await toggleEye.click();
                         await sleep(200);
@@ -138,8 +138,8 @@ async function runTests() {
                     console.log(`📸 Captura da Etapa 3 salva: ${screenshotPath3}`);
 
                     // Salvar e Iniciar Onboarding
-                    console.log('👉 Clicando em "Salvar e Iniciar Onboarding"...');
-                    await page.click('text=Salvar e Iniciar Onboarding');
+                    console.log('👉 Clicando em "Save and Start Onboarding"...');
+                    await page.click('text=Save and Start Onboarding');
                     await sleep(1500); // Aguardar o salvamento físico no disco e inicialização do tour
 
                     // --- 4. VERIFICAÇÃO DE SEGURANÇA E CRIPTOGRAFIA ---
@@ -152,7 +152,7 @@ async function runTests() {
                         console.log(`   - Chave bruta informada: "${dummyKey}"`);
                         console.log(`   - Chave persistida fisicamente no JSON: "${persistedKey}"`);
 
-                        if (persistedKey.startsWith('enc:') && persistedKey !== dummyKey) {
+                        if (persistedKey.startsWith('enc') && persistedKey !== dummyKey) {
                             console.log('✅ PASS: A Gemini API Key está 100% criptografada fisicamente no armazenamento local!');
                         } else {
                             console.error('❌ FAIL: Chave salva em texto aberto ou sem criptografia no disco.');

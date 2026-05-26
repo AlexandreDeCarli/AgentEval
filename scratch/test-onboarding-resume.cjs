@@ -41,11 +41,21 @@ async function runTests() {
         await page.goto(URL, { waitUntil: 'domcontentloaded' });
         await sleep(1500); // Aguardar render e hidratação
 
-        console.log('✨ Fechando Modal de Boas-Vindas clicando em "Iniciar Tutorial"...');
-        await page.click('text=Iniciar Tutorial');
-        await sleep(1000);
+        console.log('✨ Fechando Modal de Boas-Vindas clicando em "Get Started"...');
+        await page.click('text=Get Started');
+        await sleep(800);
 
-        // O tour geral deve ter começado no passo 0 (Bem-vindo ao AgentEval!)
+        console.log('👉 Aceitando Termos de Uso (Etapa 2)...');
+        await page.click('#accept-terms-checkbox');
+        await sleep(300);
+        await page.click('text=Accept and Proceed');
+        await sleep(800);
+
+        console.log('👉 Pulando API Key na Etapa 3...');
+        await page.click('text=Skip for now / Configure later');
+        await sleep(1500); // Aguardar fechamento físico e início do tour
+
+        // O tour geral deve ter começado no passo 0 (Welcome to AgentEval!)
         const tourPopover = page.locator('.agent-eval-driver-popover');
         if (await tourPopover.isVisible()) {
             console.log('✅ PASS: Tour Geral iniciado com sucesso após fechar o modal de boas-vindas.');
@@ -53,7 +63,7 @@ async function runTests() {
             const titleStep0 = await page.locator('.driver-popover-title').textContent();
             console.log(`   📝 Passo Atual: "${titleStep0}"`);
 
-            // Avançar para o passo 1 (Projetos & Configurações)
+            // Avançar para o passo 1 (Projects & Settings)
             console.log('👉 Clicando em "Avançar" para ir ao passo 1...');
             await page.click('.driver-popover-next-btn');
             await sleep(500);
@@ -61,7 +71,7 @@ async function runTests() {
             const titleStep1 = await page.locator('.driver-popover-title').textContent();
             console.log(`   📝 Passo Atual: "${titleStep1}"`);
 
-            // Avançar para o passo 2 (Crie seu Primeiro Projeto)
+            // Avançar para o passo 2 (Create your First Project)
             console.log('👉 Clicando em "Avançar" para ir ao passo 2...');
             await page.click('.driver-popover-next-btn');
             await sleep(500);
@@ -69,7 +79,7 @@ async function runTests() {
             const titleStep2 = await page.locator('.driver-popover-title').textContent();
             console.log(`   📝 Passo Atual: "${titleStep2}"`);
             
-            if (titleStep2.includes('Crie seu Primeiro Projeto')) {
+            if (titleStep2.includes('Create your First Project')) {
                 console.log('✅ PASS: Chegamos no passo do botão "New Project"!');
                 
                 // Clicar em "Avançar" de novo (neste passo, o onNextClick customizado cria o projeto e redireciona)
@@ -99,7 +109,7 @@ async function runTests() {
                     await page.screenshot({ path: screenshotProj });
                     console.log(`📸 Captura de tela no projeto salva: ${screenshotProj}`);
                     
-                    // 2. RETORNO PARA A HOME: O tour geral deve retomar do passo 3 (Missions)
+                    // 2. RETORNO PARA A HOME: O tour geral deve retomar do passo 3 (Mission Board)
                     console.log('💡 Clicando em "Projects" no menu lateral para voltar para a Home (Dashboard)...');
                     await page.click('#sidebar-projects');
                     await sleep(1500); // Aguardar navegação, render e o delay de 1000ms do auto-start retomar
@@ -113,8 +123,8 @@ async function runTests() {
                         console.log(`✅ PASS: Tour Geral RETOMADO automaticamente ao voltar para a Home!`);
                         console.log(`   📝 Passo Retomado: "${resumedTitle}"`);
                         
-                        if (resumedTitle.includes('Quadro de Missões')) {
-                            console.log('🎉 SUCESSO ABSOLUTO: O Tour retomou exatamente do passo 3 (Quadro de Missões)!');
+                        if (resumedTitle.includes('Mission Board')) {
+                            console.log('🎉 SUCESSO ABSOLUTO: O Tour retomou exatamente do passo 3 (Mission Board)!');
                         } else {
                             console.error(`❌ FAIL: Tour retomou no passo errado: "${resumedTitle}"`);
                         }
