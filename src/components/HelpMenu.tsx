@@ -165,8 +165,6 @@ export const HelpMenu: React.FC = () => {
             sessionStorage.setItem('autoStartMissionTour', 'true');
             navigate(`/missions/${targetMissionId}`);
         }
-        
-        navigate(`/missions/${targetMissionId}`);
     };
 
     return (
