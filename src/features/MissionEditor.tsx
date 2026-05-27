@@ -178,32 +178,23 @@ export const MissionEditor: React.FC = () => {
         }
     }, [formData, isNew]);
 
-    // When system_prompt_id changes, sync target_system_prompt
-    const handleSystemPromptChange = (updated: Mission) => {
-        const prompt = availablePrompts.find((sp) => sp.id === updated.system_prompt_id);
-        setFormData({
-            ...updated,
-            target_system_prompt: prompt?.content || '',
-        });
-    };
-
-    // When environment_id changes, sync api_config
-    const handleEnvironmentChange = (updated: Mission) => {
-        const env = availableEnvs.find((e) => e.id === updated.environment_id);
-        setFormData({
-            ...updated,
-            api_config: env?.api_config || updated.api_config,
-        });
-    };
-
+    // Consolidate change handler to support simultaneous updates and prevent stale synchronization
     const handleFormChange = (updated: Mission) => {
+        let finalData = { ...updated };
+
+        // 1. If system_prompt_id changed, sync target_system_prompt
         if (updated.system_prompt_id !== formData.system_prompt_id) {
-            handleSystemPromptChange(updated);
-        } else if (updated.environment_id !== formData.environment_id) {
-            handleEnvironmentChange(updated);
-        } else {
-            setFormData(updated);
+            const prompt = availablePrompts.find((sp) => sp.id === updated.system_prompt_id);
+            finalData.target_system_prompt = prompt?.content || '';
         }
+
+        // 2. If environment_id changed, sync api_config
+        if (updated.environment_id !== formData.environment_id) {
+            const env = availableEnvs.find((e) => e.id === updated.environment_id);
+            finalData.api_config = env?.api_config || updated.api_config;
+        }
+
+        setFormData(finalData);
     };
 
     const handleSave = () => {

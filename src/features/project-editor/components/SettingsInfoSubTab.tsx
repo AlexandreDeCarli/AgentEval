@@ -18,12 +18,15 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
     onChange,
 }) => {
     const handleTargetProviderChange = (value: TargetProvider) => {
-        onChange({
+        const updatedProject = {
             ...project,
             target_provider: value,
+        };
+        onChange({
+            ...updatedProject,
             target_gemini_model:
                 value === 'gemini'
-                    ? getProjectGeminiModel(project)
+                    ? getProjectGeminiModel(updatedProject)
                     : project.target_gemini_model,
         });
     };

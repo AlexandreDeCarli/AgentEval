@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTestRunStore } from '../store/useTestRunStore';
 import { useMissionStore } from '../store/useMissionStore';
 import { useProjectStore } from '../store/useProjectStore';
@@ -25,7 +25,11 @@ export const TestHistory: React.FC = () => {
         }
     }, [selectedRun]);
 
-    const getMissionTitle = (id: string) => missions.find(m => m.id === id)?.titulo || 'Unknown Mission';
+    // Optimize nested lookups by pre-computing Maps
+    const missionMap = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
+    const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+
+    const getMissionTitle = (id: string) => missionMap.get(id)?.titulo || 'Unknown Mission';
 
     return (
         <div className="p-8 max-w-6xl mx-auto animate-fade-in">
@@ -48,8 +52,8 @@ export const TestHistory: React.FC = () => {
             ) : (
                 <div className="space-y-4">
                     {runs.map((run) => {
-                        const mission = missions.find(m => m.id === run.mission_id);
-                        const project = projects.find(p => p.id === mission?.project_id);
+                        const mission = missionMap.get(run.mission_id);
+                        const project = mission && mission.project_id ? projectMap.get(mission.project_id) : undefined;
                         const missionTitle = mission?.titulo || 'Unknown Mission';
                         const missionGoal = mission?.mission_goal || 'No description available for this test scenario.';
                         const dateStr = new Date(run.created_at).toLocaleString();
