@@ -13,6 +13,11 @@ export const HighlightedJson: React.FC<{ value: any }> = ({ value }) => {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
         
+        // Avoid running heavy regex on extremely large payloads to prevent UI freezing
+        if (jsonStr.length > 50000) {
+            return jsonStr;
+        }
+        
         const regex = /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
         
         return jsonStr.replace(regex, (match) => {
