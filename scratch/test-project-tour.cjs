@@ -4,7 +4,12 @@ const fs = require('fs');
 
 const PORT = 5173;
 const URL = `http://localhost:${PORT}`;
-const SCREENSHOT_DIR = '/Users/alexandre/.gemini/antigravity/brain/440d8562-527c-49ae-bbc4-b40fbc05c8ae';
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || 
+                       (fs.existsSync('/Users/alexandre') ? '/Users/alexandre/.gemini/antigravity/brain/440d8562-527c-49ae-bbc4-b40fbc05c8ae' : path.join(__dirname, '../output/screenshots'));
+
+if (!fs.existsSync(SCREENSHOT_DIR)) {
+    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
