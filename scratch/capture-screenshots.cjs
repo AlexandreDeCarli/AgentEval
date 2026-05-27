@@ -84,12 +84,12 @@ const MOCK_MISSIONS = [
         "environment_id": "env-production",
         "max_turns": 5,
         "variables": {
-            "tester_id": "tester_9821"
+            "tester_id": ["tester_9821"]
         },
         "evaluation_criteria": [
-            "Assistant successfully recognizes Order ID ZE-9821",
-            "Assistant provides a realistic delivery estimation date",
-            "Polite and professional support tone maintained"
+            { "id": "crit-1", "name": "Order Recognition", "description": "Assistant successfully recognizes Order ID ZE-9821" },
+            { "id": "crit-2", "name": "ETA Verification", "description": "Assistant provides a realistic delivery estimation date" },
+            { "id": "crit-3", "name": "Tone and Style", "description": "Polite and professional support tone maintained" }
         ]
     },
     {
@@ -102,11 +102,11 @@ const MOCK_MISSIONS = [
         "environment_id": "env-production",
         "max_turns": 4,
         "variables": {
-            "tester_id": "tester_angry_99"
+            "tester_id": ["tester_angry_99"]
         },
         "evaluation_criteria": [
-            "Assistant triggers supervisor handoff within 2 turns",
-            "Handoff message is clear and includes transfer ID"
+            { "id": "crit-esc-1", "name": "Handoff Timing", "description": "Assistant triggers supervisor handoff within 2 turns" },
+            { "id": "crit-esc-2", "name": "Clear Handoff Information", "description": "Handoff message is clear and includes transfer ID" }
         ]
     }
 ];
@@ -168,33 +168,30 @@ const MOCK_TEST_RUNS = [
         ],
         "evaluation": {
             "overall_score": 96,
-            "criteria_evaluations": [
+            "summary": "The chatbot executed the mission flawlessly. It correctly identified the order tracking ID ZE-9821 and provided a detailed delivery estimation date within a single turn, maintaining an excellent supportive tone.",
+            "criteria_scores": [
                 {
-                    "criterion": "Assistant successfully recognizes Order ID ZE-9821",
-                    "passed": true,
+                    "criterion_id": "crit-1",
                     "score": 10,
-                    "reasoning": "The assistant immediately matched the exact order ID and retrieved the corresponding record correctly."
+                    "justification": "The assistant immediately matched the exact order ID and retrieved the corresponding record correctly."
                 },
                 {
-                    "criterion": "Assistant provides a realistic delivery estimation date",
-                    "passed": true,
+                    "criterion_id": "crit-2",
                     "score": 10,
-                    "reasoning": "The assistant specified that the watch is scheduled for delivery on Friday, May 29th, giving a precise and realistic estimate."
+                    "justification": "The assistant specified that the watch is scheduled for delivery on Friday, May 29th, giving a precise and realistic estimate."
                 },
                 {
-                    "criterion": "Polite and professional support tone maintained",
-                    "passed": true,
+                    "criterion_id": "crit-3",
                     "score": 9,
-                    "reasoning": "Highly polite, welcoming, and helpful dialogue throughout the conversation."
+                    "justification": "Highly polite, welcoming, and helpful dialogue throughout the conversation."
                 }
             ],
-            "summary": "The chatbot executed the mission flawlessly. It correctly identified the order tracking ID ZE-9821 and provided a detailed delivery estimation date within a single turn, maintaining an excellent supportive tone.",
-            "suggestions": [
+            "prompt_improvements": [
                 {
-                    "category": "suggestion",
-                    "severity": "suggestion",
-                    "description": "Consider adding the estimated arrival time range (e.g. 9 AM - 5 PM) to give the customer even more clarity on the delivery day.",
-                    "impact": "Improves overall customer satisfaction during deliveries."
+                    "target_text": "You handle order tracking and cancellations for StyleMart. Ask for the order number if not provided.",
+                    "suggested_text": "You handle order tracking and cancellations for StyleMart. Ask for the order number if not provided. When presenting the arrival date, suggest a standard daytime delivery window (e.g., between 9 AM and 5 PM) for better clarity.",
+                    "justification": "Providing an estimated delivery time frame alongside the date increases user satisfaction and improves planning.",
+                    "severity": "sugestão"
                 }
             ],
             "metrics": {
