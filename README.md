@@ -126,8 +126,8 @@ Watch the conversation happen live. Polling indicators, turn-by-turn messages, a
 ### Persistent File Storage & Hybrid Fallback
 All data is stored in JSON files under `./data/` via our custom local server persistence layer. If running in a web sandbox (like our Render Live Demo), it seamlessly falls back to browser-synchronized `localStorage` to keep your workspace persistent across refreshes.
 
-### 🔒 Secure Multi-Byte Key Encryption
-To provide the highest level of privacy and corporate safety, your **Gemini API Key** is encrypted physically on disk (inside your browser's persistent files or settings JSON) using a multi-byte XOR streaming cipher with a dynamically generated random salt. This guarantees that your key is never stored in plain text and cannot be read directly from persistent storage files. Decryption occurs transparently only in memory during runtime.
+### 🔒 Secure AES-GCM Key Encryption
+To provide the highest level of privacy and corporate safety, your **Gemini API Key** is encrypted physically on disk (inside your browser's persistent files or settings JSON) using standard AES-GCM (256-bit) local storage encryption via the native Web Crypto API. This guarantees that your key is never stored in plain text and cannot be read directly from persistent storage files. Decryption occurs transparently only in memory during runtime.
 
 ### 🛡️ Mandatory Consent & Terms of Use
 Compliance-first design requires every user to review and explicitly accept our Terms of Use (detailing that the application is free, open-source, operates 100% locally, and does not transmit any user prompts or keys to external servers) upon their first launch. The initial screen completely hides close buttons, making it a robust, secure gatekeeper.
@@ -218,6 +218,27 @@ Click **New Project**, add your documentation and system prompts, choose the pro
 - For **Gemini** projects: choose the Gemini model to test directly
 
 Then click **Generate with AI** to create your first missions.
+
+---
+
+## 🧪 E2E System Testing
+
+AgentEval features a complete suite of automated End-to-End (E2E) integration tests using **Playwright** to validate all key user flows (onboarding setup, security encryption, project configurations, guided tours, and tab navigations).
+
+### Running All System Tests
+We provide a unified test orchestrator that sequentially runs the E2E test scripts, manages the Vite development server lifecycle, and outputs a complete CLI dashboard:
+```bash
+node scratch/test-all.cjs
+```
+*Note: The orchestrator dynamically probes port `5173`. It will automatically reuse any active dev server session, or spin up and tear down a new instance dynamically if the port is closed.*
+
+### Running Tests Individually
+For local debugging during developmental modifications, you can also execute any test suite individually:
+- **Welcome Modal & Encryption**: `node scratch/test-welcome-modal.cjs`
+- **Tour Pause & Onboarding Resume**: `node scratch/test-onboarding-resume.cjs`
+- **Interactive Project Tour**: `node scratch/test-project-tour.cjs`
+- **Tab & Sidebar Navigation**: `node scratch/test-navigation.cjs`
+- **UI Element States**: `node scratch/test-ui.cjs`
 
 ---
 
