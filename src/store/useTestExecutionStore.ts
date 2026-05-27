@@ -211,7 +211,23 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
 
                 // ==== DELAY: Simular tempo de digitação (40ms por caracter) ====
                 const typingDelay = Math.min(testerResult.message.length * 40, 4000); // Teto de 4s para evitar loops travados
-                await new Promise((resolve) => setTimeout(resolve, typingDelay));
+                await new Promise((resolve, reject) => {
+                    const onAbort = () => {
+                        clearTimeout(timer);
+                        reject(new Error('Test aborted by user'));
+                    };
+                    const timer = setTimeout(() => {
+                        signal.removeEventListener('abort', onAbort);
+                        resolve(null);
+                    }, typingDelay);
+                    
+                    if (signal.aborted) {
+                        clearTimeout(timer);
+                        reject(new Error('Test aborted by user'));
+                        return;
+                    }
+                    signal.addEventListener('abort', onAbort);
+                });
 
                 if (signal.aborted) throw new Error('Test aborted by user');
 
