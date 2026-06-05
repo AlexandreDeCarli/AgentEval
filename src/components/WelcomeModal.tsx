@@ -156,23 +156,23 @@ export const WelcomeModal: React.FC = () => {
                             <div className="space-y-4 pr-0 md:pr-4 border-r-0 md:border-r border-white/[0.06]">
                                 <div className="flex items-center gap-2 text-[#4A72FF]">
                                     <Sparkles className="w-5 h-5 animate-pulse" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">About the Project</span>
+                                    <span className="text-label">About the Project</span>
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                                    <h2 className="text-title text-white flex items-center gap-2">
                                         AgentEval
                                     </h2>
-                                    <p className="text-xs text-[#4A72FF]/90 font-semibold tracking-wide">
+                                    <p className="text-label text-[#4A72FF]/90">
                                         Premium AI Agent Evaluation Platform
                                     </p>
                                 </div>
 
-                                <p className="text-xs text-slate-300 leading-relaxed">
+                                <p className="text-body text-muted-foreground">
                                     <strong>AgentEval</strong> is a premium ecosystem designed to structure, execute, and analyze automated Quality Assurance (QA) tests on LLM-based conversational agents.
                                 </p>
-
-                                <div className="space-y-2 text-xs text-slate-400 leading-relaxed">
+ 
+                                <div className="space-y-2 text-body text-slate-400">
                                     <div className="flex gap-2.5 items-start">
                                         <span className="text-[#4A72FF] mt-0.5">✔</span>
                                         <p><strong>Intelligent Evaluator:</strong> Gemini acts as a simulated user, dynamically testing your agent and scoring complex conversational success criteria.</p>
@@ -193,31 +193,31 @@ export const WelcomeModal: React.FC = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 text-indigo-400">
                                         <User className="w-5 h-5" />
-                                        <span className="text-xs font-bold uppercase tracking-widest">Developer</span>
+                                        <span className="text-label">Developer</span>
                                     </div>
-
+ 
                                     <div className="space-y-2">
-                                        <h3 className="text-xl font-bold text-white">Alexandre De Carli</h3>
-                                        <p className="text-xs text-indigo-300 font-semibold tracking-wide">
+                                        <h3 className="text-title text-white">Alexandre De Carli</h3>
+                                        <p className="text-label text-indigo-300">
                                             Entrepreneur, Product Manager & Software Engineer
                                         </p>
                                     </div>
-
-                                    <p className="text-xs text-slate-300 leading-relaxed">
+ 
+                                    <p className="text-body text-muted-foreground">
                                         I am deeply passionate about designing fluid user interfaces, integrating intelligent AI workflows, and developing state-of-the-art web architectures that wow users.
                                     </p>
                                 </div>
 
                                 {/* Social Links & Support */}
-                                <div className="space-y-2 pt-2">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Connect with me</span>
+                                <div className="space-y-2">
+                                    <span className="text-label text-slate-400 block mb-2">Connect with me</span>
                                     
                                     <div className="flex flex-col gap-2">
                                         <a 
                                             href="https://potencial.tec.br" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/40 text-slate-300 hover:text-white text-xs font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <Globe className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
@@ -225,12 +225,12 @@ export const WelcomeModal: React.FC = () => {
                                             </div>
                                             <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
-
+ 
                                         <a 
                                             href="https://www.linkedin.com/in/alexandredecarli/" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#0077b5]/10 hover:border-[#0077b5]/40 text-slate-300 hover:text-white text-xs font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#0077b5]/10 hover:border-[#0077b5]/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <Linkedin className="w-4 h-4 text-[#0077b5] group-hover:scale-110 transition-transform" />
@@ -238,12 +238,12 @@ export const WelcomeModal: React.FC = () => {
                                             </div>
                                             <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
-
+ 
                                         <a 
                                             href="https://github.com/AlexandreDeCarli" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] hover:border-slate-500/40 text-slate-300 hover:text-white text-xs font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] hover:border-slate-500/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <Github className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
@@ -251,12 +251,12 @@ export const WelcomeModal: React.FC = () => {
                                             </div>
                                             <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
-
+ 
                                         <a 
                                             href="https://www.buymeacoffee.com/AlexandreDeCarli" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#ffdd00]/10 hover:border-[#ffdd00]/40 text-slate-300 hover:text-[#ffdd00] text-xs font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#ffdd00]/10 hover:border-[#ffdd00]/40 text-muted-foreground hover:text-[#ffdd00] text-body font-semibold transition-all duration-200 group"
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <Coffee className="w-4 h-4 text-[#ffdd00] group-hover:scale-110 transition-transform" />
@@ -266,7 +266,6 @@ export const WelcomeModal: React.FC = () => {
                                         </a>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
 
@@ -274,7 +273,7 @@ export const WelcomeModal: React.FC = () => {
                         <div className="pt-4 flex flex-col items-center">
                             <button
                                 onClick={() => setStep('terms')}
-                                className="w-full max-w-sm px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#4A72FF] to-violet-500 hover:from-[#4A72FF]/95 hover:to-violet-400 text-white font-bold text-sm tracking-wide uppercase shadow-[0_4px_20px_rgba(74,114,255,0.25)] hover:shadow-[0_4px_25px_rgba(74,114,255,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0 flex items-center justify-center gap-2 group"
+                                className="w-full max-w-sm px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#4A72FF] to-violet-500 hover:from-[#4A72FF]/95 hover:to-violet-400 text-white font-bold text-body tracking-wide uppercase shadow-[0_4px_20px_rgba(74,114,255,0.25)] hover:shadow-[0_4px_25px_rgba(74,114,255,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0 flex items-center justify-center gap-2 group"
                             >
                                 <span>Get Started</span>
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -290,31 +289,31 @@ export const WelcomeModal: React.FC = () => {
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#4A72FF]/10 border border-[#4A72FF]/20 shadow-[0_0_15px_rgba(74,114,255,0.1)]">
                                 <Shield className="w-6 h-6 text-[#4A72FF]" />
                             </div>
-                            <h2 className="text-2xl font-bold tracking-tight text-white mt-2">
+                            <h2 className="text-title text-white mt-2">
                                 Terms of Use & Liability Limits
                             </h2>
-                            <p className="text-xs text-[#4A72FF]/90 font-semibold tracking-wide uppercase">
+                            <p className="text-label text-[#4A72FF]/90 uppercase">
                                 Please read and accept the conditions before proceeding
                             </p>
                         </div>
 
                         {/* Scrollable Terms Textbox */}
-                        <div className="overflow-y-auto max-h-56 pr-2 border border-white/[0.08] bg-white/[0.01] p-4 rounded-xl text-xs text-slate-300 leading-relaxed space-y-4 text-left custom-scrollbar">
+                        <div className="overflow-y-auto max-h-56 pr-2 border border-white/[0.08] bg-white/[0.01] p-4 rounded-xl text-body text-muted-foreground space-y-4 text-left custom-scrollbar max-w-[75ch]">
                             <p>
                                 Welcome to <strong>AgentEval</strong>! Before getting started, you must read and accept the terms of use, privacy policy, and liability limits established for this tool.
                             </p>
                             
-                            <h4 className="font-bold text-white text-[11px] uppercase tracking-wider">1. Free and Open Source Tool</h4>
+                            <h4 className="text-label text-white">1. Free and Open Source Tool</h4>
                             <p>
                                 AgentEval is provided completely <strong>free of charge and open source</strong>, designed to assist developers and QA analysts in the automated testing of AI conversational agents.
                             </p>
                             
-                            <h4 className="font-bold text-white text-[11px] uppercase tracking-wider">2. Zero Data Collection Policy</h4>
+                            <h4 className="text-label text-white">2. Zero Data Collection Policy</h4>
                             <p>
                                 🔒 <strong>Complete Local Privacy:</strong> We value your privacy. AgentEval runs **100% locally and autonomously** in your web browser. **No data**, API credentials, project setups, custom system prompts, or execution histories are ever transmitted or saved on external servers.
                             </p>
                             
-                            <h4 className="font-bold text-white text-[11px] uppercase tracking-wider">3. Limitation of Liability</h4>
+                            <h4 className="text-label text-white">3. Limitation of Liability</h4>
                             <p>
                                 The software is provided "as is" at your own risk. The developer of AgentEval **assumes no legal or financial liability** in cases of:
                             </p>
@@ -324,7 +323,7 @@ export const WelcomeModal: React.FC = () => {
                                 <li><strong>Improper Decisions:</strong> Code deployments made in production environments based on autonomous scores generated by the AI agent evaluator.</li>
                             </ul>
                             
-                            <h4 className="font-bold text-white text-[11px] uppercase tracking-wider">4. Independent Technologies</h4>
+                            <h4 className="text-label text-white">4. Independent Technologies</h4>
                             <p>
                                 AgentEval integrates third-party tools (such as Google Gemini API, Tailwind CSS, React, etc.). Each of these services operates under its own independent terms. AgentEval is **not associated with** and shares no contractual liability with these brands.
                             </p>
@@ -339,7 +338,7 @@ export const WelcomeModal: React.FC = () => {
                                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                                 className="w-4.5 h-4.5 rounded border-white/20 bg-[#111827] text-[#4A72FF] focus:ring-[#4A72FF]/40 cursor-pointer"
                             />
-                            <label htmlFor="accept-terms-checkbox" className="text-xs text-slate-300 cursor-pointer select-none">
+                            <label htmlFor="accept-terms-checkbox" className="text-body text-muted-foreground cursor-pointer select-none">
                                 I have read and agree to the Terms of Use and Privacy Policy of AgentEval.
                             </label>
                         </div>
@@ -349,7 +348,7 @@ export const WelcomeModal: React.FC = () => {
                             <button
                                 disabled={!acceptedTerms}
                                 onClick={() => setStep('apiKey')}
-                                className={`w-full max-w-sm px-6 py-3.5 rounded-xl text-white font-bold text-sm tracking-wide uppercase flex items-center justify-center gap-2 group transition-all duration-200 cursor-pointer ${
+                                className={`w-full max-w-sm px-6 py-3.5 rounded-xl text-white font-bold text-body tracking-wide uppercase flex items-center justify-center gap-2 group transition-all duration-200 cursor-pointer ${
                                     acceptedTerms 
                                     ? 'bg-gradient-to-r from-[#4A72FF] to-violet-500 hover:from-[#4A72FF]/95 hover:to-violet-400 shadow-[0_4px_20px_rgba(74,114,255,0.25)] hover:shadow-[0_4px_25px_rgba(74,114,255,0.35)] hover:-translate-y-[1px] active:scale-[0.98]'
                                     : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed opacity-50'
@@ -369,20 +368,20 @@ export const WelcomeModal: React.FC = () => {
                             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                                 <Key className="w-6 h-6 text-amber-400" />
                             </div>
-                            <h2 className="text-2xl font-bold tracking-tight text-white mt-2">
+                            <h2 className="text-title text-white mt-2">
                                 Gemini API Key (Evaluator Credentials)
                             </h2>
-                            <p className="text-xs text-amber-400/80 font-semibold tracking-wide uppercase">
+                            <p className="text-label text-amber-400/80 uppercase">
                                 Required to execute intelligent conversational QA simulations
                             </p>
                         </div>
 
                         {/* Local Privacy Warning */}
-                        <div className="border border-amber-500/10 bg-amber-500/[0.03] p-4 rounded-xl text-left text-xs leading-relaxed text-slate-300 space-y-2 max-w-lg mx-auto">
+                        <div className="border border-amber-500/20 bg-muted p-4 rounded-xl text-left text-body text-muted-foreground space-y-2 max-w-[75ch] mx-auto">
                             <p>
                                 AgentEval uses **Gemini 2.5 Pro** to intelligently simulate user interactions, chatting with your agent and scoring conversational success metrics.
                             </p>
-                            <p className="text-[11px] text-amber-400/90 font-medium">
+                            <p className="text-body text-amber-400/90 font-medium">
                                 🔒 <strong>Guaranteed Local Security:</strong> Thanks to our local Web Crypto AES-GCM encryption layer, your API key is encrypted and stored locally in your browser's IndexedDB. It is **never** sent to any external servers.
                             </p>
                         </div>
@@ -390,14 +389,14 @@ export const WelcomeModal: React.FC = () => {
                         {/* API Key Input Field */}
                         <div className="space-y-2 text-left max-w-lg mx-auto">
                             <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <label className="text-label text-slate-400">
                                     Gemini API Key
                                 </label>
                                 <a 
                                     href="https://aistudio.google.com/" 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="text-[10px] font-bold text-[#4A72FF] hover:text-[#4A72FF]/80 flex items-center gap-1 transition-colors group"
+                                    className="text-label text-[#4A72FF] hover:text-[#4A72FF]/80 flex items-center gap-1 transition-colors group"
                                 >
                                     <span>Get a free API key at AI Studio</span>
                                     <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
@@ -425,7 +424,7 @@ export const WelcomeModal: React.FC = () => {
                         <div className="pt-2 flex flex-col items-center gap-3">
                             <button
                                 onClick={handleSaveAndFinish}
-                                className="w-full max-w-sm px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#4A72FF] to-violet-500 hover:from-[#4A72FF]/95 hover:to-violet-400 text-white font-bold text-sm tracking-wide uppercase shadow-[0_4px_20px_rgba(74,114,255,0.25)] hover:shadow-[0_4px_25px_rgba(74,114,255,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0 flex items-center justify-center gap-2 group"
+                                className="w-full max-w-sm px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#4A72FF] to-violet-500 hover:from-[#4A72FF]/95 hover:to-violet-400 text-white font-bold text-body tracking-wide uppercase shadow-[0_4px_20px_rgba(74,114,255,0.25)] hover:shadow-[0_4px_25px_rgba(74,114,255,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0 flex items-center justify-center gap-2 group"
                             >
                                 <span>Save and Start Onboarding</span>
                                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -433,7 +432,7 @@ export const WelcomeModal: React.FC = () => {
                             
                             <button
                                 onClick={handleSkip}
-                                className="text-xs text-slate-500 hover:text-slate-300 font-medium transition-colors cursor-pointer"
+                                className="text-label text-slate-500 hover:text-slate-300 font-medium transition-colors cursor-pointer"
                             >
                                 Skip for now / Configure later
                             </button>

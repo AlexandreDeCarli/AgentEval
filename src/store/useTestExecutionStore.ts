@@ -15,6 +15,7 @@ import {
 } from '../utils/missionTarget';
 import { useTestRunStore } from './useTestRunStore';
 import { useProjectStore } from './useProjectStore';
+import { useToastStore } from './useToastStore';
 
 export interface ExecutionState {
     missionId: string;
@@ -339,6 +340,10 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
 
             useTestRunStore.getState().setEvaluation(runId, evalResult);
             useTestRunStore.getState().updateRunStatus(runId, missionCompleted ? 'success' : 'failed');
+            useToastStore.getState().addToast(
+                `Test Run for "${mission.titulo}" completed with score: ${evalResult.overall_score}/100`,
+                'success'
+            );
 
             set((state) => {
                 const exec = state.executions[mission.id];
@@ -372,6 +377,10 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             });
             if (errorMessage !== 'Test aborted by user') {
                 useTestRunStore.getState().updateRunStatus(runId, 'failed', errorMessage);
+                useToastStore.getState().addToast(
+                    `Test Run for "${mission.titulo}" failed: ${errorMessage}`,
+                    'error'
+                );
             }
         }
     },

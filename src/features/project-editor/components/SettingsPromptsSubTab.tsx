@@ -47,10 +47,10 @@ export const SettingsPromptsSubTab: React.FC<SettingsPromptsSubTabProps> = ({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center select-none">
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-body text-muted-foreground">
                     Add the system prompts used by the target's AI agents.
                 </p>
-                <Button variant="outline" size="sm" onClick={handleAddPrompt} className="gap-2 text-xs font-bold uppercase">
+                <Button variant="outline" size="sm" onClick={handleAddPrompt} className="gap-2">
                     <Plus className="w-4 h-4" /> Add Prompt
                 </Button>
             </div>
@@ -68,8 +68,8 @@ export const SettingsPromptsSubTab: React.FC<SettingsPromptsSubTabProps> = ({
                     >
                         <div className="flex items-center gap-3">
                             <FileText className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-bold text-sm text-white">{sp.name || 'Untitled'}</span>
-                            <span className="text-[10px] text-muted-foreground font-semibold bg-[#272D35] px-2 py-0.5 rounded border border-border/40 font-mono">
+                            <span className="text-body font-bold text-white">{sp.name || 'Untitled'}</span>
+                            <span className="text-label text-muted-foreground bg-[#272D35] px-2 py-0.5 rounded border border-border/40 font-mono tabular-nums">
                                 {sp.content.length} chars
                             </span>
                         </div>
@@ -102,7 +102,7 @@ export const SettingsPromptsSubTab: React.FC<SettingsPromptsSubTabProps> = ({
                                 }
                             />
                             <textarea
-                                className="w-full h-64 font-mono rounded-md border border-input bg-[#13161B] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring leading-relaxed"
+                                className="w-full h-64 font-mono rounded-md border border-input bg-[#13161B] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 placeholder="Paste the system prompt content here..."
                                 value={sp.content}
                                 onChange={(e) =>
@@ -116,10 +116,10 @@ export const SettingsPromptsSubTab: React.FC<SettingsPromptsSubTabProps> = ({
 
             {project.system_prompts.length === 0 && (
                 <div className="py-12 text-center border-2 border-dashed border-border/50 rounded-xl select-none">
-                    <p className="text-muted-foreground mb-4 text-xs font-semibold">
+                    <p className="text-body text-muted-foreground mb-4">
                         No system prompts added yet.
                     </p>
-                    <Button onClick={handleAddPrompt} variant="outline" className="gap-2 font-bold text-xs uppercase">
+                    <Button onClick={handleAddPrompt} variant="outline" className="gap-2">
                         <Plus className="w-4 h-4" /> Add first prompt
                     </Button>
                 </div>

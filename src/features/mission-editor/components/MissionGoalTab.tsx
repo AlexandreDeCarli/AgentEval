@@ -14,11 +14,11 @@ export const MissionGoalTab: React.FC<MissionGoalTabProps> = ({
 }) => {
     return (
         <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card shadow-sm">
-            <h2 className="text-base font-bold text-white uppercase tracking-wider border-b border-border/40 pb-2">
+            <h2 className="text-title text-white border-b border-border/40 pb-2 mb-4 block">
                 Mission Goal Config
             </h2>
             <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="text-label text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <span>Mission Title</span>
                     <span title="Give your mission a short and descriptive title (e.g., 'Discount Negotiation' or 'Secret Leak Test').">
                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -30,7 +30,7 @@ export const MissionGoalTab: React.FC<MissionGoalTabProps> = ({
                 />
             </div>
             <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="text-label text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <span>Mission Goal</span>
                     <span className="text-muted-foreground font-normal">
                         (Use {'{{var}}'} for variables)
@@ -40,26 +40,26 @@ export const MissionGoalTab: React.FC<MissionGoalTabProps> = ({
                     </span>
                 </label>
                 <textarea
-                    className="w-full h-24 rounded-md border border-input bg-[#13161B] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring leading-relaxed"
+                    className="w-full h-24 rounded-md border border-input bg-[#13161B] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.mission_goal}
                     onChange={(e) => onChange({ ...formData, mission_goal: e.target.value })}
                 />
             </div>
             <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="text-label text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <span>Tester Persona (Instructions for Test Agent)</span>
                     <span title="Define the role, tone, personality, or behavioral guidelines for the Intelligent Evaluator (e.g., 'Act as an angry, impatient customer').">
                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                     </span>
                 </label>
                 <textarea
-                    className="w-full h-28 rounded-md border border-input bg-[#13161B] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring leading-relaxed"
+                    className="w-full h-28 rounded-md border border-input bg-[#13161B] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={formData.tester_persona}
                     onChange={(e) => onChange({ ...formData, tester_persona: e.target.value })}
                 />
             </div>
             <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <label className="text-label text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <span>Max Turns (Conversation length limit)</span>
                     <span title="The maximum number of message rounds allowed before ending the conversation and making the evaluation.">
                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />

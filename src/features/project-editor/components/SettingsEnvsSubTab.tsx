@@ -72,14 +72,14 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center select-none">
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-body text-muted-foreground">
                     Configure API endpoints for each environment (dev, staging, prod).
                 </p>
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={handleAddEnvironment}
-                    className="gap-2 text-xs font-bold uppercase"
+                    className="gap-2"
                 >
                     <Plus className="w-4 h-4" /> Add Environment
                 </Button>
@@ -98,11 +98,11 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                     >
                         <div className="flex items-center gap-3">
                             <Server className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-bold text-sm text-white">
+                            <span className="text-body font-bold text-white">
                                 {env.name || 'Untitled'}
                             </span>
                             {env.api_config.post_url && (
-                                <span className="text-[10px] text-muted-foreground truncate max-w-xs font-mono">
+                                <span className="text-label text-muted-foreground truncate max-w-xs font-mono">
                                     {env.api_config.post_url}
                                 </span>
                             )}
@@ -137,7 +137,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                             />
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                    <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                         <span>POST URL</span>
                                         <span title="The HTTP POST endpoint of your agent where AgentEval sends the conversation history payload.">
                                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -156,7 +156,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                    <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                         <span>GET URL</span>
                                         <span title="Optional. The HTTP GET endpoint of your agent used if you require polling for asynchronous message replies.">
                                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -176,7 +176,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                     <span>Authorization Header</span>
                                     <span title="Optional. The HTTP Authorization header value sent with requests (e.g. 'Bearer your-api-key').">
                                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -195,14 +195,14 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                     <span>Payload Template (JSON)</span>
                                     <span title="The JSON body template sent in the POST request. Use {{history}} to inject the chat list array.">
                                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                                     </span>
                                 </label>
                                 <textarea
-                                    className="w-full h-24 font-mono bg-[#13161B] rounded-md border border-input px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    className="w-full h-24 font-mono bg-[#13161B] rounded-md border border-input px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     value={env.api_config.payload_template}
                                     onChange={(e) =>
                                         handleUpdateEnvApiConfig(
@@ -214,7 +214,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                     <span>Response Data Path</span>
                                     <span title="JSON path expression to extract the response text from your agent's API response (e.g., 'choices[0].message.content').">
                                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -234,7 +234,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                    <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                         <span>Polling Interval (ms)</span>
                                         <span title="The duration to wait between HTTP GET polling requests when checking for asynchronous replies.">
                                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -253,7 +253,7 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                                    <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
                                         <span>Max Timeout (s)</span>
                                         <span title="Maximum seconds the system will wait for your agent's API to respond before marking the turn as failed.">
                                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -279,10 +279,10 @@ export const SettingsEnvsSubTab: React.FC<SettingsEnvsSubTabProps> = ({
 
             {project.environments.length === 0 && (
                 <div className="py-12 text-center border-2 border-dashed border-border/50 rounded-xl select-none">
-                    <p className="text-muted-foreground mb-4 text-xs font-semibold">
+                    <p className="text-body text-muted-foreground mb-4">
                         No environments configured yet.
                     </p>
-                    <Button onClick={handleAddEnvironment} variant="outline" className="gap-2 font-bold text-xs uppercase">
+                    <Button onClick={handleAddEnvironment} variant="outline" className="gap-2">
                         <Plus className="w-4 h-4" /> Add first environment
                     </Button>
                 </div>

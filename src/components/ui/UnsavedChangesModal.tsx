@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Save, X, LogOut } from 'lucide-react';
 import { Button } from './Button';
 
@@ -15,6 +15,17 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
     onDiscard,
     onCancel,
 }) => {
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onCancel();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onCancel]);
+
     if (!isOpen) return null;
 
     return (
@@ -22,8 +33,8 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
             <div className="fixed inset-0" onClick={onCancel} />
             <div className="relative z-50 w-full max-w-md border border-border bg-background rounded-xl shadow-lg overflow-hidden">
                 <div className="p-6 space-y-4">
-                    <h2 className="text-lg font-bold">Unsaved Changes</h2>
-                    <p className="text-sm text-muted-foreground">
+                    <h2 className="text-title text-white">Unsaved Changes</h2>
+                    <p className="text-body text-muted-foreground">
                         You have unsaved changes. What would you like to do?
                     </p>
                 </div>
