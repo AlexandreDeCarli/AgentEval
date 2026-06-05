@@ -4,14 +4,14 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { Mission } from '../types';
 import { useToastStore } from '../store/useToastStore';
 
-export const useEngineLoop = (mission: Mission) => {
+export const useEngineLoop = (mission: Mission | undefined) => {
     const { geminiApiKey } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const { executions, startExecution, stopExecution, clearDebugLogs } = useTestExecutionStore();
 
     // Obtém o estado de execução ativa indexado pelo ID da missão, ou retorna valores default inativos
-    const activeExecution = executions[mission?.id] || {
-        missionId: mission?.id,
+    const activeExecution = (mission && mission.id ? executions[mission.id] : null) || {
+        missionId: mission?.id || '',
         isRunning: false,
         currentRunId: null,
         debugLogs: [],

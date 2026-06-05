@@ -51,6 +51,7 @@ export const ToastContainer: React.FC = () => {
                         <button
                             onClick={() => removeToast(toast.id)}
                             className="flex-shrink-0 text-zinc-500 hover:text-white hover:bg-white/[0.04] p-1 rounded-md transition-colors cursor-pointer"
+                            aria-label="Dismiss toast"
                         >
                             <X className="w-3.5 h-3.5" />
                         </button>

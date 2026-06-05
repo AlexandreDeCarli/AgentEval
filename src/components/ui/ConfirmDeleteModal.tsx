@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Trash2 } from 'lucide-react';
 
 interface ConfirmDeleteModalProps {
@@ -24,15 +24,21 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
     onConfirm,
     onCancel,
 }) => {
+    const onCancelRef = useRef(onCancel);
+
+    useEffect(() => {
+        onCancelRef.current = onCancel;
+    }, [onCancel]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                onCancel();
+                onCancelRef.current();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onCancel]);
+    }, []);
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop with blur and fade-in */}

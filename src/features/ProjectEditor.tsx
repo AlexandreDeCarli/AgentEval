@@ -146,7 +146,7 @@ export const ProjectEditor: React.FC = () => {
                 setSettingsTab('environments');
                 return;
             }
-            if (project.target_provider === 'http' && (!env.api_config.post_url || env.api_config.post_url.trim() === '')) {
+            if (project.target_provider === 'http' && (!env.api_config?.post_url || env.api_config.post_url.trim() === '')) {
                 addToast(`Environment "${env.name}" requires a POST URL for HTTP projects`, 'error');
                 setActiveTab('settings');
                 setSettingsTab('environments');

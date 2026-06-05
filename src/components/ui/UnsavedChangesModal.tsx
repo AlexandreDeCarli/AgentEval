@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Save, X, LogOut } from 'lucide-react';
 import { Button } from './Button';
 
@@ -15,16 +15,22 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
     onDiscard,
     onCancel,
 }) => {
+    const onCancelRef = useRef(onCancel);
+
+    useEffect(() => {
+        onCancelRef.current = onCancel;
+    }, [onCancel]);
+
     useEffect(() => {
         if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                onCancel();
+                onCancelRef.current();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onCancel]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
