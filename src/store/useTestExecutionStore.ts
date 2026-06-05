@@ -16,6 +16,7 @@ import {
 import { useTestRunStore } from './useTestRunStore';
 import { useProjectStore } from './useProjectStore';
 import { useToastStore } from './useToastStore';
+import { useSettingsStore } from './useSettingsStore';
 
 export interface ExecutionState {
     missionId: string;
@@ -328,6 +329,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 avg_time_to_complete_response_ms: Math.round(avgComplete),
             };
 
+            const evalModel = useSettingsStore.getState().evaluatorModel;
+
             const evalResult = await generateEvaluation(
                 geminiApiKey,
                 chatHistory,
@@ -335,7 +338,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 missionGoal,
                 mission.max_turns,
                 mission.evaluation_criteria || [],
-                metrics
+                metrics,
+                evalModel
             );
 
             useTestRunStore.getState().setEvaluation(runId, evalResult);

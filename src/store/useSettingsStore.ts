@@ -6,6 +6,8 @@ import { encryptApiKey, decryptApiKey } from '../utils/crypto';
 interface SettingsState {
     geminiApiKey: string;
     setGeminiApiKey: (key: string) => void;
+    evaluatorModel: string;
+    setEvaluatorModel: (model: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -13,6 +15,8 @@ export const useSettingsStore = create<SettingsState>()(
         (set) => ({
             geminiApiKey: '',
             setGeminiApiKey: (key) => set({ geminiApiKey: key }),
+            evaluatorModel: 'gemini-3.5-flash',
+            setEvaluatorModel: (model) => set({ evaluatorModel: model }),
         }),
         {
             name: 'agent-qa-settings',

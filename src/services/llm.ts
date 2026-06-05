@@ -186,7 +186,8 @@ export const generateEvaluation = async (
     missionGoal: string,
     maxTurns: number,
     criteria: EvaluationCriterion[],
-    metrics: { avg_time_to_first_response_ms: number; avg_time_to_complete_response_ms: number; }
+    metrics: { avg_time_to_first_response_ms: number; avg_time_to_complete_response_ms: number; },
+    evalModel?: string
 ): Promise<Evaluation> => {
     if (!apiKey) throw new Error('API Key is missing');
 
@@ -237,7 +238,7 @@ Are there specific parts of the Target's Original System Prompt that should be i
 
     const result = await requestGeminiGenerateContent(
         apiKey,
-        EVAL_MODEL,
+        evalModel || EVAL_MODEL,
         {
             contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
             generationConfig: {
