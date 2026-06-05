@@ -308,6 +308,11 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                     onChange={(e) => onChange({ ...formData, target_gemini_model: e.target.value })}
                                     className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer font-mono"
                                 >
+                                    {!SUGGESTED_GEMINI_TARGET_MODELS.includes(targetGeminiModel) && targetGeminiModel && (
+                                        <option value={targetGeminiModel} className="bg-card font-mono">
+                                            {targetGeminiModel} (Custom)
+                                        </option>
+                                    )}
                                     {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
                                         <option key={model} value={model} className="bg-card font-mono">
                                             {model}
