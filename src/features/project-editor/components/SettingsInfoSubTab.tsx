@@ -110,8 +110,7 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                                     </span>
                                 </label>
-                                <Input
-                                    list="project-gemini-model-suggestions"
+                                <select
                                     value={targetGeminiModel}
                                     onChange={(e) =>
                                         onChange({
@@ -119,14 +118,14 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                                             target_gemini_model: e.target.value,
                                         })
                                     }
-                                    placeholder={DEFAULT_GEMINI_TARGET_MODEL}
-                                    className="font-mono"
-                                />
-                                <datalist id="project-gemini-model-suggestions">
+                                    className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                                >
                                     {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
-                                        <option key={model} value={model} />
+                                        <option key={model} value={model} className="bg-card font-mono">
+                                            {model}
+                                        </option>
                                     ))}
-                                </datalist>
+                                </select>
                             </div>
                             <div className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
                                 <p className="text-label text-white block mb-1">Gemini project mode</p>
