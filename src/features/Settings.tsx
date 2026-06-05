@@ -157,13 +157,16 @@ export const Settings: React.FC = () => {
     const { geminiApiKey, setGeminiApiKey, evaluatorModel, setEvaluatorModel } = useSettingsStore();
 
     const [inputKey, setInputKey] = useState(geminiApiKey);
-    const [selectedModel, setSelectedModel] = useState(evaluatorModel);
+    const [selectedModel, setSelectedModel] = useState(() => {
+        return EVAL_MODELS.some(m => m.id === evaluatorModel) ? evaluatorModel : (EVAL_MODELS[0]?.id || 'gemini-3.5-flash');
+    });
     const [showKey, setShowKey] = useState(false);
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         setInputKey(geminiApiKey);
-        setSelectedModel(evaluatorModel);
+        const validModel = EVAL_MODELS.some(m => m.id === evaluatorModel) ? evaluatorModel : (EVAL_MODELS[0]?.id || 'gemini-3.5-flash');
+        setSelectedModel(validModel);
     }, [geminiApiKey, evaluatorModel]);
 
     const handleSave = useCallback(() => {
