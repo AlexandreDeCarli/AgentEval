@@ -138,6 +138,12 @@ No complex documentation reading required! AgentEval features two fully automate
 ### ⚠️ Destructive Confirmation Dialogues
 Avoid any accidental losses of projects or valuable mission configs! All deletion actions are now protected by premium, glassmorphic popover scale-bounce styled confirmation modal windows, asking for direct verification before carrying out any deletes.
 
+### 🔔 Real-time Toast Notifications
+A custom-designed, non-blocking Toast notification system replaces raw browser `alert()` popups with themed success, warning, and error messages that slide in gracefully and match the dark control room aesthetics.
+
+### ⚡ Power-User Accelerators
+Save your workspace settings and mission parameters instantly using `Cmd+S` or `Ctrl+S` keyboard shortcuts, and close any modal dialogue or popup windows effortlessly using the `Escape` key.
+
 ---
 
 ## 🛠️ Target System Requirements

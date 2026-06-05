@@ -17,25 +17,25 @@ colors:
   alert-rose: "#F43F5E"
 typography:
   display:
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.875rem"
     fontWeight: 800
     lineHeight: 1.2
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.25rem"
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   label:
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.625rem"
     fontWeight: 800
     lineHeight: 1
@@ -147,14 +147,14 @@ A restrained dark palette with one committed accent. The surface band runs from 
 
 ## 3. Typography
 
-**Display Font:** system-ui, -apple-system, sans-serif
-**Body Font:** system-ui, -apple-system, sans-serif
-**Label Font:** system-ui, -apple-system, sans-serif (uppercase, tracked)
+**Display Font:** Plus Jakarta Sans, system-ui, -apple-system, sans-serif
+**Body Font:** Plus Jakarta Sans, system-ui, -apple-system, sans-serif
+**Label Font:** Plus Jakarta Sans, system-ui, -apple-system, sans-serif (uppercase, tracked)
 
-**Character:** The type system uses a single system font stack with extreme weight contrast. Display headings are extrabold and tightly tracked; labels are tiny, uppercase, and widely tracked. The contrast between the two creates hierarchy without needing multiple typefaces.
+**Character:** The type system uses a single font stack (Plus Jakarta Sans) with extreme weight contrast. Display headings are extrabold and tightly tracked; labels are tiny, uppercase, and widely tracked. The contrast between the two creates hierarchy without needing multiple typefaces.
 
 ### Hierarchy
-- **Display** (800, 1.875rem / 30px, line-height 1.2, letter-spacing -0.025em): Page titles. "Projects", "History", "Settings". Always uppercase, always extrabold.
+- **Display** (800, 1.875rem / 30px, line-height 1.2, letter-spacing -0.025em): Page titles. "Projects", "History", "Settings". Always sentence case, always extrabold.
 - **Title** (700, 1.25rem / 20px, line-height 1.3, letter-spacing -0.01em): Section headings, modal titles, card names. Tight tracking.
 - **Body** (400, 0.875rem / 14px, line-height 1.6, letter-spacing normal): Descriptions, instructions, mission goals. Relaxed leading for readability. Max 65ch line length where possible.
 - **Label** (800, 0.625rem / 10px, line-height 1, letter-spacing 0.05em, uppercase): Metadata chips ("Active Project", "3 Prompts", "2 Envs"), sidebar subtitles, version strings. The workhorse micro-typography.
@@ -211,7 +211,7 @@ Clean, dark recesses that signal editability.
 ### Navigation (Sidebar)
 Fixed 256px sidebar. Void background. Content + footer structure.
 
-- **Active state:** Signal Blue text + background tint (15% opacity), 4px left border marker.
+- **Active state:** Signal Blue text + background tint (15% opacity), fully-rounded capsule active background highlight (`mx-3 px-3 rounded-lg bg-[#4A72FF]/15`), eliminating the artificial side-stripe border accent.
 - **Inactive state:** Ink Secondary text. On hover, Surface Elevated background, Ink Primary text.
 - **Footer:** Separated by faint border. Contains About and Help actions in ghost button style.
 - **Version label:** Bottom-anchored, Ink Muted, 10px uppercase tracked text.
@@ -220,7 +220,7 @@ Fixed 256px sidebar. Void background. Content + footer structure.
 Premium overlays with considered motion.
 
 - **Backdrop:** Background at 80% opacity + 4px blur. Fades in over 200ms with ease-out-expo.
-- **Panel:** Surface background, subtle border, rounded 16px. Scales in from 94% with a spring curve (`cubic-bezier(0.34, 1.56, 0.64, 1)`) over 300ms.
+- **Panel:** Surface background, subtle border, rounded 16px. Scales in from 94% with a premium expo-out deceleration curve (`cubic-bezier(0.16, 1, 0.3, 1)`) over 300ms.
 - **Destructive modals:** Red gradient top-edge line. Pulsing red icon. Emphasizes irreversibility.
 
 ### Mission Card (Signature Component)
