@@ -27,7 +27,7 @@ export const ProjectMissionsTab: React.FC<ProjectMissionsTabProps> = ({
             {/* Mission Header Summary */}
             {projectMissions.length > 0 && (
                 <div className="flex justify-between items-center select-none">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-label text-white flex items-center gap-2">
                         <Target className="w-4 h-4 text-primary" />
                         Registered Scenarios ({projectMissions.length})
                     </h3>
@@ -61,7 +61,7 @@ export const ProjectMissionsTab: React.FC<ProjectMissionsTabProps> = ({
 
                 {projectMissions.length === 0 && (
                     <div className="py-12 text-center border-2 border-dashed border-border/50 bg-[#1C2026]/40 rounded-2xl select-none">
-                        <p className="text-muted-foreground mb-4 text-xs font-semibold">
+                        <p className="text-body text-muted-foreground mb-4">
                             No missions created for this project yet.
                         </p>
                         <div className="flex gap-3 justify-center">

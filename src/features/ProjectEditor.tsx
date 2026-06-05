@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
@@ -11,7 +11,9 @@ import { ChatBubble } from '../components/ChatBubble';
 import { DebugLogPanel } from '../components/DebugLogPanel';
 import { Project, Mission, TestRun } from '../types';
 import { normalizeProjectTargetConfig } from '../utils/missionTarget';
-import { ArrowLeft, Trash2, TrendingUp, Server, Target } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Server, Target } from 'lucide-react';
+import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
+import { useToastStore } from '../store/useToastStore';
 import { ProjectDashboardTab } from './project-editor/components/ProjectDashboardTab';
 import { ProjectMissionsTab } from './project-editor/components/ProjectMissionsTab';
 import { ProjectSettingsTab } from './project-editor/components/ProjectSettingsTab';
@@ -31,6 +33,7 @@ export const ProjectEditor: React.FC = () => {
 
     const [project, setProject] = useState<Project | null>(null);
     const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
+    const addToast = useToastStore((state) => state.addToast);
     
     // Switcher tab and sub-tab states
     const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -87,9 +90,7 @@ export const ProjectEditor: React.FC = () => {
         setActiveTab('dashboard');
     }, [tabFromQuery]);
 
-    if (!project) return null;
-
-    const projectMissions = missions.filter((m) => m.project_id === project.id);
+    const projectMissions = project ? missions.filter((m) => m.project_id === project.id) : [];
 
     const handleTabChange = (tab: Tab) => {
         setActiveTab(tab);
@@ -112,7 +113,47 @@ export const ProjectEditor: React.FC = () => {
         setSearchParams(nextSearchParams, { replace: true });
     };
 
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
+        if (!project) return;
+        if (!project.name || project.name.trim() === '') {
+            addToast('Project Name is required', 'error');
+            setActiveTab('settings');
+            setSettingsTab('info');
+            return;
+        }
+
+        // Validate System Prompts
+        for (const prompt of project.system_prompts) {
+            if (!prompt.name || prompt.name.trim() === '') {
+                addToast('All system prompts must have a name', 'error');
+                setActiveTab('settings');
+                setSettingsTab('prompts');
+                return;
+            }
+            if (!prompt.content || prompt.content.trim() === '') {
+                addToast(`System prompt "${prompt.name}" content cannot be empty`, 'error');
+                setActiveTab('settings');
+                setSettingsTab('prompts');
+                return;
+            }
+        }
+
+        // Validate Environments
+        for (const env of project.environments) {
+            if (!env.name || env.name.trim() === '') {
+                addToast('All environments must have a name', 'error');
+                setActiveTab('settings');
+                setSettingsTab('environments');
+                return;
+            }
+            if (project.target_provider === 'http' && (!env.api_config.post_url || env.api_config.post_url.trim() === '')) {
+                addToast(`Environment "${env.name}" requires a POST URL for HTTP projects`, 'error');
+                setActiveTab('settings');
+                setSettingsTab('environments');
+                return;
+            }
+        }
+
         try {
             updateProject(project.id, project);
             setSaveStatus('saved');
@@ -121,11 +162,22 @@ export const ProjectEditor: React.FC = () => {
             setSaveStatus('error');
             setTimeout(() => setSaveStatus('idle'), 3000);
         }
-    };
+    }, [project, updateProject, addToast]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleSave]);
 
     const handleRunAllMissions = () => {
         if (!geminiApiKey) {
-            alert('Configure your Gemini API Key in Settings first.');
+            addToast('Configure your Gemini API Key in Settings first.', 'error');
             return;
         }
         projectMissions.forEach((mission) => {
@@ -139,22 +191,24 @@ export const ProjectEditor: React.FC = () => {
         { key: 'settings' as const, label: 'Workspace Settings' },
     ];
 
+    if (!project) return null;
+
     return (
         <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
             {/* Nav & Title */}
             <div className="flex flex-col gap-4">
                 <button
                     onClick={() => navigate('/projects')}
-                    className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground hover:text-white transition-colors w-fit group select-none cursor-pointer"
+                    className="flex items-center gap-2 text-xs font-extrabold text-muted-foreground hover:text-white transition-colors w-fit group select-none cursor-pointer"
                 >
                     <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
                     <span>Back to Projects list</span>
                 </button>
                 <div className="flex justify-between items-start select-none">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-white uppercase">{project.name}</h1>
+                        <h1 className="text-display text-white">{project.name}</h1>
                         {project.description && (
-                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-3xl">
+                            <p className="text-body text-muted-foreground mt-1.5 max-w-[75ch]">
                                 {project.description}
                             </p>
                         )}
@@ -169,7 +223,7 @@ export const ProjectEditor: React.FC = () => {
                         key={tab.key}
                         id={`project-tab-${tab.key}`}
                         onClick={() => handleTabChange(tab.key)}
-                        className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                        className={`flex items-center gap-2 px-5 py-3 text-xs font-bold transition-all duration-300 rounded-lg cursor-pointer ${
                             activeTab === tab.key
                                 ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                 : 'text-muted-foreground hover:text-slate-200'
@@ -213,57 +267,18 @@ export const ProjectEditor: React.FC = () => {
                 />
             )}
 
-            {/* Modal: Mission Deletion Confirmation */}
+            {/* Delete Confirmation Modal */}
             {missionToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div 
-                        className="absolute inset-0 bg-background/80 backdrop-blur-md transition-opacity duration-300 animate-modal-fade-in cursor-pointer"
-                        onClick={() => setMissionToDelete(null)}
-                    />
-                    
-                    <div className="relative bg-gradient-to-b from-[#111827] to-[#0b0f19] border border-white/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.8),_inset_0_1px_0_rgba(255,255,255,0.05)] rounded-2xl max-w-sm w-full p-6 z-10 animate-modal-scale-in overflow-hidden text-center space-y-6">
-                        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
-                        
-                        <div className="relative flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-pulse">
-                            <Trash2 className="w-8 h-8 text-red-500" />
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-bold tracking-tight text-white">Delete Mission?</h3>
-                            <p className="text-sm text-slate-400 leading-relaxed">
-                                You are about to permanently delete the mission:
-                            </p>
-                            <div className="inline-block font-semibold text-white bg-slate-900/60 border border-white/5 px-3 py-1 rounded-lg text-sm max-w-full truncate shadow-inner">
-                                "{missionToDelete.titulo}"
-                            </div>
-                        </div>
-
-                        <div className="bg-red-500/[0.03] border-l-2 border-red-500/60 p-4 rounded-r-lg text-left space-y-1">
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">⚠️ Irreversible Action</span>
-                            <p className="text-xs text-slate-400 leading-relaxed">
-                                The mission scenario, behavior parameters, and all associated test execution histories will be **permanently deleted**.
-                            </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 pt-2">
-                            <button
-                                onClick={() => setMissionToDelete(null)}
-                                className="flex-1 px-4 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 hover:text-white font-semibold text-xs tracking-wide uppercase transition-all duration-200 cursor-pointer active:scale-[0.98] border-b-[2px] border-b-black/20 hover:border-white/[0.12]"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    deleteMission(missionToDelete.id);
-                                    setMissionToDelete(null);
-                                }}
-                                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-bold text-xs tracking-wide uppercase shadow-[0_4px_12px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_16px_rgba(239,68,68,0.35)] hover:-translate-y-[1px] transition-all duration-200 cursor-pointer active:scale-[0.98] active:translate-y-0"
-                            >
-                                Yes, Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmDeleteModal
+                    itemType="Mission"
+                    itemName={missionToDelete.titulo}
+                    warningDescription="The mission scenario, behavior parameters, and all associated test execution histories will be permanently deleted."
+                    onConfirm={() => {
+                        deleteMission(missionToDelete.id);
+                        setMissionToDelete(null);
+                    }}
+                    onCancel={() => setMissionToDelete(null)}
+                />
             )}
 
             {/* Modal: Detailed Run Viewer */}
@@ -274,7 +289,7 @@ export const ProjectEditor: React.FC = () => {
                         <div className="flex flex-wrap gap-2.5 p-1.5 bg-[#1C2026] rounded-xl border border-border/50 w-fit select-none">
                             <button
                                 onClick={() => setDetailTab('score')}
-                                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                                className={`flex items-center gap-2 px-4 py-2 text-label transition-all duration-300 rounded-lg cursor-pointer ${
                                     detailTab === 'score'
                                         ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                         : 'text-muted-foreground hover:text-slate-200'
@@ -285,7 +300,7 @@ export const ProjectEditor: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setDetailTab('chat')}
-                                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                                className={`flex items-center gap-2 px-4 py-2 text-label transition-all duration-300 rounded-lg cursor-pointer ${
                                     detailTab === 'chat'
                                         ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                         : 'text-muted-foreground hover:text-slate-200'
@@ -296,7 +311,7 @@ export const ProjectEditor: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setDetailTab('logs')}
-                                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                                className={`flex items-center gap-2 px-4 py-2 text-label transition-all duration-300 rounded-lg cursor-pointer ${
                                     detailTab === 'logs'
                                         ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                         : 'text-muted-foreground hover:text-slate-200'
@@ -316,10 +331,10 @@ export const ProjectEditor: React.FC = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="bg-card border border-border/50 p-4 rounded-xl flex items-center justify-between shadow-sm select-none">
                                             <div className="space-y-1">
-                                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold block">Execution Status</span>
+                                                <span className="text-label text-muted-foreground block mb-1">Execution Status</span>
                                                 <div className="flex items-center gap-2">
                                                     <span className={`w-2 h-2 rounded-full ${selectedRun.status === 'success' ? 'bg-emerald-500 shadow-[0_0_10px_#10B981]' : 'bg-rose-500 shadow-[0_0_10px_#F43F5E]'}`} />
-                                                    <span className={`text-sm font-bold capitalize ${selectedRun.status === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                    <span className={`text-body font-bold capitalize ${selectedRun.status === 'success' ? 'text-emerald-400' : 'text-rose-400'}`}>
                                                         {selectedRun.status}
                                                     </span>
                                                 </div>
@@ -328,8 +343,8 @@ export const ProjectEditor: React.FC = () => {
                                         
                                         <div className="bg-card border border-border/50 p-4 rounded-xl flex items-center justify-between shadow-sm select-none">
                                             <div className="space-y-1">
-                                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold block">Turns Spent</span>
-                                                <div className="text-sm font-bold text-slate-200">
+                                                <span className="text-label text-muted-foreground block mb-1">Turns Spent</span>
+                                                <div className="text-body font-bold text-slate-200 tabular-nums">
                                                     {selectedRun.chat_history.filter(m => m.role === 'target').length} turns
                                                 </div>
                                             </div>
@@ -337,8 +352,8 @@ export const ProjectEditor: React.FC = () => {
                                         
                                         <div className="bg-card border border-border/50 p-4 rounded-xl flex items-center justify-between shadow-sm select-none">
                                             <div className="space-y-1">
-                                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold block">Ran On</span>
-                                                <div className="text-sm font-bold text-slate-200 font-mono">
+                                                <span className="text-label text-muted-foreground block mb-1">Ran On</span>
+                                                <div className="text-body font-bold text-slate-200 font-mono tabular-nums">
                                                     {new Date(selectedRun.created_at).toLocaleString()}
                                                 </div>
                                             </div>
@@ -348,14 +363,14 @@ export const ProjectEditor: React.FC = () => {
                                     {/* Variables Card */}
                                     {selectedRun.resolved_variables && Object.keys(selectedRun.resolved_variables).length > 0 && (
                                         <div className="border border-border/50 p-4 rounded-xl bg-card/60 shadow-sm space-y-3">
-                                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground select-none">
+                                            <h4 className="text-label text-muted-foreground select-none block mb-2">
                                                 Resolved Scenario Variables
                                             </h4>
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                                 {Object.entries(selectedRun.resolved_variables).map(([key, val]) => (
                                                     <div key={key} className="bg-[#13161B] border border-border/30 p-2.5 rounded-lg flex flex-col justify-between shadow-inner">
-                                                        <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{key}</span>
-                                                        <span className="text-xs font-mono font-bold text-white mt-1 break-all">{String(val)}</span>
+                                                        <span className="text-label text-muted-foreground block mb-1">{key}</span>
+                                                        <span className="text-body font-mono font-bold text-white break-all tabular-nums">{String(val)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -365,8 +380,8 @@ export const ProjectEditor: React.FC = () => {
                                     {/* Error panel */}
                                     {selectedRun.error && (
                                         <div className="space-y-2 border border-rose-500/20 p-5 rounded-xl bg-rose-500/[0.02] shadow-sm">
-                                            <h3 className="font-bold text-xs uppercase text-rose-400 tracking-wider select-none">Execution Error</h3>
-                                            <div className="bg-rose-500/10 text-rose-400 border border-rose-500/20 p-4 rounded-lg text-sm leading-relaxed font-mono">
+                                            <h3 className="text-label text-rose-400 select-none block mb-1">Execution Error</h3>
+                                            <div className="bg-rose-500/10 text-rose-400 border border-rose-500/20 p-4 rounded-lg text-body font-mono">
                                                 {selectedRun.error}
                                             </div>
                                         </div>
@@ -375,7 +390,7 @@ export const ProjectEditor: React.FC = () => {
                                     {/* LLM Evaluation Report */}
                                     {selectedRun.evaluation && (
                                         <div className="border border-border/50 p-6 rounded-xl bg-card/40 shadow-sm space-y-4">
-                                            <h3 className="font-bold text-xs uppercase text-muted-foreground tracking-wider border-b border-border/40 pb-2 select-none">Intelligent Evaluation Report</h3>
+                                            <h3 className="text-label text-muted-foreground border-b border-border/40 pb-2 select-none mb-3 block">Intelligent Evaluation Report</h3>
                                             <EvaluationReport
                                                 evaluation={selectedRun.evaluation}
                                                 mission={missions.find(m => m.id === selectedRun.mission_id)}
@@ -391,9 +406,9 @@ export const ProjectEditor: React.FC = () => {
                                     <div className="bg-[#1C2026] px-5 py-3.5 border-b border-border/40 flex items-center justify-between select-none">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Conversation Transcript</h4>
+                                            <h4 className="text-label text-white block">Conversation Transcript</h4>
                                         </div>
-                                        <span className="text-[10px] text-muted-foreground bg-[#272D35] px-2.5 py-0.5 rounded border border-border/40 font-semibold font-mono">
+                                        <span className="text-label text-muted-foreground bg-[#272D35] px-2.5 py-0.5 rounded border border-border/40 font-mono tabular-nums">
                                             {selectedRun.chat_history.length} Messages
                                         </span>
                                     </div>
@@ -402,7 +417,7 @@ export const ProjectEditor: React.FC = () => {
                                             <ChatBubble key={msg.id} message={msg} />
                                         ))}
                                         {selectedRun.chat_history.length === 0 && (
-                                            <div className="text-center py-12 text-muted-foreground text-xs font-semibold">
+                                            <div className="text-center py-12 text-muted-foreground text-body font-bold">
                                                 No messages recorded in this execution.
                                             </div>
                                         )}

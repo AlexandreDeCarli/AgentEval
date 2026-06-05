@@ -76,7 +76,7 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
     const renderTrendChart = () => {
         if (trendRuns.length === 0) {
             return (
-                <div className="h-[150px] flex flex-col items-center justify-center text-xs text-muted-foreground bg-[#1C2026]/40 border border-dashed border-border/60 rounded-xl select-none animate-fade-in">
+                <div className="h-[150px] flex flex-col items-center justify-center text-body text-muted-foreground bg-[#1C2026]/40 border border-dashed border-border/60 rounded-xl select-none animate-fade-in">
                     <TrendingUp className="w-6 h-6 text-slate-500 mb-2 opacity-50" />
                     <span>Run tests to populate the performance trend chart.</span>
                 </div>
@@ -195,9 +195,9 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                 <div className="flex items-center justify-between mb-3 select-none">
                     <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-[#4A72FF]" />
-                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">Score Trend (Last 15 Runs)</h4>
+                        <h4 className="text-label text-white">Score Trend (Last 15 Runs)</h4>
                     </div>
-                    <span className="text-[9px] text-muted-foreground font-semibold">Scale: {yMin} - {yMax}</span>
+                    <span className="text-label text-muted-foreground tabular-nums">Scale: {yMin} - {yMax}</span>
                 </div>
                 <div className="h-[180px] w-full">
                     <Line key={`project-trend-chart-${trendRuns.length}-${sortedCompletedRuns.length}`} data={chartData} options={chartOptions} />
@@ -213,9 +213,9 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                 {/* Success Rate Donut */}
                 <div className="border border-border/50 bg-[#1C2026] p-5 rounded-2xl flex items-center justify-between shadow-sm select-none">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Success Rate</span>
-                        <h3 className="text-2xl font-black text-white">{successRate}%</h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <span className="text-label text-slate-400">Success Rate</span>
+                        <h3 className="text-3xl font-extrabold text-white tabular-nums">{successRate}%</h3>
+                        <p className="text-body text-muted-foreground">
                             {successExecutions} of {totalExecutions} total executions successful.
                         </p>
                     </div>
@@ -244,8 +244,8 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                             }}
                         />
                         <div className="absolute flex flex-col items-center pointer-events-none select-none">
-                            <span className="text-base font-black text-white">{successRate}%</span>
-                            <span className="text-[8px] uppercase font-bold text-slate-400">Pass</span>
+                            <span className="text-base font-extrabold text-white tabular-nums">{successRate}%</span>
+                            <span className="text-label text-slate-400">Pass</span>
                         </div>
                     </div>
                 </div>
@@ -253,18 +253,18 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                 {/* Average Score */}
                 <div className="border border-border/50 bg-[#1C2026] p-5 rounded-2xl flex flex-col justify-between shadow-sm select-none">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Evaluation Score</span>
+                        <span className="text-label text-slate-400">Average Evaluation Score</span>
                         <div className="flex items-baseline gap-2">
-                            <h3 className={`text-3xl font-black ${
+                            <h3 className={`text-3xl font-extrabold tabular-nums ${
                                 averageScore >= 80 ? 'text-emerald-400' : averageScore >= 50 ? 'text-amber-400' : 'text-red-400'
                             }`}>{averageScore}</h3>
-                            <span className="text-xs text-muted-foreground">/ 100</span>
+                            <span className="text-body text-muted-foreground">/ 100</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                        <p className="text-body text-muted-foreground mt-2">
                             Calculated from {evaluatedRuns.length} evaluated test runs.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 mt-4 text-[10px] uppercase font-bold text-slate-400 bg-[#272D35]/50 px-3 py-1.5 rounded-lg border border-border/20 w-fit">
+                    <div className="flex items-center gap-2 mt-4 text-label text-slate-400 bg-[#272D35]/50 px-3 py-1.5 rounded-lg border border-border/20 w-fit">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         <span>Quality Bar</span>
                     </div>
@@ -273,13 +273,13 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                 {/* Total Executions */}
                 <div className="border border-border/50 bg-[#1C2026] p-5 rounded-2xl flex flex-col justify-between shadow-sm select-none">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Executions Overview</span>
-                        <h3 className="text-3xl font-black text-white">{totalExecutions}</h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                        <span className="text-label text-slate-400">Executions Overview</span>
+                        <h3 className="text-3xl font-extrabold text-white tabular-nums">{totalExecutions}</h3>
+                        <p className="text-body text-muted-foreground mt-2">
                             Simulations ran across all registered missions.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 mt-4 text-[10px] uppercase font-bold text-slate-400 bg-[#272D35]/50 px-3 py-1.5 rounded-lg border border-border/20 w-fit">
+                    <div className="flex items-center gap-2 mt-4 text-label text-slate-400 bg-[#272D35]/50 px-3 py-1.5 rounded-lg border border-border/20 w-fit">
                         <Clock className="w-3.5 h-3.5 text-sky-400" />
                         <span>History Log</span>
                     </div>
@@ -292,20 +292,20 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
             {/* Last 10 Tests Table */}
             <div className="border border-border/50 bg-[#1C2026] rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-border/40 flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Last 10 Completed Test Runs</h4>
-                    <span className="text-[10px] text-muted-foreground font-semibold bg-[#272D35] px-2 py-0.5 rounded border border-border/40">
+                    <h4 className="text-label text-white">Last 10 Completed Test Runs</h4>
+                    <span className="text-label text-muted-foreground bg-[#272D35] px-2 py-0.5 rounded border border-border/40 font-bold tabular-nums">
                         {sortedCompletedRuns.length} completed total
                     </span>
                 </div>
 
                 {sortedCompletedRuns.length === 0 ? (
-                    <div className="p-12 text-center text-xs text-muted-foreground">
+                    <div className="p-12 text-center text-body text-muted-foreground font-bold">
                         No completed runs yet for this project.
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-left">
-                            <thead className="text-[10px] text-slate-400 uppercase bg-[#272D35]/30 border-b border-border/40">
+                        <table className="w-full text-body text-left">
+                            <thead className="text-label text-slate-400 bg-[#272D35]/30 border-b border-border/40">
                                 <tr>
                                     <th className="px-6 py-3.5 font-bold">Date & Time</th>
                                     <th className="px-6 py-3.5 font-bold">Mission</th>
@@ -320,10 +320,10 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                                     const mission = projectMissions.find(m => m.id === run.mission_id);
                                     return (
                                         <tr key={run.id} className="hover:bg-muted/10 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-slate-300">
+                                            <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono tabular-nums">
                                                 {new Date(run.created_at).toLocaleString()}
                                             </td>
-                                            <td className="px-6 py-4 font-semibold text-white">
+                                            <td className="px-6 py-4 font-semibold text-white text-body">
                                                 {mission?.titulo || 'Unknown Mission'}
                                             </td>
                                             <td className="px-6 py-4">
@@ -331,12 +331,12 @@ export const ProjectDashboardTab: React.FC<ProjectDashboardTabProps> = ({
                                                     {run.status.toUpperCase()}
                                                 </Badge>
                                             </td>
-                                            <td className="px-6 py-4 text-slate-300">
+                                            <td className="px-6 py-4 text-slate-300 font-mono tabular-nums">
                                                 {Math.floor(run.chat_history.length / 2)}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {run.evaluation ? (
-                                                    <span className={`font-black ${
+                                                    <span className={`font-extrabold tabular-nums ${
                                                         run.evaluation.overall_score >= 80 ? 'text-emerald-400' : run.evaluation.overall_score >= 50 ? 'text-amber-400' : 'text-red-400'
                                                     }`}>
                                                         {run.evaluation.overall_score}/100

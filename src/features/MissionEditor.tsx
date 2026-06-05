@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMissionStore, defaultMockMission } from '../store/useMissionStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useToastStore } from '../store/useToastStore';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Mission } from '../types';
@@ -58,6 +59,7 @@ export const MissionEditor: React.FC = () => {
     const [aiCount, setAiCount] = useState(8);
     const [isGenerating, setIsGenerating] = useState(false);
     const [genError, setGenError] = useState('');
+    const addToast = useToastStore((state) => state.addToast);
 
     const [formData, setFormData] = useState<Mission>({
         id: crypto.randomUUID(),
@@ -90,6 +92,10 @@ export const MissionEditor: React.FC = () => {
     const [pendingDestination, setPendingDestination] = useState<string | number | null>(null);
     const savedDataRef = useRef<string>('');
 
+    const projectMissionsUrl = formData.project_id
+        ? `/projects/${formData.project_id}?tab=missions`
+        : null;
+
     // Resolve project context
     const currentProject = projects.find((p) => p.id === formData.project_id);
     const availablePrompts = currentProject?.system_prompts || [];
@@ -101,15 +107,15 @@ export const MissionEditor: React.FC = () => {
 
     const handleAiGenerate = async () => {
         if (!geminiApiKey) {
-            alert('Configure your Gemini API Key in Settings first.');
+            addToast('Configure your Gemini API Key in Settings first.', 'error');
             return;
         }
         if (!currentProject) {
-            alert('Project context is missing.');
+            addToast('Project context is missing.', 'error');
             return;
         }
         if (currentProject.system_prompts.length === 0) {
-            alert('Add at least one system prompt to the project before generating missions.');
+            addToast('Add at least one system prompt to the project before generating missions.', 'error');
             return;
         }
 
@@ -197,8 +203,26 @@ export const MissionEditor: React.FC = () => {
         setFormData(finalData);
     };
 
-    const handleSave = () => {
-        if (jsonError) return alert('Fix JSON errors before saving');
+    const handleSave = useCallback(() => {
+        if (!formData.titulo || formData.titulo.trim() === '') {
+            addToast('Mission Title is required', 'error');
+            setActiveTab('goal');
+            return;
+        }
+        if (!formData.mission_goal || formData.mission_goal.trim() === '') {
+            addToast('Mission Goal is required', 'error');
+            setActiveTab('goal');
+            return;
+        }
+        if (!formData.tester_persona || formData.tester_persona.trim() === '') {
+            addToast('Tester Persona is required', 'error');
+            setActiveTab('goal');
+            return;
+        }
+        if (jsonError) {
+            addToast('Fix JSON errors before saving', 'error');
+            return;
+        }
         const missionToSave = normalizeMission(formData);
         if (isNew) {
             addMission(missionToSave);
@@ -212,7 +236,18 @@ export const MissionEditor: React.FC = () => {
         } else {
             navigate('/');
         }
-    };
+    }, [jsonError, formData, isNew, addMission, updateMission, projectMissionsUrl, navigate, addToast]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleSave]);
 
     const requestNavigate = (destination: string | number) => {
         if (isDirty) {
@@ -225,9 +260,27 @@ export const MissionEditor: React.FC = () => {
     };
 
     const doSaveAndLeave = () => {
+        if (!formData.titulo || formData.titulo.trim() === '') {
+            addToast('Mission Title is required', 'error');
+            setActiveTab('goal');
+            setUnsavedModalOpen(false);
+            return;
+        }
+        if (!formData.mission_goal || formData.mission_goal.trim() === '') {
+            addToast('Mission Goal is required', 'error');
+            setActiveTab('goal');
+            setUnsavedModalOpen(false);
+            return;
+        }
+        if (!formData.tester_persona || formData.tester_persona.trim() === '') {
+            addToast('Tester Persona is required', 'error');
+            setActiveTab('goal');
+            setUnsavedModalOpen(false);
+            return;
+        }
         if (jsonError) {
             setUnsavedModalOpen(false);
-            alert('Fix JSON errors before saving');
+            addToast('Fix JSON errors before saving', 'error');
             return;
         }
         const missionToSave = normalizeMission(formData);
@@ -261,9 +314,7 @@ export const MissionEditor: React.FC = () => {
     const targetGeminiModel = currentProject
         ? getProjectGeminiModel(currentProject, formData)
         : getMissionGeminiModel(formData);
-    const projectMissionsUrl = formData.project_id
-        ? `/projects/${formData.project_id}?tab=missions`
-        : null;
+
 
     if (isNew && creationMethod === 'select') {
         return (
@@ -279,8 +330,8 @@ export const MissionEditor: React.FC = () => {
                 </div>
 
                 <div className="text-center max-w-xl mx-auto mb-12">
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-3">Create New Mission</h1>
-                    <p className="text-sm text-slate-400">
+                    <h1 className="text-display text-white mb-3">Create New Mission</h1>
+                    <p className="text-body text-slate-400">
                         How would you like to define your new test mission scenario?
                     </p>
                 </div>
@@ -295,8 +346,8 @@ export const MissionEditor: React.FC = () => {
                             <Compass className="w-8 h-8 text-slate-400 group-hover:text-[#4A72FF] transition-all duration-300" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-white group-hover:text-[#4A72FF] transition-colors">Create Manually</h3>
-                            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                            <h3 className="text-title text-white group-hover:text-[#4A72FF] transition-colors">Create Manually</h3>
+                            <p className="text-body text-slate-400 mt-2">
                                 Write your own scenario guidelines, variables, environment targets, and custom LLM validation criteria manually.
                             </p>
                         </div>
@@ -311,8 +362,8 @@ export const MissionEditor: React.FC = () => {
                             <Sparkles className="w-8 h-8 text-slate-400 group-hover:text-[#8B5CF6] transition-all duration-300" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-white group-hover:text-[#8B5CF6] transition-colors">Generate with AI</h3>
-                            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                            <h3 className="text-title text-white group-hover:text-[#8B5CF6] transition-colors">Generate with AI</h3>
+                            <p className="text-body text-slate-400 mt-2">
                                 Let Gemini 2.5 Pro analyze your project documentation to automatically generate multiple comprehensive test scenarios.
                             </p>
                         </div>
@@ -355,11 +406,11 @@ export const MissionEditor: React.FC = () => {
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
-                <h1 className="text-3xl font-bold tracking-tight">
+                <h1 className="text-display text-white">
                     {isNew ? 'Create Mission' : 'Edit Mission'}
                 </h1>
                 {isDirty && (
-                    <Badge variant="destructive" className="text-[10px]">
+                    <Badge variant="destructive">
                         Unsaved
                     </Badge>
                 )}
@@ -374,7 +425,7 @@ export const MissionEditor: React.FC = () => {
                             key={tab.key}
                             id={`mission-tab-${tab.key}`}
                             onClick={() => setActiveTab(tab.key)}
-                            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                            className={`flex items-center gap-2 px-3.5 py-2 text-label transition-all duration-300 rounded-lg cursor-pointer ${
                                 activeTab === tab.key
                                     ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                     : 'text-muted-foreground hover:text-slate-200'
@@ -383,7 +434,7 @@ export const MissionEditor: React.FC = () => {
                             {tab.icon}
                             <span>{tab.label}</span>
                             {tab.key === 'criteria' && (
-                                <span className="ml-1.5 text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full border border-border/30">
+                                <span className="ml-1.5 text-label bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full border border-border/30 font-bold tabular-nums">
                                     {(formData.evaluation_criteria || []).length}
                                 </span>
                             )}
@@ -395,7 +446,7 @@ export const MissionEditor: React.FC = () => {
                 <Button
                     id="mission-save-button"
                     onClick={handleSave}
-                    className="gap-2 transition-all duration-300 shadow-[0_4px_15px_rgba(74,114,255,0.25)] hover:scale-[1.02] active:scale-[0.98] font-bold text-xs uppercase tracking-wide px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white border border-white/[0.05]"
+                    className="gap-2 transition-all duration-300 shadow-[0_4px_15px_rgba(74,114,255,0.25)] hover:scale-[1.02] active:scale-[0.98] px-5 py-2.5 rounded-lg cursor-pointer bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white border border-white/[0.05]"
                 >
                     <Save className="w-3.5 h-3.5" /> Save Mission
                 </Button>

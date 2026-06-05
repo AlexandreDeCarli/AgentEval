@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -9,6 +10,17 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'default' }) => {
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const sizeClasses = {
@@ -28,8 +40,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                 <div className="flex items-center justify-between p-6 border-b border-border bg-card">
                     <h2 className="text-xl font-bold leading-none tracking-tight">{title}</h2>
                     <button
-                        className="p-1 rounded-md hover:bg-muted transition-colors"
+                        className="p-2 rounded-md hover:bg-muted transition-colors cursor-pointer"
                         onClick={onClose}
+                        aria-label="Close"
                     >
                         <X className="w-5 h-5 text-muted-foreground" />
                     </button>
@@ -46,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                         className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
                         onClick={onClose}
                     >
-                        Fechar
+                        Close
                     </button>
                 </div>
             </div>

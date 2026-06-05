@@ -46,7 +46,7 @@ export const MissionCriteriaTab: React.FC<MissionCriteriaTabProps> = ({
     return (
         <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                <h2 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <h2 className="text-title text-white flex items-center gap-1.5">
                     <span>Evaluation Criteria</span>
                     <span title="Define the list of checks or rules that Gemini will evaluate at the end of the chat. The score (0-100) will be calculated based on passing these criteria.">
                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -56,12 +56,12 @@ export const MissionCriteriaTab: React.FC<MissionCriteriaTabProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={handleAddCriterion}
-                    className="h-8 gap-2 font-bold text-xs uppercase"
+                    className="h-8 gap-2"
                 >
                     <Plus className="w-3 h-3" /> Add Criterion
                 </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body text-muted-foreground">
                 The Evaluator LLM will grade the interaction against these specific rules.
             </p>
             <div className="space-y-4">
@@ -81,7 +81,7 @@ export const MissionCriteriaTab: React.FC<MissionCriteriaTabProps> = ({
                             />
                             <textarea
                                 placeholder="Description: How should the AI evaluate this?"
-                                className="w-full h-16 rounded-md border border-input bg-[#13161B] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="w-full h-16 rounded-md border border-input bg-[#13161B] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 value={crit.description}
                                 onChange={(e) =>
                                     handleUpdateCriterion(
@@ -103,7 +103,7 @@ export const MissionCriteriaTab: React.FC<MissionCriteriaTabProps> = ({
                     </div>
                 ))}
                 {criteria.length === 0 && (
-                    <div className="text-xs text-muted-foreground text-center py-8 border border-dashed rounded-lg border-border/50">
+                    <div className="text-body text-muted-foreground text-center py-8 border border-dashed rounded-lg border-border/50">
                         No custom criteria defined. The evaluator will use its default judgment.
                     </div>
                 )}

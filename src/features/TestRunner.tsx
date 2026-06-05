@@ -81,8 +81,8 @@ export const TestRunner: React.FC = () => {
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
                     <div>
-                        <h1 className="font-bold text-lg leading-tight">{mission.titulo}</h1>
-                        <span className="text-xs text-muted-foreground">
+                        <h1 className="text-title leading-tight">{mission.titulo}</h1>
+                        <span className="text-label text-muted-foreground">
                             Test Runner · {targetLabel}
                         </span>
                     </div>
@@ -103,11 +103,11 @@ export const TestRunner: React.FC = () => {
             <div className="flex-1 flex overflow-hidden">
                 {/* Sidebar / Variables info */}
                 <aside className="w-80 border-r border-border bg-muted/30 p-4 overflow-y-auto hidden lg:block">
-                    <h3 className="font-semibold text-sm mb-4 uppercase tracking-wider text-muted-foreground">Mission Context</h3>
+                    <h3 className="text-label mb-4 text-muted-foreground">Mission Context</h3>
                     {currentRun ? (
                         <div className="space-y-4">
                             <div className="space-y-1">
-                                <span className="text-xs text-muted-foreground">Status</span>
+                                <span className="text-label text-muted-foreground">Status</span>
                                 <div>
                                     <Badge variant={currentRun.status === 'success' ? 'success' : currentRun.status === 'failed' ? 'destructive' : 'default'}>
                                         {currentRun.status.toUpperCase()}
@@ -115,13 +115,13 @@ export const TestRunner: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <span className="text-xs text-muted-foreground">Target</span>
+                                <span className="text-label text-muted-foreground">Target</span>
                                 <div className="bg-card border border-border rounded-md p-3 text-xs font-mono break-all">
                                     {targetLabel}
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <span className="text-xs text-muted-foreground">Resolved Variables</span>
+                                <span className="text-label text-muted-foreground">Resolved Variables</span>
                                 <div className="bg-card border border-border rounded-md p-3 text-xs font-mono break-all space-y-1">
                                     {Object.entries(currentRun.resolved_variables || {}).map(([k, v]) => (
                                         <div key={k}><span className="text-primary">{k}:</span> {JSON.stringify(v)}</div>
@@ -131,7 +131,7 @@ export const TestRunner: React.FC = () => {
                             </div>
                             {currentRun.error && (
                                 <div className="space-y-1">
-                                    <span className="text-xs text-muted-foreground">Error Details</span>
+                                    <span className="text-label text-muted-foreground">Error Details</span>
                                     <div className="bg-destructive/20 border border-destructive/50 text-destructive-foreground rounded-md p-3 text-xs">
                                         {currentRun.error}
                                     </div>
@@ -139,7 +139,7 @@ export const TestRunner: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <div className="text-sm text-muted-foreground text-center mt-10">
+                        <div className="text-body text-muted-foreground text-center mt-10">
                             Click 'Start New Test' to resolve variables and begin.
                         </div>
                     )}
@@ -151,7 +151,7 @@ export const TestRunner: React.FC = () => {
                         {!currentRun && (
                             <div className="h-full flex items-center justify-center text-muted-foreground flex-col">
                                 <BotIcon className="w-16 h-16 mb-4 opacity-20" />
-                                <p>Waiting to start...</p>
+                                <p className="text-body">Waiting to start...</p>
                             </div>
                         )}
 
@@ -168,7 +168,7 @@ export const TestRunner: React.FC = () => {
 
                         {isRunning && chatHistoryLength % 2 !== 0 && (
                             <div className="flex justify-end mb-4">
-                                <div className="bg-muted text-muted-foreground text-sm rounded-lg p-3 flex items-center gap-3">
+                                <div className="bg-muted text-muted-foreground text-body rounded-lg p-3 flex items-center gap-3">
                                     <Spinner className="w-4 h-4" /> {targetProvider === 'gemini'
                                         ? 'Gemini target is thinking...'
                                         : 'Target is typing (Polling...)'}
@@ -178,7 +178,7 @@ export const TestRunner: React.FC = () => {
 
                         {isRunning && chatHistoryLength % 2 === 0 && chatHistoryLength > 0 && (
                             <div className="flex justify-start mb-4">
-                                <div className="bg-muted text-muted-foreground text-sm rounded-lg p-3 flex items-center gap-3">
+                                <div className="bg-muted text-muted-foreground text-body rounded-lg p-3 flex items-center gap-3">
                                     <Spinner className="w-4 h-4" /> Tester is thinking...
                                 </div>
                             </div>
@@ -193,8 +193,8 @@ export const TestRunner: React.FC = () => {
                             <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800 bg-zinc-900">
                                 <div className="flex items-center gap-2">
                                     <Terminal className="w-3.5 h-3.5 text-green-400" />
-                                    <span className="text-zinc-400 font-sans">API Inspector</span>
-                                    <span className="text-zinc-600">({debugLogs.length} requests)</span>
+                                    <span className="text-label text-zinc-400">API Inspector</span>
+                                    <span className="text-label text-zinc-600 tabular-nums">({debugLogs.length} requests)</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
@@ -214,7 +214,7 @@ export const TestRunner: React.FC = () => {
                             </div>
                             <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                 {debugLogs.length === 0 && (
-                                    <div className="text-zinc-600 p-2 font-sans">No requests yet. Start a test.</div>
+                                    <div className="text-body text-zinc-600 p-2">No requests yet. Start a test.</div>
                                 )}
                                 {debugLogs.map((entry) => (
                                     <DebugEntry key={entry.id} entry={entry} />
@@ -242,7 +242,7 @@ export const TestRunner: React.FC = () => {
                         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center p-4">
                             <div className="bg-card w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-border shadow-2xl rounded-xl">
                                 <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-20">
-                                    <h2 className="font-bold text-lg">Evaluation Report</h2>
+                                    <h2 className="text-title">Evaluation Report</h2>
                                     <Button variant="ghost" size="sm" onClick={() => navigate('/history')}>View in History</Button>
                                 </div>
                                 <div className="p-6">

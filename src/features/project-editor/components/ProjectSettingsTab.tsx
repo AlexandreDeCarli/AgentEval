@@ -45,7 +45,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
                             key={tab.key}
                             id={`project-tab-${tab.key}`}
                             onClick={() => onSettingsTabChange(tab.key)}
-                            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded-lg cursor-pointer ${
+                            className={`flex items-center gap-2 px-4 py-2.5 text-label transition-all duration-300 rounded-lg cursor-pointer ${
                                 settingsTab === tab.key
                                     ? 'bg-[#272D35] text-white border border-border/40 shadow-sm scale-[1.02]'
                                     : 'text-muted-foreground hover:text-slate-200'
@@ -58,18 +58,18 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
 
                 <div className="flex items-center gap-3">
                     {saveStatus === 'saved' && (
-                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 animate-fade-in bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                        <span className="text-label text-emerald-400 flex items-center gap-1.5 animate-fade-in bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
                             <Check className="w-3.5 h-3.5" /> Project Saved Successfully
                         </span>
                     )}
                     {saveStatus === 'error' && (
-                        <span className="text-xs text-rose-400 font-bold flex items-center gap-1.5 animate-fade-in bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">
+                        <span className="text-label text-rose-400 flex items-center gap-1.5 animate-fade-in bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">
                             <AlertCircle className="w-3.5 h-3.5" /> Error Saving Changes
                         </span>
                     )}
                     <Button
                         onClick={onSave}
-                        className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white font-bold text-xs uppercase shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5"
+                        className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5"
                     >
                         <Save className="w-4 h-4" /> Save Project
                     </Button>

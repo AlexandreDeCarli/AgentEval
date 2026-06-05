@@ -2,9 +2,11 @@ import { useCallback } from 'react';
 import { useTestExecutionStore } from '../store/useTestExecutionStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { Mission } from '../types';
+import { useToastStore } from '../store/useToastStore';
 
 export const useEngineLoop = (mission: Mission) => {
     const { geminiApiKey } = useSettingsStore();
+    const addToast = useToastStore((state) => state.addToast);
     const { executions, startExecution, stopExecution, clearDebugLogs } = useTestExecutionStore();
 
     // Obtém o estado de execução ativa indexado pelo ID da missão, ou retorna valores default inativos
@@ -22,7 +24,7 @@ export const useEngineLoop = (mission: Mission) => {
 
     const startRun = useCallback(async () => {
         if (!geminiApiKey) {
-            alert("Please configure your Gemini API Key in Settings first.");
+            addToast("Please configure your Gemini API Key in Settings first.", "error");
             return;
         }
         if (!mission) return;

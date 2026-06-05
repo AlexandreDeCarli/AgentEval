@@ -25,9 +25,9 @@ export const TestExecutionWidget: React.FC = () => {
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping absolute" />
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 relative" />
                     </div>
-                    <span className="text-xs font-bold text-white tracking-wider uppercase">Active Test Runs</span>
+                    <span className="text-label text-white">Active Test Runs</span>
                 </div>
-                <span className="text-[10px] font-extrabold px-1.5 py-0.5 bg-[#4A72FF]/20 text-[#4A72FF] rounded border border-[#4A72FF]/30">
+                <span className="text-label px-1.5 py-0.5 bg-[#4A72FF]/20 text-[#4A72FF] rounded border border-[#4A72FF]/30">
                     {activeRuns.length} {activeRuns.length === 1 ? 'RUN' : 'RUNS'}
                 </span>
             </div>
@@ -40,12 +40,12 @@ export const TestExecutionWidget: React.FC = () => {
                         className="p-3 bg-[#13161B]/40 border border-border/30 rounded-lg flex items-center justify-between gap-3 hover:border-[#4A72FF]/30 transition-all duration-200"
                     >
                         <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-bold text-[#F9FAFB] truncate" title={run.missionTitle}>
+                            <h4 className="text-body font-bold text-[#F9FAFB] truncate" title={run.missionTitle}>
                                 {run.missionTitle}
                             </h4>
                             <div className="flex items-center gap-2 mt-1">
                                 <Loader2 className="w-3 h-3 text-[#4A72FF] animate-spin" />
-                                <span className="text-[10px] text-muted-foreground font-medium">
+                                <span className="text-label text-muted-foreground">
                                     Turn {run.turnsCompleted}/{run.maxTurns}
                                 </span>
                             </div>
@@ -73,7 +73,7 @@ export const TestExecutionWidget: React.FC = () => {
             </div>
 
             {/* Footer Status */}
-            <div className="px-4 py-2 bg-[#13161B]/20 border-t border-border/20 text-[10px] text-muted-foreground flex items-center justify-between font-medium">
+            <div className="px-4 py-2 bg-[#13161B]/20 border-t border-border/20 text-label text-muted-foreground flex items-center justify-between">
                 <span>Running in background...</span>
                 <span className="text-[#4A72FF] font-semibold">AgentEval Engine</span>
             </div>

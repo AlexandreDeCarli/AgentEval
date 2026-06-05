@@ -60,7 +60,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
             {currentProject && (
                 <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card shadow-sm">
                     <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                        <h2 className="text-base font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <h2 className="text-title text-white flex items-center gap-1.5">
                             <span>Target System Prompt</span>
                             <span title="Select which system prompt persona will be applied to the target agent for this specific mission.">
                                 <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
@@ -69,7 +69,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-2 text-xs text-muted-foreground hover:text-foreground h-8"
+                            className="gap-2 text-label text-muted-foreground hover:text-foreground h-8"
                             onClick={() =>
                                 requestNavigate(`/projects/${currentProject.id}`)
                             }
@@ -79,7 +79,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                     </div>
 
                     <select
-                        className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         value={formData.system_prompt_id || ''}
                         onChange={(e) => handleSystemPromptChange(e.target.value)}
                     >
@@ -95,7 +95,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                         <div>
                             <button
                                 onClick={() => setShowPromptPreview(!showPromptPreview)}
-                                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                className="flex items-center gap-2 text-label text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <Eye className="w-3.5 h-3.5" />
                                 {showPromptPreview ? 'Hide' : 'Preview'} prompt content
@@ -107,7 +107,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                             </button>
                             {showPromptPreview && (
                                 <div className="mt-3 p-4 bg-muted rounded-lg border border-border max-h-64 overflow-y-auto">
-                                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                                    <pre className="text-body text-muted-foreground whitespace-pre-wrap font-mono">
                                         {selectedPrompt.content}
                                     </pre>
                                 </div>
@@ -116,7 +116,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                     )}
 
                     {!selectedPrompt && formData.system_prompt_id === '' && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-body text-muted-foreground">
                             Select a system prompt from the project. The evaluator uses it to
                             grade the agent's behavior.
                         </p>
@@ -127,14 +127,14 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
             {/* Target Integration */}
             <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card shadow-sm">
                 <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                    <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                    <h2 className="text-title text-white">
                         {currentProject ? 'Project Target Integration' : 'Target Integration'}
                     </h2>
                     {currentProject && (
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-2 text-xs text-muted-foreground hover:text-foreground h-8"
+                            className="gap-2 text-label text-muted-foreground hover:text-foreground h-8"
                             onClick={() =>
                                 requestNavigate(`/projects/${currentProject.id}`)
                             }
@@ -148,38 +148,38 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                     targetProvider === 'gemini' ? (
                         <div className="space-y-3">
                             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
-                                <p className="text-sm font-medium">Gemini project target</p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-body font-bold text-white">Gemini project target</p>
+                                <p className="text-body text-muted-foreground">
                                     This mission will run directly against Gemini using the
                                     project configuration.
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-body text-muted-foreground">
                                     Model: <span className="font-mono">{targetGeminiModel}</span>
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-body text-muted-foreground">
                                     AgentEval reuses the Gemini API key configured in Settings
                                     for the target call.
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <>
+                         <>
                             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
-                                <p className="text-sm font-medium">HTTP project target</p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-body font-bold text-white">HTTP project target</p>
+                                <p className="text-body text-muted-foreground">
                                     The provider is configured at the project level. This mission
                                     only selects which environment should be used.
                                 </p>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                                <label className="text-label text-slate-300 flex items-center gap-1.5">
                                     <span>Active Environment</span>
                                     <span title="Select which API environment (e.g. Staging, Production) the test agent will send HTTP requests to.">
                                         <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                                     </span>
                                 </label>
                                 <select
-                                    className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     value={formData.environment_id || ''}
                                     onChange={(e) => handleEnvironmentChange(e.target.value)}
                                 >
@@ -196,7 +196,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                 <div>
                                     <button
                                         onClick={() => setShowApiPreview(!showApiPreview)}
-                                        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                        className="flex items-center gap-2 text-label text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         <Eye className="w-3.5 h-3.5" />
                                         {showApiPreview ? 'Hide' : 'Preview'} API configuration
@@ -206,64 +206,64 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                             <ChevronDown className="w-3.5 h-3.5" />
                                         )}
                                     </button>
-                                    {showApiPreview && (
-                                        <div className="mt-3 p-4 bg-muted rounded-lg border border-border space-y-3">
+                                     {showApiPreview && (
+                                        <div className="mt-3 p-4 bg-muted rounded-lg border border-border space-y-3 select-none">
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                    <span className="text-label text-muted-foreground block mb-1">
                                                         POST URL
                                                     </span>
-                                                    <p className="text-xs font-mono mt-0.5 break-all">
+                                                    <p className="text-body font-mono break-all mt-0.5 text-white">
                                                         {selectedEnv.api_config.post_url || '(empty)'}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                    <span className="text-label text-muted-foreground block mb-1">
                                                         GET URL
                                                     </span>
-                                                    <p className="text-xs font-mono mt-0.5 break-all">
+                                                    <p className="text-body font-mono break-all mt-0.5 text-white">
                                                         {selectedEnv.api_config.get_url || '(empty)'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                <span className="text-label text-muted-foreground block mb-1">
                                                     Auth Header
                                                 </span>
-                                                <p className="text-xs font-mono mt-0.5">
+                                                <p className="text-body font-mono mt-0.5 text-white">
                                                     {maskAuth(selectedEnv.api_config.auth_header)}
                                                 </p>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                <span className="text-label text-muted-foreground block mb-1">
                                                     Payload Template
                                                 </span>
-                                                <pre className="text-xs font-mono mt-0.5 bg-background p-2 rounded border border-border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                <pre className="text-body font-mono mt-0.5 bg-background p-2 rounded border border-border whitespace-pre-wrap max-h-32 overflow-y-auto">
                                                     {selectedEnv.api_config.payload_template}
                                                 </pre>
                                             </div>
                                             <div className="grid grid-cols-3 gap-3">
                                                 <div>
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                    <span className="text-label text-muted-foreground block mb-1">
                                                         Response Path
                                                     </span>
-                                                    <p className="text-xs font-mono mt-0.5">
+                                                    <p className="text-body font-mono mt-0.5 text-white">
                                                         {selectedEnv.api_config.response_path || '(auto)'}
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                    <span className="text-label text-muted-foreground block mb-1">
                                                         Polling
                                                     </span>
-                                                    <p className="text-xs font-mono mt-0.5">
+                                                    <p className="text-body font-mono mt-0.5 text-white tabular-nums">
                                                         {selectedEnv.api_config.polling_interval}ms
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                                    <span className="text-label text-muted-foreground block mb-1">
                                                         Timeout
                                                     </span>
-                                                    <p className="text-xs font-mono mt-0.5">
+                                                    <p className="text-body font-mono mt-0.5 text-white tabular-nums">
                                                         {selectedEnv.api_config.max_timeout}s
                                                     </p>
                                                 </div>
@@ -274,7 +274,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                             )}
 
                             {!selectedEnv && formData.environment_id === '' && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-body text-muted-foreground">
                                     Select an environment to define where the test agent will
                                     send messages.
                                 </p>
@@ -285,11 +285,11 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                     // Standalone Mission Mode
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                            <label className="text-label text-slate-300 mb-1 block">
                                 Target Provider
                             </label>
                             <select
-                                className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 value={targetProvider}
                                 onChange={(e) => onChange({ ...formData, target_provider: e.target.value as TargetProvider })}
                             >
@@ -300,7 +300,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
 
                         {targetProvider === 'gemini' ? (
                             <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                <label className="text-label text-slate-300 mb-1 block">
                                     Gemini Model
                                 </label>
                                 <Input
@@ -320,7 +320,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                        <label className="text-label text-slate-300 mb-1 block">
                                             POST URL
                                         </label>
                                         <Input
@@ -330,7 +330,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                        <label className="text-label text-slate-300 mb-1 block">
                                             GET URL
                                         </label>
                                         <Input
@@ -341,7 +341,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                    <label className="text-label text-slate-300 mb-1 block">
                                         Authorization Header
                                     </label>
                                     <Input
@@ -351,17 +351,17 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                    <label className="text-label text-slate-300 mb-1 block">
                                         Payload Template (JSON)
                                     </label>
                                     <textarea
-                                        className="w-full h-24 font-mono bg-[#13161B] rounded-md border border-input px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        className="w-full h-24 font-mono bg-[#13161B] rounded-md border border-input px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         value={formData.api_config.payload_template}
                                         onChange={(e) => handleUpdateApiConfig('payload_template', e.target.value)}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                    <label className="text-label text-slate-300 mb-1 block">
                                         Response Data Path
                                     </label>
                                     <Input
@@ -372,7 +372,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                        <label className="text-label text-slate-300 mb-1 block">
                                             Polling Interval (ms)
                                         </label>
                                         <Input
@@ -382,7 +382,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-300 mb-1 block">
+                                        <label className="text-label text-slate-300 mb-1 block">
                                             Max Timeout (s)
                                         </label>
                                         <Input

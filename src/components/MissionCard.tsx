@@ -49,13 +49,13 @@ export const MissionCard: React.FC<MissionCardProps> = ({
         <div className="border border-border/50 rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20 transition-all duration-300 shadow-sm gap-4">
             <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                    <h4 className="font-bold text-sm text-white truncate">
+                    <h4 className="text-body font-bold text-white truncate">
                         {mission.titulo}
                     </h4>
                     
                     {/* Project association label if viewed globally */}
                     {!onSelectRun && project && (
-                        <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700/60 font-semibold select-none">
+                        <span className="text-label bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700/60 select-none">
                             {project.name}
                         </span>
                     )}
@@ -80,7 +80,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({
                                                 navigate(`/run/${mission.id}?run=${run.id}`);
                                             }
                                         }}
-                                        className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold border cursor-pointer hover:scale-105 active:scale-95 transition-all select-none ${
+                                        className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-label border cursor-pointer hover:scale-105 active:scale-95 transition-all select-none ${
                                             isSuccess
                                                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                                                 : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
@@ -88,7 +88,7 @@ export const MissionCard: React.FC<MissionCardProps> = ({
                                         title={`Run on ${new Date(run.created_at).toLocaleString()}. Click to view details.`}
                                     >
                                         <span>{isSuccess ? '✓' : '✗'}</span>
-                                        {displayScore !== '' && <span>{displayScore}</span>}
+                                        {displayScore !== '' && <span className="tabular-nums">{displayScore}</span>}
                                     </div>
                                 );
                             })}
@@ -96,27 +96,27 @@ export const MissionCard: React.FC<MissionCardProps> = ({
                     )}
                 </div>
                 
-                <p className="text-xs text-muted-foreground line-clamp-1 mt-1.5 leading-relaxed">
+                <p className="text-body text-muted-foreground line-clamp-1 mt-1.5">
                     {mission.mission_goal}
                 </p>
                 
                 <div className="flex flex-wrap gap-2 mt-3 select-none">
                     {prompt && (
-                        <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-extrabold bg-[#272D35] text-slate-300">
+                        <Badge variant="secondary" className="bg-[#272D35] text-slate-300">
                             Prompt: {prompt.name}
                         </Badge>
                     )}
                     {targetProvider === 'gemini' ? (
-                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-extrabold border-slate-700 text-slate-400">
+                        <Badge variant="outline" className="border-slate-700 text-slate-400">
                             Gemini · {targetGeminiModel}
                         </Badge>
                     ) : env && (
-                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-extrabold border-slate-700 text-slate-400">
+                        <Badge variant="outline" className="border-slate-700 text-slate-400">
                             Env: {env.name}
                         </Badge>
                     )}
                     {Object.keys(mission.variables || {}).length > 0 && (
-                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-extrabold border-slate-700 text-slate-400">
+                        <Badge variant="outline" className="border-slate-700 text-slate-400">
                             {Object.keys(mission.variables).length} vars
                         </Badge>
                     )}
@@ -145,9 +145,10 @@ export const MissionCard: React.FC<MissionCardProps> = ({
                     </Button>
                 )}
                 <Button
+                    variant="success"
                     size="sm"
                     onClick={() => navigate(`/run/${mission.id}`)}
-                    className="gap-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase h-8 cursor-pointer"
+                    className="gap-1 h-8"
                 >
                     <Play className="w-3.5 h-3.5 fill-current" /> Run
                 </Button>
