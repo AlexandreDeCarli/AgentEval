@@ -73,7 +73,7 @@ export const Sidebar: React.FC = () => {
                 </button>
             </div>
             <div className="p-3 border-t border-border text-label text-muted-foreground text-center bg-[#13161B]/50 font-bold">
-                v2.3.2
+                v2.4.0
             </div>
         </aside>
     );
