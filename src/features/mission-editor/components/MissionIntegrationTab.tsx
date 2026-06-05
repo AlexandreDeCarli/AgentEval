@@ -3,7 +3,7 @@ import { HelpCircle, ExternalLink, Eye, ChevronUp, ChevronDown } from 'lucide-re
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Project, Mission, SystemPrompt, Environment, TargetProvider, ApiConfig } from '../../../types';
-import { DEFAULT_GEMINI_TARGET_MODEL, SUGGESTED_GEMINI_TARGET_MODELS } from '../../../utils/missionTarget';
+import { SUGGESTED_GEMINI_TARGET_MODELS } from '../../../utils/missionTarget';
 
 interface MissionIntegrationTabProps {
     formData: Mission;
@@ -303,18 +303,17 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                 <label className="text-label text-slate-300 mb-1 block">
                                     Gemini Model
                                 </label>
-                                <Input
-                                    list="gemini-model-suggestions"
+                                <select
                                     value={targetGeminiModel}
                                     onChange={(e) => onChange({ ...formData, target_gemini_model: e.target.value })}
-                                    placeholder={DEFAULT_GEMINI_TARGET_MODEL}
-                                    className="font-mono"
-                                />
-                                <datalist id="gemini-model-suggestions">
+                                    className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer font-mono"
+                                >
                                     {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
-                                        <option key={model} value={model} />
+                                        <option key={model} value={model} className="bg-card font-mono">
+                                            {model}
+                                        </option>
                                     ))}
-                                </datalist>
+                                </select>
                             </div>
                         ) : (
                             <div className="space-y-4">
