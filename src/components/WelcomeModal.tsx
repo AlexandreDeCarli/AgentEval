@@ -153,43 +153,68 @@ export const WelcomeModal: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left pt-2">
                             
                             {/* Left Column: Project Overview */}
-                            <div className="space-y-4 pr-0 md:pr-4 border-r-0 md:border-r border-white/[0.06]">
-                                <div className="flex items-center gap-2 text-[#4A72FF]">
-                                    <Sparkles className="w-5 h-5 animate-pulse" />
-                                    <span className="text-label">About the Project</span>
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <h2 className="text-title text-white flex items-center gap-2">
-                                        AgentEval
-                                    </h2>
-                                    <p className="text-label text-[#4A72FF]/90">
-                                        Premium AI Agent Evaluation Platform
+                            <div className="space-y-6 pr-0 md:pr-4 border-r-0 md:border-r border-white/[0.06] flex flex-col justify-start">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-[#4A72FF]">
+                                        <Sparkles className="w-5 h-5 animate-pulse" />
+                                        <span className="text-label">About the Project</span>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <h2 className="text-title text-white flex items-center gap-2">
+                                            AgentEval
+                                        </h2>
+                                        <p className="text-label text-[#4A72FF]/90">
+                                            Premium AI Agent Evaluation Platform
+                                        </p>
+                                    </div>
+
+                                    <p className="text-body text-muted-foreground">
+                                        <strong>AgentEval</strong> is a premium ecosystem designed to structure, execute, and analyze automated Quality Assurance (QA) tests on LLM-based conversational agents.
                                     </p>
+ 
+                                    <div className="space-y-2 text-body text-slate-400">
+                                        <div className="flex gap-2.5 items-start">
+                                            <span className="text-[#4A72FF] mt-0.5">✔</span>
+                                            <p><strong>Intelligent Evaluator:</strong> Gemini acts as a simulated user, dynamically testing your agent and scoring complex conversational success criteria.</p>
+                                        </div>
+                                        <div className="flex gap-2.5 items-start">
+                                            <span className="text-[#4A72FF] mt-0.5">✔</span>
+                                            <p><strong>Flexible Targets:</strong> Supports testing Gemini models directly or connecting to external APIs via highly configurable HTTP requests.</p>
+                                        </div>
+                                        <div className="flex gap-2.5 items-start">
+                                            <span className="text-[#4A72FF] mt-0.5">✔</span>
+                                            <p><strong>Variables & Criteria:</strong> Define parameterized test scenarios and strict success/failure rules in a fully visual dashboard.</p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <p className="text-body text-muted-foreground">
-                                    <strong>AgentEval</strong> is a premium ecosystem designed to structure, execute, and analyze automated Quality Assurance (QA) tests on LLM-based conversational agents.
-                                </p>
- 
-                                <div className="space-y-2 text-body text-slate-400">
-                                    <div className="flex gap-2.5 items-start">
-                                        <span className="text-[#4A72FF] mt-0.5">✔</span>
-                                        <p><strong>Intelligent Evaluator:</strong> Gemini acts as a simulated user, dynamically testing your agent and scoring complex conversational success criteria.</p>
+                                {/* Open Source Repository Highlight */}
+                                <div className="p-4 rounded-xl border border-[#4A72FF]/30 bg-[#4A72FF]/5 space-y-3 relative overflow-hidden group hover:border-[#4A72FF]/50 transition-all duration-300">
+                                    {/* Subtle background glow */}
+                                    <div className="absolute -right-10 -bottom-10 w-24 h-24 bg-[#4A72FF]/10 rounded-full blur-xl group-hover:bg-[#4A72FF]/15 transition-all duration-300" />
+                                    
+                                    <div className="flex items-center gap-2">
+                                        <Github className="w-4 h-4 text-white" />
+                                        <span className="text-label text-white font-extrabold tracking-wider uppercase">Open Source</span>
                                     </div>
-                                    <div className="flex gap-2.5 items-start">
-                                        <span className="text-[#4A72FF] mt-0.5">✔</span>
-                                        <p><strong>Flexible Targets:</strong> Supports testing Gemini models directly or connecting to external APIs via highly configurable HTTP requests.</p>
-                                    </div>
-                                    <div className="flex gap-2.5 items-start">
-                                        <span className="text-[#4A72FF] mt-0.5">✔</span>
-                                        <p><strong>Variables & Criteria:</strong> Define parameterized test scenarios and strict success/failure rules in a fully visual dashboard.</p>
-                                    </div>
+                                    <p className="text-xs text-slate-300 relative z-10 leading-relaxed">
+                                        AgentEval is open source. <strong>Every contribution is highly welcome!</strong> Join us on GitHub to help build the future of AI Agent QA.
+                                    </p>
+                                    <a 
+                                        href="https://github.com/AlexandreDeCarli/AgentEval" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#4A72FF] hover:bg-[#3b5cd9] active:scale-[0.98] text-white text-xs font-bold transition-all shadow-[0_2px_10px_rgba(74,114,255,0.2)] hover:shadow-[0_2px_15px_rgba(74,114,255,0.3)] relative z-10 w-fit"
+                                    >
+                                        <span>Access Repository</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                    </a>
                                 </div>
                             </div>
 
                             {/* Right Column: Developer Presentation */}
-                            <div className="space-y-5 flex flex-col justify-between">
+                            <div className="space-y-6 flex flex-col justify-start">
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 text-indigo-400">
                                         <User className="w-5 h-5" />
@@ -198,71 +223,82 @@ export const WelcomeModal: React.FC = () => {
  
                                     <div className="space-y-2">
                                         <h3 className="text-title text-white">Alexandre De Carli</h3>
-                                        <p className="text-label text-indigo-300">
-                                            Entrepreneur, Product Manager & Software Engineer
+                                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                                            Tech Manager & Hands-on Leader
                                         </p>
                                     </div>
  
-                                    <p className="text-body text-muted-foreground">
-                                        I am deeply passionate about designing fluid user interfaces, integrating intelligent AI workflows, and developing state-of-the-art web architectures that wow users.
+                                    <p className="text-body text-muted-foreground leading-relaxed">
+                                        Hands-on Tech Manager and Architect with 16 years of experience bridging software engineering, system architecture, and strategic business leadership. Experienced in leading multi-squads, defining engineering standards, and deploying platform architectures processing R$100B+ in annual transactions.
+                                    </p>
+                                    <p className="text-body text-muted-foreground leading-relaxed">
+                                        Ecosystem specialist in applying AI to the development lifecycle—including multi-agent systems, LLMs (Gemini, OpenAI, Claude), and production-grade RAG—to act as a catalyst for engineering teams.{' '}
+                                        <a 
+                                            href="https://www.linkedin.com/in/alexandredecarli/" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="text-[#4A72FF] hover:text-[#4A72FF]/85 hover:underline font-semibold inline-flex items-center gap-0.5"
+                                        >
+                                            See more <ExternalLink className="w-3 h-3" />
+                                        </a>
                                     </p>
                                 </div>
 
                                 {/* Social Links & Support */}
-                                <div className="space-y-2">
-                                    <span className="text-label text-slate-400 block mb-2">Connect with me</span>
+                                <div className="space-y-3">
+                                    <span className="text-label text-slate-400 block">Connect with me</span>
                                     
-                                    <div className="flex flex-col gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                         <a 
                                             href="https://potencial.tec.br" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-emerald-500/10 hover:border-emerald-500/40 text-muted-foreground hover:text-white text-xs font-semibold transition-all duration-200 group"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Globe className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                                            <div className="flex items-center gap-2">
+                                                <Globe className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
                                                 <span>potencial.tec.br</span>
                                             </div>
-                                            <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                                            <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
  
                                         <a 
                                             href="https://www.linkedin.com/in/alexandredecarli/" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#0077b5]/10 hover:border-[#0077b5]/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#0077b5]/10 hover:border-[#0077b5]/40 text-muted-foreground hover:text-white text-xs font-semibold transition-all duration-200 group"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Linkedin className="w-4 h-4 text-[#0077b5] group-hover:scale-110 transition-transform" />
+                                            <div className="flex items-center gap-2">
+                                                <Linkedin className="w-3.5 h-3.5 text-[#0077b5] group-hover:scale-110 transition-transform" />
                                                 <span>LinkedIn</span>
                                             </div>
-                                            <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                                            <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
  
                                         <a 
                                             href="https://github.com/AlexandreDeCarli" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] hover:border-slate-500/40 text-muted-foreground hover:text-white text-body font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.08] hover:border-slate-500/40 text-muted-foreground hover:text-white text-xs font-semibold transition-all duration-200 group"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Github className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+                                            <div className="flex items-center gap-2">
+                                                <Github className="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" />
                                                 <span>GitHub</span>
                                             </div>
-                                            <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                                            <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
  
                                         <a 
                                             href="https://www.buymeacoffee.com/AlexandreDeCarli" 
                                             target="_blank" 
                                             rel="noopener noreferrer" 
-                                            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#ffdd00]/10 hover:border-[#ffdd00]/40 text-muted-foreground hover:text-[#ffdd00] text-body font-semibold transition-all duration-200 group"
+                                            className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-[#ffdd00]/10 hover:border-[#ffdd00]/40 text-muted-foreground hover:text-[#ffdd00] text-xs font-semibold transition-all duration-200 group"
                                         >
-                                            <div className="flex items-center gap-2.5">
-                                                <Coffee className="w-4 h-4 text-[#ffdd00] group-hover:scale-110 transition-transform" />
-                                                <span>Support me on Buy Me a Coffee</span>
+                                            <div className="flex items-center gap-2">
+                                                <Coffee className="w-3.5 h-3.5 text-[#ffdd00] group-hover:scale-110 transition-transform" />
+                                                <span>Buy Me a Coffee</span>
                                             </div>
-                                            <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                                            <ExternalLink className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />
                                         </a>
                                     </div>
                                 </div>

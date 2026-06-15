@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info } from 'lucide-react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 
@@ -15,21 +15,21 @@ export const Sidebar: React.FC = () => {
     return (
         <aside className="w-64 h-screen border-r border-border bg-card flex flex-col select-none">
             {/* Header with gradient logo ring and BETA tag */}
-            <div id="sidebar-header" className="p-6 flex items-center justify-between gap-2 border-b border-border/40">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#4A72FF] to-[#1c2e6b] flex items-center justify-center p-[2.5px] shadow-[0_0_15px_rgba(74,114,255,0.25)]">
+            <div id="sidebar-header" className="p-6 border-b border-border/40">
+                <Link to="/" className="flex items-center gap-2.5 group cursor-pointer decoration-none">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#4A72FF] to-[#1c2e6b] flex items-center justify-center p-[2.5px] shadow-[0_0_15px_rgba(74,114,255,0.25)] group-hover:shadow-[0_0_20px_rgba(74,114,255,0.4)] transition-all duration-300">
                         <div className="w-full h-full rounded-full bg-[#1C2026] flex items-center justify-center text-xs font-bold text-white tracking-tight">
                             AE
                         </div>
                     </div>
                     <div>
                         <div className="flex items-center gap-1.5">
-                            <h1 className="text-sm font-extrabold text-[#F9FAFB] tracking-tight">AgentEval</h1>
+                            <h1 className="text-sm font-extrabold text-[#F9FAFB] tracking-tight group-hover:text-[#4A72FF] transition-colors">AgentEval</h1>
                             <span className="text-[7.5px] font-extrabold px-1.5 py-0.5 bg-[#4A72FF]/20 text-[#4A72FF] rounded uppercase tracking-widest border border-[#4A72FF]/30">BETA</span>
                         </div>
                         <span className="text-label text-muted-foreground block font-bold">AI Test Mission Engine</span>
                     </div>
-                </div>
+                </Link>
             </div>
 
             {/* Navigation links with active side marker */}
@@ -73,7 +73,7 @@ export const Sidebar: React.FC = () => {
                 </button>
             </div>
             <div className="p-3 border-t border-border text-label text-muted-foreground text-center bg-[#13161B]/50 font-bold">
-                v2.4.0
+                v2.5.0
             </div>
         </aside>
     );
