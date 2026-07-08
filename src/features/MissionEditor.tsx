@@ -57,6 +57,7 @@ export const MissionEditor: React.FC = () => {
     const [activeTab, setActiveTab] = useState<MissionTab>('goal');
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiCount, setAiCount] = useState(8);
+    const [selectedAiPromptIds, setSelectedAiPromptIds] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [genError, setGenError] = useState('');
     const addToast = useToastStore((state) => state.addToast);
@@ -118,6 +119,13 @@ export const MissionEditor: React.FC = () => {
             addToast('Add at least one system prompt to the project before generating missions.', 'error');
             return;
         }
+        const validSelectedPromptIds = selectedAiPromptIds.filter((promptId) =>
+            currentProject.system_prompts.some((prompt) => prompt.id === promptId)
+        );
+        if (validSelectedPromptIds.length === 0) {
+            addToast('Select at least one system prompt before generating missions.', 'error');
+            return;
+        }
 
         setIsGenerating(true);
         setGenError('');
@@ -127,7 +135,8 @@ export const MissionEditor: React.FC = () => {
                 geminiApiKey,
                 currentProject,
                 aiPrompt.trim() || undefined,
-                aiCount
+                aiCount,
+                validSelectedPromptIds
             );
 
             generated.forEach((m) => addMission(m));
@@ -186,7 +195,7 @@ export const MissionEditor: React.FC = () => {
 
     // Consolidate change handler to support simultaneous updates and prevent stale synchronization
     const handleFormChange = (updated: Mission) => {
-        let finalData = { ...updated };
+        const finalData = { ...updated };
 
         // 1. If system_prompt_id changed, sync target_system_prompt
         if (updated.system_prompt_id !== formData.system_prompt_id) {
@@ -355,7 +364,10 @@ export const MissionEditor: React.FC = () => {
 
                     {/* Option 2: AI Generation */}
                     <div 
-                        onClick={() => setCreationMethod('ai')}
+                        onClick={() => {
+                            setSelectedAiPromptIds(availablePrompts.map((prompt) => prompt.id));
+                            setCreationMethod('ai');
+                        }}
                         className="group border border-border/80 hover:border-[#8B5CF6]/50 bg-card/60 p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-[0_10px_30px_rgba(139,92,246,0.08)] flex flex-col items-center text-center space-y-4 hover:-translate-y-1 active:scale-[0.98]"
                     >
                         <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-border/60 group-hover:bg-[#8B5CF6]/10 group-hover:border-[#8B5CF6]/30 transition-all duration-300">
@@ -384,6 +396,9 @@ export const MissionEditor: React.FC = () => {
                 isGenerating={isGenerating}
                 genError={genError}
                 handleAiGenerate={handleAiGenerate}
+                systemPrompts={availablePrompts}
+                selectedSystemPromptIds={selectedAiPromptIds}
+                setSelectedSystemPromptIds={setSelectedAiPromptIds}
             />
         );
     }
