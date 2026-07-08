@@ -68,8 +68,10 @@ async function main() {
     const { module: missionGenerator, cleanup } = await loadMissionGenerator();
     const project = createProject();
     let systemPromptSentToGemini = '';
+    let fetchCalls = 0;
 
     global.fetch = async (_url, options) => {
+        fetchCalls += 1;
         const requestBody = JSON.parse(options.body);
         systemPromptSentToGemini = requestBody.contents[0].parts[0].text;
 
@@ -113,6 +115,19 @@ async function main() {
     };
 
     try {
+        await assert.rejects(
+            () =>
+                missionGenerator.generateMissionsFromAI(
+                    'test-api-key',
+                    project,
+                    undefined,
+                    1,
+                    []
+                ),
+            /Select at least one system prompt before generating missions/
+        );
+        assert.equal(fetchCalls, 0);
+
         const missions = await missionGenerator.generateMissionsFromAI(
             'test-api-key',
             project,
@@ -125,6 +140,7 @@ async function main() {
         assert.doesNotMatch(systemPromptSentToGemini, /ORDERS_PROMPT_SHOULD_BE_EXCLUDED/);
         assert.equal(missions[0].system_prompt_id, 'sp-returns');
         assert.equal(missions[0].target_system_prompt, 'RETURNS_PROMPT_SHOULD_BE_INCLUDED');
+        assert.equal(fetchCalls, 1);
     } finally {
         cleanup();
     }

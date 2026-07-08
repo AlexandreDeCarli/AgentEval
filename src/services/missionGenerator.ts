@@ -27,7 +27,7 @@ export const generateMissionsFromAI = async (
     selectedSystemPromptIds?: string[]
 ): Promise<Mission[]> => {
     const selectedPromptIdSet = new Set(selectedSystemPromptIds || []);
-    const promptsForGeneration = selectedSystemPromptIds?.length
+    const promptsForGeneration = selectedSystemPromptIds !== undefined
         ? project.system_prompts.filter((sp) => selectedPromptIdSet.has(sp.id))
         : project.system_prompts;
 
