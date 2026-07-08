@@ -60,6 +60,7 @@ export interface ChatMessage {
     id: string;
     role: 'tester' | 'target' | 'system';
     content: string;
+    structuredContent?: string;
     timestamp: number;
     isCompletedFlag?: boolean;
     isProcessing?: boolean;

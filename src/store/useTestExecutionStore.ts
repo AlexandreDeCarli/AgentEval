@@ -273,11 +273,12 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     const preStateIds = await fetchPreStateIds(processedApiConfig, signal);
                     await sendTargetMessage(processedApiConfig, testerResult.message, signal, appendDebugLog);
 
-                    await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status) => {
+                    await pollTargetResponse(processedApiConfig, preStateIds, (msgId, content, status, structuredContent) => {
                         const isProcessing = status === 'processing';
                         const existingMsg = chatHistory.find((m) => m.id === msgId);
                         if (existingMsg) {
                             existingMsg.content = content;
+                            existingMsg.structuredContent = structuredContent;
                             existingMsg.isProcessing = isProcessing;
                             useTestRunStore.getState().updateMessage(runId, msgId, existingMsg);
                         } else {
@@ -285,6 +286,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                                 id: msgId,
                                 role: 'target',
                                 content,
+                                structuredContent,
                                 timestamp: Date.now(),
                                 isProcessing,
                             };

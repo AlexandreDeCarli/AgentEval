@@ -14,6 +14,26 @@ type TargetItem = UnknownRecord & {
     contentStatus?: unknown;
 };
 
+type TargetMessageCallback = (
+    msgId: string,
+    content: string,
+    status: string,
+    structuredContent?: string
+) => void;
+
+const STRUCTURED_OUTPUT_KEYS = [
+    'userResponse',
+    'functionToExecute',
+    'functionName',
+    'function_call',
+    'functionCall',
+    'toolCall',
+    'tool_calls',
+    'toolCalls',
+    'functionResult',
+    'extractedData',
+];
+
 const isRecord = (value: unknown): value is UnknownRecord =>
     typeof value === 'object' && value !== null;
 
@@ -70,6 +90,12 @@ const extractUserResponse = (value: unknown): string | undefined => {
     if (!isRecord(functionResult)) return undefined;
     const data = functionResult.data;
     return typeof data === 'string' ? data : undefined;
+};
+
+const getStructuredContent = (value: unknown): string | undefined => {
+    if (!isRecord(value)) return undefined;
+    if (!STRUCTURED_OUTPUT_KEYS.some((key) => key in value)) return undefined;
+    return JSON.stringify(value);
 };
 
 const getSortableId = (value: unknown): number | null => {
@@ -190,7 +216,7 @@ export const fetchPreStateIds = async (
 export const pollTargetResponse = async (
     apiConfig: ApiConfig,
     preStateIds: Set<unknown>,
-    onMessage: (msgId: string, content: string, status: string) => void,
+    onMessage: TargetMessageCallback,
     signal?: AbortSignal,
     onDebugLog?: (entry: DebugLogEntry) => void
 ): Promise<void> => {
@@ -262,6 +288,11 @@ export const pollTargetResponse = async (
 
                 let extracted: unknown =
                     typeof item.content === 'string' ? item.content : item.content ?? item;
+                let structuredContent: string | undefined;
+
+                if (typeof extracted !== 'string') {
+                    structuredContent = JSON.stringify(extracted);
+                }
 
                 // Unwrap: {"role":"model","parts":[{"text":"..."}]}
                 if (typeof extracted === 'string') {
@@ -276,6 +307,7 @@ export const pollTargetResponse = async (
                 if (typeof extracted === 'string') {
                     const innerJson = parseJsonString(extracted);
                     const userResponse = extractUserResponse(innerJson);
+                    structuredContent = getStructuredContent(innerJson) ?? structuredContent;
                     if (userResponse) {
                         extracted = userResponse;
                     }
@@ -287,7 +319,7 @@ export const pollTargetResponse = async (
                 const lastStatus = knownStatus.get(itemKey);
                 if (lastStatus !== statusToReport || lastStatus === undefined) {
                     knownStatus.set(itemKey, statusToReport);
-                    onMessage(String(itemKey), finalStr, statusToReport);
+                    onMessage(String(itemKey), finalStr, statusToReport, structuredContent);
                 }
             }
 
