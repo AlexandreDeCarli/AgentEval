@@ -23,9 +23,21 @@ export const generateMissionsFromAI = async (
     apiKey: string,
     project: Project,
     userPrompt?: string,
-    count?: number
+    count?: number,
+    selectedSystemPromptIds?: string[]
 ): Promise<Mission[]> => {
-    const promptsContext = project.system_prompts
+    const selectedPromptIdSet = new Set(selectedSystemPromptIds || []);
+    const promptsForGeneration = selectedSystemPromptIds !== undefined
+        ? project.system_prompts.filter((sp) => selectedPromptIdSet.has(sp.id))
+        : project.system_prompts;
+
+    if (promptsForGeneration.length === 0) {
+        throw new Error('Select at least one system prompt before generating missions.');
+    }
+
+    const allowedSystemPromptIds = new Set(promptsForGeneration.map((sp) => sp.id));
+
+    const promptsContext = promptsForGeneration
         .map(
             (sp, i) =>
                 `--- SYSTEM PROMPT #${i + 1}: "${sp.name}" (ID: ${sp.id}) ---\n${sp.content}\n--- END PROMPT #${i + 1} ---`
@@ -56,7 +68,7 @@ Your task is to generate a comprehensive set of test missions (test scenarios) f
 ${project.documentation || '(No documentation provided)'}
 """
 
-**System Prompts of the Target AI Agents:**
+**Selected System Prompts of the Target AI Agents:**
 ${promptsContext}
 
 **Available Environments:**
@@ -64,7 +76,7 @@ ${environmentsContext}
 
 ## INSTRUCTIONS
 
-Analyze ALL the system prompts and documentation carefully. Generate test missions that cover:
+Analyze only the selected system prompts and documentation carefully. Generate test missions that cover:
 
 1. **Happy Path Scenarios** — Standard use cases where the agent should succeed
 2. **Edge Cases** — Unusual but valid inputs, boundary conditions
@@ -78,7 +90,7 @@ Analyze ALL the system prompts and documentation carefully. Generate test missio
 - Write the **titulo** (title) prefixed with "(Gerado por IA)"
 - Write a clear **tester_persona** in Portuguese (pt-BR): describe WHO the tester is pretending to be, their personality, level of knowledge, and behavior patterns
 - Write a clear **mission_goal** in Portuguese (pt-BR): what the test is trying to verify
-- Set **system_prompt_id** to the ID of the system prompt this mission targets
+- Set **system_prompt_id** to the ID of the selected system prompt this mission targets. Use only these IDs: ${promptsForGeneration.map((sp) => sp.id).join(', ')}
 - Set **environment_id** to the first available environment ID, or empty string if none
 - Define **variables** as an object where each key maps to an array of possible values. The engine picks one randomly per run, creating variety. Use variables in persona and goal with {{variable_name}} syntax
 - Set reasonable **max_turns** (3-15 depending on complexity)
@@ -187,10 +199,13 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 
     // Transform raw AI output into proper Mission objects
     return parsed.map((raw) => {
-        const systemPromptId = raw.system_prompt_id || project.system_prompts[0]?.id || '';
+        const rawSystemPromptId = raw.system_prompt_id || promptsForGeneration[0]?.id || '';
+        const systemPromptId = allowedSystemPromptIds.has(rawSystemPromptId)
+            ? rawSystemPromptId
+            : promptsForGeneration[0]?.id || '';
         const envId = raw.environment_id || defaultEnvId;
         const env = project.environments.find((e) => e.id === envId);
-        const sp = project.system_prompts.find((s) => s.id === systemPromptId);
+        const sp = promptsForGeneration.find((s) => s.id === systemPromptId);
 
         return {
             id: crypto.randomUUID(),
