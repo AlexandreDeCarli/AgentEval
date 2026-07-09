@@ -147,6 +147,78 @@ async function main() {
             })),
             /missions/
         );
+
+        const incompleteImport = transfer.parseConfigurationExport(JSON.stringify({
+            schema: 'agenteval.configuration-export',
+            version: 1,
+            data: {
+                projects: [
+                    {
+                        id: 'project-minimal',
+                        name: 'Minimal Project',
+                    },
+                    {
+                        id: 'project-partial-env',
+                        name: 'Partial Env Project',
+                        environments: [
+                            {
+                                id: 'env-partial',
+                                name: 'Partial Env',
+                                api_config: {
+                                    post_url: 42,
+                                    polling_interval: 'slow',
+                                },
+                            },
+                        ],
+                    },
+                ],
+                missions: [
+                    {
+                        id: 'mission-minimal',
+                        titulo: 'Minimal Mission',
+                        variables: {
+                            ok: ['value'],
+                            malformed: 'not-array',
+                        },
+                    },
+                ],
+                settings: {
+                    geminiApiKey: 'AIza-secret',
+                },
+            },
+        }));
+
+        assert.deepEqual(incompleteImport.projects[0].system_prompts, []);
+        assert.deepEqual(incompleteImport.projects[0].environments, []);
+        assert.equal(incompleteImport.projects[0].description, '');
+        assert.equal(incompleteImport.projects[0].documentation, '');
+        assert.deepEqual(incompleteImport.projects[1].environments[0].api_config, {
+            post_url: '',
+            get_url: '',
+            auth_header: '',
+            payload_template: '',
+            response_path: '',
+            polling_interval: 2000,
+            max_timeout: 30,
+        });
+        assert.deepEqual(incompleteImport.missions[0].variables, {
+            ok: ['value'],
+            malformed: [],
+        });
+        assert.equal(incompleteImport.missions[0].max_turns, 10);
+        assert.equal(incompleteImport.missions[0].target_system_prompt, '');
+        assert.equal(incompleteImport.missions[0].tester_persona, '');
+        assert.equal(incompleteImport.missions[0].mission_goal, '');
+        assert.deepEqual(incompleteImport.missions[0].api_config, {
+            post_url: '',
+            get_url: '',
+            auth_header: '',
+            payload_template: '',
+            response_path: '',
+            polling_interval: 2000,
+            max_timeout: 30,
+        });
+        assert.equal(incompleteImport.settings.evaluatorModel, 'gemini-3.5-flash');
     } finally {
         cleanup();
     }
