@@ -39,12 +39,24 @@ const normalizeApiConfig = (value: unknown): ApiConfig => {
     const rawConfig = isRecord(value) ? value : {};
 
     return {
-        post_url: typeof rawConfig.post_url === 'string' ? rawConfig.post_url : '',
-        get_url: typeof rawConfig.get_url === 'string' ? rawConfig.get_url : '',
-        auth_header: typeof rawConfig.auth_header === 'string' ? rawConfig.auth_header : '',
+        post_url:
+            typeof rawConfig.post_url === 'string'
+                ? rawConfig.post_url
+                : DEFAULT_API_CONFIG.post_url,
+        get_url:
+            typeof rawConfig.get_url === 'string' ? rawConfig.get_url : DEFAULT_API_CONFIG.get_url,
+        auth_header:
+            typeof rawConfig.auth_header === 'string'
+                ? rawConfig.auth_header
+                : DEFAULT_API_CONFIG.auth_header,
         payload_template:
-            typeof rawConfig.payload_template === 'string' ? rawConfig.payload_template : '',
-        response_path: typeof rawConfig.response_path === 'string' ? rawConfig.response_path : '',
+            typeof rawConfig.payload_template === 'string'
+                ? rawConfig.payload_template
+                : DEFAULT_API_CONFIG.payload_template,
+        response_path:
+            typeof rawConfig.response_path === 'string'
+                ? rawConfig.response_path
+                : DEFAULT_API_CONFIG.response_path,
         polling_interval:
             typeof rawConfig.polling_interval === 'number'
                 ? rawConfig.polling_interval
