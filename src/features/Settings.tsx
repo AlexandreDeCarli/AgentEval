@@ -1,8 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { useMissionStore } from '../store/useMissionStore';
+import { useToastStore } from '../store/useToastStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Key, Cpu, Info } from 'lucide-react';
+import { createConfigurationExport, parseConfigurationExport } from '../services/configurationTransfer';
+import { Cpu, Download, Info, Key, ShieldAlert, Upload } from 'lucide-react';
 
 interface ModelInfo {
     id: string;
@@ -155,6 +159,10 @@ const EVAL_MODELS: ModelInfo[] = [
 
 export const Settings: React.FC = () => {
     const { geminiApiKey, setGeminiApiKey, evaluatorModel, setEvaluatorModel } = useSettingsStore();
+    const projects = useProjectStore((state) => state.projects);
+    const missions = useMissionStore((state) => state.missions);
+    const addToast = useToastStore((state) => state.addToast);
+    const importInputRef = useRef<HTMLInputElement>(null);
 
     const [inputKey, setInputKey] = useState(geminiApiKey);
     const [selectedModel, setSelectedModel] = useState(() => {
@@ -175,6 +183,65 @@ export const Settings: React.FC = () => {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     }, [inputKey, selectedModel, setGeminiApiKey, setEvaluatorModel]);
+
+    const handleExportConfiguration = useCallback(() => {
+        const exported = createConfigurationExport({
+            projects,
+            missions,
+            settings: {
+                geminiApiKey,
+                evaluatorModel,
+            },
+        });
+        const blob = new Blob([JSON.stringify(exported, null, 2)], {
+            type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const date = new Date().toISOString().slice(0, 10);
+        const linkElement = document.createElement('a');
+
+        linkElement.href = url;
+        linkElement.download = `agenteval-config-${date}.json`;
+        linkElement.style.display = 'none';
+        document.body.appendChild(linkElement);
+        linkElement.click();
+        document.body.removeChild(linkElement);
+        URL.revokeObjectURL(url);
+
+        addToast('Configuration export generated. Histories were not included.', 'success');
+    }, [addToast, evaluatorModel, geminiApiKey, missions, projects]);
+
+    const handleImportConfiguration = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+            try {
+                const rawResult = readerEvent.target?.result;
+                const imported = parseConfigurationExport(typeof rawResult === 'string' ? rawResult : '');
+
+                useProjectStore.setState({ projects: imported.projects });
+                useMissionStore.setState({ missions: imported.missions });
+                setGeminiApiKey(imported.settings.geminiApiKey);
+                setEvaluatorModel(imported.settings.evaluatorModel);
+
+                addToast(
+                    `Imported ${imported.projects.length} projects and ${imported.missions.length} missions. Histories were unchanged.`,
+                    'success',
+                    6000
+                );
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unable to import configuration file.';
+                addToast(message, 'error', 6000);
+            }
+        };
+        reader.onerror = () => {
+            addToast('Unable to read configuration file.', 'error');
+        };
+        reader.readAsText(file);
+    }, [addToast, setEvaluatorModel, setGeminiApiKey]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -314,6 +381,61 @@ export const Settings: React.FC = () => {
                 <div className="pt-4 border-t border-border flex items-center gap-4">
                     <Button onClick={handleSave}>Save Settings</Button>
                     {saved && <span className="text-body text-green-500 font-medium">Saved successfully!</span>}
+                </div>
+            </div>
+
+            <div className="border border-border bg-card rounded-xl shadow-sm p-6 space-y-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-3">
+                        <h2 className="text-title flex items-center gap-2">
+                            <Upload className="w-5 h-5 text-primary" /> Workspace Migration
+                        </h2>
+                        <p className="text-body text-muted-foreground max-w-[75ch]">
+                            Export projects, missions, and global settings to move an AgentEval
+                            workspace between environments. Test histories and run logs are not
+                            included.
+                        </p>
+                    </div>
+                    <div className="flex shrink-0 gap-3">
+                        <Button variant="outline" onClick={handleExportConfiguration} className="gap-2">
+                            <Download className="w-4 h-4" /> Export
+                        </Button>
+                        <Button onClick={() => importInputRef.current?.click()} className="gap-2">
+                            <Upload className="w-4 h-4" /> Import
+                        </Button>
+                    </div>
+                </div>
+
+                <input
+                    ref={importInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="application/json,.json"
+                    onChange={handleImportConfiguration}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
+                        <span className="text-label text-muted-foreground">Projects</span>
+                        <div className="mt-1 text-title text-white">{projects.length}</div>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
+                        <span className="text-label text-muted-foreground">Missions</span>
+                        <div className="mt-1 text-title text-white">{missions.length}</div>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
+                        <span className="text-label text-muted-foreground">Histories</span>
+                        <div className="mt-1 text-title text-white">Excluded</div>
+                    </div>
+                </div>
+
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4 flex items-start gap-3">
+                    <ShieldAlert className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
+                    <p className="text-body text-amber-100/90">
+                        Import replaces the current projects, missions, and settings in this
+                        browser. Export files include configuration secrets such as Gemini API keys
+                        and environment authorization headers.
+                    </p>
                 </div>
             </div>
         </div>
