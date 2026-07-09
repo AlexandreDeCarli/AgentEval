@@ -45,6 +45,27 @@ async function main() {
         assert.equal(functionCall.functionName, 'getBalance');
         assert.match(functionCall.formattedJson, /"includePending": true/);
 
+        const toolCall = formatter.describeChatMessageContent(JSON.stringify({
+            tool_calls: [
+                {
+                    function: {
+                        name: 'lookupOrder',
+                        arguments: {
+                            orderId: 'ORD-123',
+                            includeItems: true,
+                        },
+                    },
+                },
+            ],
+        }));
+
+        assert.equal(toolCall.kind, 'function_call');
+        assert.equal(toolCall.functionName, 'lookupOrder');
+        assert.match(
+            toolCall.summaryFields.find((field) => field.label === 'Arguments').value,
+            /"orderId": "ORD-123"/
+        );
+
         const structuredOutput = formatter.describeChatMessageContent(`
 \`\`\`json
 {
@@ -63,6 +84,10 @@ async function main() {
         const plainText = formatter.describeChatMessageContent('Pedido encontrado. Posso ajudar em algo mais?');
         assert.equal(plainText.kind, 'plain_text');
         assert.equal(plainText.text, 'Pedido encontrado. Posso ajudar em algo mais?');
+
+        const nullishInput = formatter.describeChatMessageContent(null);
+        assert.equal(nullishInput.kind, 'plain_text');
+        assert.equal(nullishInput.text, '');
     } finally {
         cleanup();
     }

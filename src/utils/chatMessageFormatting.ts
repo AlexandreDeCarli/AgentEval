@@ -159,6 +159,27 @@ const getResponseText = (value: unknown): string | undefined => {
     return undefined;
 };
 
+const readNestedArguments = (value: unknown): unknown => {
+    if (!isRecord(value)) return undefined;
+
+    for (const key of ARGUMENT_KEYS) {
+        if (value[key] !== undefined) {
+            return value[key];
+        }
+    }
+
+    const nestedFunction = value.function;
+    if (isRecord(nestedFunction)) {
+        for (const key of ARGUMENT_KEYS) {
+            if (nestedFunction[key] !== undefined) {
+                return nestedFunction[key];
+            }
+        }
+    }
+
+    return undefined;
+};
+
 const getArgumentsValue = (value: unknown): unknown => {
     if (!isRecord(value)) return undefined;
 
@@ -169,20 +190,14 @@ const getArgumentsValue = (value: unknown): unknown => {
     }
 
     const functionCall = value.function_call ?? value.functionCall ?? value.toolCall;
-    if (isRecord(functionCall)) {
-        for (const key of ARGUMENT_KEYS) {
-            if (functionCall[key] !== undefined) {
-                return functionCall[key];
-            }
-        }
+    const nestedArgs = readNestedArguments(functionCall);
+    if (nestedArgs !== undefined) return nestedArgs;
 
-        const nestedFunction = functionCall.function;
-        if (isRecord(nestedFunction)) {
-            for (const key of ARGUMENT_KEYS) {
-                if (nestedFunction[key] !== undefined) {
-                    return nestedFunction[key];
-                }
-            }
+    const toolCalls = value.tool_calls ?? value.toolCalls;
+    if (Array.isArray(toolCalls)) {
+        for (const call of toolCalls) {
+            const toolArgs = readNestedArguments(call);
+            if (toolArgs !== undefined) return toolArgs;
         }
     }
 
@@ -212,7 +227,14 @@ const buildSummaryFields = (
     return fields;
 };
 
-export const describeChatMessageContent = (content: string): ChatMessageContentDescription => {
+export const describeChatMessageContent = (content: unknown): ChatMessageContentDescription => {
+    if (typeof content !== 'string') {
+        return {
+            kind: 'plain_text',
+            text: String(content ?? ''),
+        };
+    }
+
     const parsed = parseJsonCandidate(content);
     if (!isRecord(parsed) && !Array.isArray(parsed)) {
         return {

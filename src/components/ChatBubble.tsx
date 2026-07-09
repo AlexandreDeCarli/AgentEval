@@ -16,8 +16,8 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message, animateTyping, 
     const isTester = message.role === 'tester';
     const [displayedText, setDisplayedText] = React.useState(animateTyping ? '' : message.content);
     const formattedContent = React.useMemo(
-        () => describeChatMessageContent(message.structuredContent ?? displayedText),
-        [displayedText, message.structuredContent]
+        () => describeChatMessageContent(message.structuredContent ?? message.content),
+        [message.content, message.structuredContent]
     );
 
     React.useEffect(() => {
