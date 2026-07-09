@@ -175,12 +175,16 @@ export const ProjectEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
-    const handleRunAllMissions = () => {
+    const handleRunAllMissions = (missionsToRun: Mission[]) => {
         if (!geminiApiKey) {
             addToast('Configure your Gemini API Key in Settings first.', 'error');
             return;
         }
-        projectMissions.forEach((mission) => {
+        if (missionsToRun.length === 0) {
+            addToast('No missions available for this batch run.', 'error');
+            return;
+        }
+        missionsToRun.forEach((mission) => {
             startExecution(mission, geminiApiKey);
         });
     };

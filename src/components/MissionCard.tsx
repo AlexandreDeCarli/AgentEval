@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pencil, Play, Trash2, Copy } from 'lucide-react';
-import { Mission } from '../types';
+import { Mission, TestRun } from '../types';
 import { useProjectStore } from '../store/useProjectStore';
 import { useTestRunStore } from '../store/useTestRunStore';
 import { Button } from './ui/Button';
@@ -15,7 +15,10 @@ interface MissionCardProps {
     mission: Mission;
     onDelete: (mission: Mission) => void;
     onClone?: (mission: Mission) => void;
-    onSelectRun?: (run: any) => void;
+    onSelectRun?: (run: TestRun) => void;
+    isSelected?: boolean;
+    onSelectionChange?: (missionId: string, selected: boolean) => void;
+    selectionLabel?: string;
 }
 
 export const MissionCard: React.FC<MissionCardProps> = ({
@@ -23,6 +26,9 @@ export const MissionCard: React.FC<MissionCardProps> = ({
     onDelete,
     onClone,
     onSelectRun,
+    isSelected = false,
+    onSelectionChange,
+    selectionLabel,
 }) => {
     const navigate = useNavigate();
     const { projects } = useProjectStore();
@@ -46,7 +52,24 @@ export const MissionCard: React.FC<MissionCardProps> = ({
         .slice(0, 3);
 
     return (
-        <div className="border border-border/50 rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20 transition-all duration-300 shadow-sm gap-4">
+        <div
+            className={`border rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between transition-all duration-300 shadow-sm gap-4 ${
+                isSelected
+                    ? 'border-[#4A72FF]/70 bg-[#272D35]/35'
+                    : 'border-border/50 hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20'
+            }`}
+        >
+            {onSelectionChange && (
+                <label className="flex items-center self-start sm:self-center pt-0.5 sm:pt-0 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(event) => onSelectionChange(mission.id, event.target.checked)}
+                        className="h-4 w-4 rounded border-border bg-[#272D35] text-[#4A72FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] cursor-pointer"
+                        aria-label={selectionLabel || `Select mission ${mission.titulo}`}
+                    />
+                </label>
+            )}
             <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
                     <h4 className="text-body font-bold text-white truncate">
