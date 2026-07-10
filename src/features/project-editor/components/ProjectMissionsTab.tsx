@@ -54,8 +54,8 @@ export const ProjectMissionsTab: React.FC<ProjectMissionsTabProps> = ({
     const runTargetMissions = hasSelection ? selectedVisibleMissions : filteredMissions;
 
     useEffect(() => {
-        setSelectedMissionIds((current) => reconcileSelectedMissionIds(current, filteredMissions));
-    }, [filteredMissions]);
+        setSelectedMissionIds((current) => reconcileSelectedMissionIds(current, projectMissions));
+    }, [projectMissions]);
 
     const handleSelectionChange = (missionId: string, selected: boolean) => {
         setSelectedMissionIds((current) => {
@@ -76,7 +76,6 @@ export const ProjectMissionsTab: React.FC<ProjectMissionsTabProps> = ({
 
     const handleClearFilters = () => {
         setFilters(DEFAULT_MISSION_FILTERS);
-        setSelectedMissionIds([]);
     };
 
     return (

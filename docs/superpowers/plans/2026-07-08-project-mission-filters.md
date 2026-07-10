@@ -38,7 +38,7 @@
 
 **Interfaces:**
 - Consumes: `Mission`, `Project`.
-- Produces: `MissionFilters`, `DEFAULT_MISSION_FILTERS`, `getMissionFilterOptions(project)`, `filterProjectMissions(missions, filters)`, `reconcileSelectedMissionIds(selectedIds, visibleMissions)`.
+- Produces: `MissionFilters`, `DEFAULT_MISSION_FILTERS`, `getMissionFilterOptions(project)`, `filterProjectMissions(missions, filters)`, `reconcileSelectedMissionIds(selectedIds, allMissions)`.
 
 - [x] **Step 1: Write helper with exact API**
 
@@ -66,11 +66,11 @@ const normalizeSearchValue = (value: string | undefined) =>
     (value || '').trim().toLocaleLowerCase();
 
 export const getMissionFilterOptions = (project: Project) => ({
-    environmentOptions: project.environments.map((environment) => ({
+    environmentOptions: (project.environments || []).map((environment) => ({
         id: environment.id,
         name: environment.name,
     })),
-    systemPromptOptions: project.system_prompts.map((prompt) => ({
+    systemPromptOptions: (project.system_prompts || []).map((prompt) => ({
         id: prompt.id,
         name: prompt.name,
     })),
@@ -100,16 +100,16 @@ export const filterProjectMissions = (
 
 export const reconcileSelectedMissionIds = (
     selectedIds: string[],
-    visibleMissions: Mission[]
+    allMissions: Mission[]
 ): string[] => {
-    const visibleMissionIds = new Set(visibleMissions.map((mission) => mission.id));
-    return selectedIds.filter((missionId) => visibleMissionIds.has(missionId));
+    const missionIds = new Set(allMissions.map((mission) => mission.id));
+    return selectedIds.filter((missionId) => missionIds.has(missionId));
 };
 ```
 
 - [x] **Step 2: Verify build reaches this file without TypeScript errors**
 
-Run: `PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/tsc -b`
+Run: `npm run build`
 
 Expected: exit `0`.
 
@@ -127,11 +127,13 @@ Expected: exit `0`.
 - [x] **Step 1: Extend props and destructuring**
 
 ```ts
+import { Mission, TestRun } from '../types';
+
 interface MissionCardProps {
     mission: Mission;
     onDelete: (mission: Mission) => void;
     onClone?: (mission: Mission) => void;
-    onSelectRun?: (run: any) => void;
+    onSelectRun?: (run: TestRun) => void;
     isSelected?: boolean;
     onSelectionChange?: (missionId: string, selected: boolean) => void;
     selectionLabel?: string;
@@ -160,7 +162,7 @@ Use `border-[#4A72FF]/70 bg-[#272D35]/35` when `isSelected` is true; otherwise p
 
 - [x] **Step 4: Verify**
 
-Run: `PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/tsc -b`
+Run: `npm run build`
 
 Expected: exit `0`.
 
@@ -224,7 +226,7 @@ Show `No missions match these filters.` with a `Clear filters` action when `proj
 
 - [x] **Step 6: Verify**
 
-Run: `PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/tsc -b`
+Run: `npm run build`
 
 Expected: exit `0`.
 
@@ -260,7 +262,7 @@ const handleRunAllMissions = (missionsToRun: Mission[]) => {
 
 - [x] **Step 2: Verify**
 
-Run: `PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/tsc -b`
+Run: `npm run build`
 
 Expected: exit `0`.
 
@@ -277,11 +279,11 @@ Expected: exit `0`.
 
 - [x] **Step 1: Add Playwright script**
 
-Use a Vite server on port `5173`, dismiss onboarding if visible, open the first project, click `Testing Missions`, fill the search field with `PIX`, check the first visible mission checkbox, and assert the batch button text changes to `Run Selected (1)`.
+Use a Vite server on port `5177`, dismiss onboarding if visible, open `demo-shopassist-001` on its missions tab, filter by `demo-env-mock`, `sp-shop-orders`, and `Order`, assert `Run All (2)`, check a visible mission, and assert `Run Selected (1)`. Change the search to hide and then restore the selected mission, confirming that its checkbox remains selected.
 
 - [x] **Step 2: Run focused script**
 
-Run: `PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" node scratch/test-project-mission-filters.cjs`
+Run: `node scratch/test-project-mission-filters.cjs`
 
 Expected: `PASS project mission filters`.
 
@@ -300,10 +302,9 @@ Expected: `PASS project mission filters`.
 Run:
 
 ```bash
-PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/tsc -b
-PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/vite build
-PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" ./node_modules/.bin/eslint .
-PATH="/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PWD/node_modules/.bin:$PATH" node scratch/test-project-mission-filters.cjs
+npm run build
+npx eslint src/features/project-editor/missionFilters.ts src/components/MissionCard.tsx src/features/project-editor/components/ProjectMissionsTab.tsx src/features/ProjectEditor.tsx
+node scratch/test-project-mission-filters.cjs
 ```
 
 Expected: all exit `0`.

@@ -21,11 +21,11 @@ const normalizeSearchValue = (value: string | undefined) =>
     (value || '').trim().toLocaleLowerCase();
 
 export const getMissionFilterOptions = (project: Project) => ({
-    environmentOptions: project.environments.map((environment) => ({
+    environmentOptions: (project.environments || []).map((environment) => ({
         id: environment.id,
         name: environment.name,
     })),
-    systemPromptOptions: project.system_prompts.map((prompt) => ({
+    systemPromptOptions: (project.system_prompts || []).map((prompt) => ({
         id: prompt.id,
         name: prompt.name,
     })),
@@ -55,8 +55,8 @@ export const filterProjectMissions = (
 
 export const reconcileSelectedMissionIds = (
     selectedIds: string[],
-    visibleMissions: Mission[]
+    allMissions: Mission[]
 ): string[] => {
-    const visibleMissionIds = new Set(visibleMissions.map((mission) => mission.id));
-    return selectedIds.filter((missionId) => visibleMissionIds.has(missionId));
+    const missionIds = new Set(allMissions.map((mission) => mission.id));
+    return selectedIds.filter((missionId) => missionIds.has(missionId));
 };

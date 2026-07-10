@@ -5,7 +5,7 @@ const net = require('net');
 
 const PORT = 5177;
 const URL = `http://localhost:${PORT}`;
-const NODE_PATH = '/Users/alexandre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin';
+const NODE_PATH = path.dirname(process.execPath);
 
 function isPortOpen(port) {
     return new Promise((resolve) => {
@@ -28,6 +28,17 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitForPort(port, timeoutMs = 15000) {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (await isPortOpen(port)) return true;
+        await sleep(300);
+    }
+
+    return false;
+}
+
 async function dismissWelcome(page) {
     const welcomeTitle = page.locator('text=About the Project');
     if (!(await welcomeTitle.isVisible().catch(() => false))) return;
@@ -43,21 +54,24 @@ async function runTests() {
     let browser;
     let hasFailed = false;
 
-    if (!(await isPortOpen(PORT))) {
-        serverProcess = exec(`node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`, {
-            cwd: path.join(__dirname, '..'),
-            env: {
-                ...process.env,
-                PATH: `${NODE_PATH}:${path.join(__dirname, '../node_modules/.bin')}:${process.env.PATH || ''}`,
-            },
-        });
-        serverProcess.stderr.on('data', (data) => {
-            console.error(`[Vite Error] ${data.toString().trim()}`);
-        });
-        await sleep(4000);
-    }
-
     try {
+        if (!(await isPortOpen(PORT))) {
+            serverProcess = exec(`${process.execPath} ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`, {
+                cwd: path.join(__dirname, '..'),
+                env: {
+                    ...process.env,
+                    PATH: `${NODE_PATH}:${path.join(__dirname, '../node_modules/.bin')}:${process.env.PATH || ''}`,
+                },
+            });
+            serverProcess.stderr.on('data', (data) => {
+                console.error(`[Vite Error] ${data.toString().trim()}`);
+            });
+
+            if (!(await waitForPort(PORT))) {
+                throw new Error(`Vite dev server did not start on port ${PORT} in time`);
+            }
+        }
+
         browser = await chromium.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -78,14 +92,8 @@ async function runTests() {
         await environmentSelect.waitFor({ state: 'visible', timeout: 5000 });
         await promptSelect.waitFor({ state: 'visible', timeout: 5000 });
 
-        await environmentSelect.evaluate((select) => {
-            select.value = 'demo-env-mock';
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        await promptSelect.evaluate((select) => {
-            select.value = 'sp-shop-orders';
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-        });
+        await environmentSelect.selectOption('demo-env-mock');
+        await promptSelect.selectOption('sp-shop-orders');
         await searchInput.fill('Order');
         await page.waitForTimeout(300);
 
@@ -109,6 +117,20 @@ async function runTests() {
         const selectedText = await runSelectedButton.textContent();
         if (!selectedText || !selectedText.includes('Run Selected (1)')) {
             throw new Error(`Expected Run Selected (1), got: ${selectedText}`);
+        }
+
+        await searchInput.fill('No matching mission');
+        await page.waitForTimeout(300);
+        await searchInput.fill('Order');
+        await visibleCards.first().waitFor({ state: 'visible', timeout: 5000 });
+
+        if (!(await visibleCards.first().isChecked())) {
+            throw new Error('Expected the selected mission to remain selected after changing filters');
+        }
+
+        const restoredSelectedText = await runSelectedButton.textContent();
+        if (!restoredSelectedText || !restoredSelectedText.includes('Run Selected (1)')) {
+            throw new Error(`Expected restored Run Selected (1), got: ${restoredSelectedText}`);
         }
 
         await page.locator('button:has-text("Clear selection")').click();
