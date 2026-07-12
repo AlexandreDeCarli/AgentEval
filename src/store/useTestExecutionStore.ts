@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Mission, TestRun, ChatMessage } from '../types';
+import { AiRoutine, ChatMessage, GeminiUsageMeasurement, Mission, TestRun } from '../types';
 import { resolveVariables, applyVariables } from '../utils/templateEngine';
 import {
     generateTesterMessage,
@@ -17,6 +17,7 @@ import { useTestRunStore } from './useTestRunStore';
 import { useProjectStore } from './useProjectStore';
 import { useToastStore } from './useToastStore';
 import { useSettingsStore } from './useSettingsStore';
+import { useAiUsageStore } from './useAiUsageStore';
 
 export interface ExecutionState {
     missionId: string;
@@ -133,6 +134,17 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
         const targetGeminiModel = project
             ? getProjectGeminiModel(project, mission)
             : getMissionGeminiModel(mission);
+        const recordUsage = (routine: AiRoutine) => (usage: GeminiUsageMeasurement) => {
+            useAiUsageStore.getState().recordMeasurement(
+                {
+                    routine,
+                    projectId: project?.id || mission.project_id,
+                    missionId: mission.id,
+                    runId,
+                },
+                usage
+            );
+        };
         let runtimeApiConfig = mission.api_config;
         if (targetProvider === 'http' && project && mission.environment_id) {
             const env = project?.environments.find((e) => e.id === mission.environment_id);
@@ -192,7 +204,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     geminiApiKey,
                     testerPersona,
                     missionGoal,
-                    chatHistory
+                    chatHistory,
+                    recordUsage('tester_conversation')
                 );
 
                 const testerMsg: ChatMessage = {
@@ -255,7 +268,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                         mission.target_system_prompt,
                         chatHistory,
                         signal,
-                        appendDebugLog
+                        appendDebugLog,
+                        recordUsage('gemini_target')
                     );
 
                     const targetMsg: ChatMessage = {
@@ -341,7 +355,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 mission.max_turns,
                 mission.evaluation_criteria || [],
                 metrics,
-                evalModel
+                evalModel,
+                recordUsage('evaluation')
             );
 
             useTestRunStore.getState().setEvaluation(runId, evalResult);

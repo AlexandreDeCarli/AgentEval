@@ -1,6 +1,6 @@
-import { Mission, Project } from '../types';
+import { GeminiUsageMeasurement, Mission, Project } from '../types';
+import { getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
 
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GENERATOR_MODEL = 'gemini-2.5-pro';
 
 interface GeneratedCriterionPayload {
@@ -24,7 +24,8 @@ export const generateMissionsFromAI = async (
     project: Project,
     userPrompt?: string,
     count?: number,
-    selectedSystemPromptIds?: string[]
+    selectedSystemPromptIds?: string[],
+    onUsage?: (usage: GeminiUsageMeasurement) => void
 ): Promise<Mission[]> => {
     const selectedPromptIdSet = new Set(selectedSystemPromptIds || []);
     const promptsForGeneration = selectedSystemPromptIds !== undefined
@@ -119,15 +120,10 @@ Return a JSON array of mission objects.
 ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 `.trim();
 
-    const url = `${GEMINI_API_BASE_URL}/${GENERATOR_MODEL}:generateContent`;
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
+    const result = await requestGeminiGenerateContent({
+        apiKey,
+        model: GENERATOR_MODEL,
+        requestBody: {
             contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
             generationConfig: {
                 responseMimeType: 'application/json',
@@ -170,16 +166,18 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
                     },
                 },
             },
-        }),
+        },
+        onUsage,
     });
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Gemini API Error: ${response.status} - ${errorBody}`);
+    if (!result.ok) {
+        throw new Error(`Gemini API Error: ${result.status} - ${getGeminiErrorBody(result.body)}`);
     }
 
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const data = result.body as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!rawText) throw new Error('Empty response from Gemini');
 

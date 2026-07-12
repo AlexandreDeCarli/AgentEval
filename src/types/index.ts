@@ -113,3 +113,58 @@ export interface TestRun {
     updated_at: number;
     error?: string;
 }
+
+export type AiRoutine =
+    | 'mission_generation'
+    | 'tester_conversation'
+    | 'gemini_target'
+    | 'evaluation';
+
+export type AiPricingStatus = 'priced' | 'unpriced' | 'unpriced_cache';
+
+export interface GeminiUsageMeasurement {
+    requestedModel: string;
+    resolvedModel: string;
+    responseId?: string;
+    promptTokens: number;
+    candidateTokens: number;
+    thinkingTokens: number;
+    cachedTokens: number;
+    totalTokens: number;
+}
+
+export interface AiUsageContext {
+    routine: AiRoutine;
+    projectId?: string;
+    missionId?: string;
+    runId?: string;
+}
+
+export interface AiPricingSnapshot {
+    pricingVersion: string;
+    pricingDate: string;
+    currency: 'USD';
+    inputPerMillionUsd: number;
+    outputPerMillionUsd: number;
+    source: string;
+    promptThresholdTokens?: number;
+}
+
+export interface AiUsageEvent extends AiUsageContext {
+    id: string;
+    occurredAt: number;
+    requestedModel: string;
+    resolvedModel: string;
+    responseId?: string;
+    inputTokens: number;
+    candidateTokens: number;
+    thinkingTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    totalTokens: number;
+    pricingStatus: AiPricingStatus;
+    estimatedInputCostUsd: number | null;
+    estimatedOutputCostUsd: number | null;
+    estimatedCostUsd: number | null;
+    pricingSnapshot: AiPricingSnapshot | null;
+}

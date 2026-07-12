@@ -276,6 +276,7 @@ export const TestHistory: React.FC = () => {
                                             <EvaluationReport
                                                 evaluation={selectedRun.evaluation}
                                                 mission={missions.find(m => m.id === selectedRun.mission_id)}
+                                                runId={selectedRun.id}
                                             />
                                         </div>
                                     )}

@@ -1,442 +1,63 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useSettingsStore } from '../store/useSettingsStore';
-import { useProjectStore } from '../store/useProjectStore';
-import { useMissionStore } from '../store/useMissionStore';
-import { useToastStore } from '../store/useToastStore';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { createConfigurationExport, parseConfigurationExport } from '../services/configurationTransfer';
-import { Cpu, Download, Info, Key, ShieldAlert, Upload } from 'lucide-react';
+import React, { Suspense, useState } from 'react';
+import { BarChart3, KeyRound, Move } from 'lucide-react';
+import { AiConfigurationSettings } from './settings/AiConfigurationSettings';
+import { WorkspaceMigrationSettings } from './settings/WorkspaceMigrationSettings';
 
-interface ModelInfo {
-    id: string;
-    name: string;
-    isFreeTier: boolean;
-    inputCostPaid: string;
-    outputCostPaid: string;
-    rpmLimitFree?: number;
-    rpdLimitFree?: number;
-    tpmLimitFree?: number;
-    description: string;
-    contextLimit: string;
-    releaseDate?: string;
-    knowledgeCutoff?: string;
-}
+const AiUsageDashboard = React.lazy(() =>
+    import('./settings/AiUsageDashboard').then((module) => ({ default: module.AiUsageDashboard }))
+);
 
-const EVAL_MODELS: ModelInfo[] = [
-    {
-        id: 'gemini-2.5-pro',
-        name: 'Gemini 2.5 Pro',
-        isFreeTier: false,
-        inputCostPaid: '$1.25 (<=200K) / $2.50 (>200K)',
-        outputCostPaid: '$10.00 (<=200K) / $15.00 (>200K)',
-        description: 'Our previous generation advanced reasoning model, which excels at coding and complex reasoning tasks.',
-        contextLimit: '2M tokens',
-        releaseDate: 'Jun. 17, 2025',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-2.5-flash',
-        name: 'Gemini 2.5 Flash',
-        isFreeTier: true,
-        inputCostPaid: '$0.30',
-        outputCostPaid: '$2.50',
-        rpmLimitFree: 5,
-        rpdLimitFree: 20,
-        tpmLimitFree: 250000,
-        description: 'Our hybrid reasoning model, with a 1M token context window and thinking budgets.',
-        contextLimit: '1M tokens',
-        releaseDate: 'Jun. 9, 2025',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-2.5-flash-lite',
-        name: 'Gemini 2.5 Flash-Lite',
-        isFreeTier: true,
-        inputCostPaid: '$0.10',
-        outputCostPaid: '$0.40',
-        rpmLimitFree: 10,
-        rpdLimitFree: 20,
-        tpmLimitFree: 250000,
-        description: 'Our smallest and most cost effective model, built for at scale usage.',
-        contextLimit: '1M tokens',
-        releaseDate: 'Jul. 14, 2025',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-3.5-flash',
-        name: 'Gemini 3.5 Flash (Default)',
-        isFreeTier: true,
-        inputCostPaid: '$1.50',
-        outputCostPaid: '$9.00',
-        rpmLimitFree: 5,
-        rpdLimitFree: 20,
-        tpmLimitFree: 250000,
-        description: 'Our most intelligent model for sustained frontier performance in agentic and coding tasks.',
-        contextLimit: '1M tokens',
-        releaseDate: 'May 19, 2026',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-3.1-flash-lite',
-        name: 'Gemini 3.1 Flash-Lite',
-        isFreeTier: true,
-        inputCostPaid: '$0.25 (Text) / $0.50 (Audio)',
-        outputCostPaid: '$1.50',
-        rpmLimitFree: 15,
-        rpdLimitFree: 500,
-        tpmLimitFree: 250000,
-        description: 'Our most cost-efficient model, optimized for high-volume agentic tasks, translation, and simple data processing.',
-        contextLimit: '1M tokens',
-        releaseDate: 'May 7, 2026',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-3.1-pro-preview',
-        name: 'Gemini 3.1 Pro Preview',
-        isFreeTier: false,
-        inputCostPaid: '$2.00 (<=200K) / $4.00 (>200K)',
-        outputCostPaid: '$12.00 (<=200K) / $18.00 (>200K)',
-        description: 'Our latest SOTA reasoning model with unprecedented depth and nuance, and powerful multimodal understanding and coding capabilities.',
-        contextLimit: '2M tokens',
-        releaseDate: 'Feb. 12, 2026',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-3-flash-preview',
-        name: 'Gemini 3 Flash Preview',
-        isFreeTier: true,
-        inputCostPaid: '$0.50',
-        outputCostPaid: '$3.00',
-        rpmLimitFree: 5,
-        rpdLimitFree: 20,
-        tpmLimitFree: 250000,
-        description: 'Our most intelligent model built for speed, combining frontier intelligence with superior search and grounding.',
-        contextLimit: '1M tokens',
-        releaseDate: 'Dec. 17, 2025',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-flash-latest',
-        name: 'Gemini Flash Latest (Alias to 3.5 Flash)',
-        isFreeTier: true,
-        inputCostPaid: '$1.50',
-        outputCostPaid: '$9.00',
-        rpmLimitFree: 5,
-        rpdLimitFree: 20,
-        tpmLimitFree: 250000,
-        description: 'An alias to our latest Flash model which changes over time. Currently points to gemini-3.5-flash.',
-        contextLimit: '1M tokens',
-        releaseDate: 'Dec. 17, 2025',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-flash-lite-latest',
-        name: 'Gemini Flash-Lite Latest (Alias to 3.1 Flash-Lite)',
-        isFreeTier: true,
-        inputCostPaid: '$0.25 (Text) / $0.50 (Audio)',
-        outputCostPaid: '$1.50',
-        rpmLimitFree: 15,
-        rpdLimitFree: 500,
-        tpmLimitFree: 250000,
-        description: 'An alias to our latest Flash-Lite model which changes over time. Currently points to gemini-3.1-flash-lite.',
-        contextLimit: '1M tokens',
-        releaseDate: 'May 7, 2026',
-        knowledgeCutoff: 'Jan. 2025'
-    },
-    {
-        id: 'gemini-pro-latest',
-        name: 'Gemini Pro Latest (Alias to 3.1 Pro Preview)',
-        isFreeTier: false,
-        inputCostPaid: '$2.00 (<=200K) / $4.00 (>200K)',
-        outputCostPaid: '$12.00 (<=200K) / $18.00 (>200K)',
-        description: 'An alias to our latest Pro model which changes over time. Currently points to gemini-3.1-pro-preview.',
-        contextLimit: '2M tokens',
-        releaseDate: 'Feb. 12, 2026',
-        knowledgeCutoff: 'Jan. 2025'
-    }
+type SettingsSection = 'ai' | 'usage' | 'workspace';
+
+const sections = [
+    { key: 'ai' as const, label: 'AI Configuration', shortLabel: 'AI', icon: KeyRound },
+    { key: 'usage' as const, label: 'Usage & Costs', shortLabel: 'Usage', icon: BarChart3 },
+    { key: 'workspace' as const, label: 'Workspace Migration', shortLabel: 'Migration', icon: Move },
 ];
 
 export const Settings: React.FC = () => {
-    const { geminiApiKey, setGeminiApiKey, evaluatorModel, setEvaluatorModel } = useSettingsStore();
-    const projects = useProjectStore((state) => state.projects);
-    const missions = useMissionStore((state) => state.missions);
-    const addToast = useToastStore((state) => state.addToast);
-    const importInputRef = useRef<HTMLInputElement>(null);
-
-    const [inputKey, setInputKey] = useState(geminiApiKey);
-    const [selectedModel, setSelectedModel] = useState(() => {
-        return EVAL_MODELS.some(m => m.id === evaluatorModel) ? evaluatorModel : (EVAL_MODELS[0]?.id || 'gemini-3.5-flash');
-    });
-    const [showKey, setShowKey] = useState(false);
-    const [saved, setSaved] = useState(false);
-
-    useEffect(() => {
-        setInputKey(geminiApiKey);
-        const validModel = EVAL_MODELS.some(m => m.id === evaluatorModel) ? evaluatorModel : (EVAL_MODELS[0]?.id || 'gemini-3.5-flash');
-        setSelectedModel(validModel);
-    }, [geminiApiKey, evaluatorModel]);
-
-    const handleSave = useCallback(() => {
-        setGeminiApiKey(inputKey);
-        setEvaluatorModel(selectedModel);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    }, [inputKey, selectedModel, setGeminiApiKey, setEvaluatorModel]);
-
-    const handleExportConfiguration = useCallback(() => {
-        const exported = createConfigurationExport({
-            projects,
-            missions,
-            settings: {
-                geminiApiKey,
-                evaluatorModel,
-            },
-        });
-        const blob = new Blob([JSON.stringify(exported, null, 2)], {
-            type: 'application/json',
-        });
-        const url = URL.createObjectURL(blob);
-        const date = new Date().toISOString().slice(0, 10);
-        const linkElement = document.createElement('a');
-
-        linkElement.href = url;
-        linkElement.download = `agenteval-config-${date}.json`;
-        linkElement.style.display = 'none';
-        document.body.appendChild(linkElement);
-        linkElement.click();
-        document.body.removeChild(linkElement);
-        URL.revokeObjectURL(url);
-
-        addToast('Configuration export generated. Histories were not included.', 'success');
-    }, [addToast, evaluatorModel, geminiApiKey, missions, projects]);
-
-    const handleImportConfiguration = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (readerEvent) => {
-            try {
-                const rawResult = readerEvent.target?.result;
-                const imported = parseConfigurationExport(typeof rawResult === 'string' ? rawResult : '');
-
-                useProjectStore.setState({ projects: imported.projects });
-                useMissionStore.setState({ missions: imported.missions });
-                setGeminiApiKey(imported.settings.geminiApiKey);
-                setEvaluatorModel(imported.settings.evaluatorModel);
-
-                addToast(
-                    `Imported ${imported.projects.length} projects and ${imported.missions.length} missions. Histories were unchanged.`,
-                    'success',
-                    6000
-                );
-            } catch (error) {
-                const message = error instanceof Error ? error.message : 'Unable to import configuration file.';
-                addToast(message, 'error', 6000);
-            }
-        };
-        reader.onerror = () => {
-            addToast('Unable to read configuration file.', 'error');
-        };
-        reader.readAsText(file);
-    }, [addToast, setEvaluatorModel, setGeminiApiKey]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-                e.preventDefault();
-                handleSave();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleSave]);
-
-    const activeModelInfo = EVAL_MODELS.find(m => m.id === selectedModel) || EVAL_MODELS[0];
+    const [activeSection, setActiveSection] = useState<SettingsSection>('ai');
 
     return (
-        <div className="p-8 max-w-3xl mx-auto space-y-8">
-            <div className="select-none">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+            <header>
                 <h1 className="text-display text-white">Settings</h1>
-                <p className="text-label text-muted-foreground mt-1">Configure global application settings.</p>
-            </div>
+                <p className="text-body text-muted-foreground mt-1">Configure AI access, inspect usage, and move workspace data.</p>
+            </header>
 
-            <div className="border border-border bg-card rounded-xl shadow-sm p-6 space-y-8">
-                {/* Section 1: API Keys */}
-                <div className="space-y-4">
-                    <h2 className="text-title flex items-center gap-2">
-                        <Key className="w-5 h-5 text-primary" /> API Keys
-                    </h2>
-                    <p className="text-body text-muted-foreground max-w-[75ch]">
-                        The Tester and Evaluator agents use Gemini. If a project tests a Gemini
-                        model directly, AgentEval reuses this same Google AI Studio API key for the
-                        target call.
-                    </p>
-
-                    <div className="space-y-2">
-                        <label className="text-label">Gemini API Key</label>
-                        <div className="flex gap-3">
-                            <Input
-                                type={showKey ? "text" : "password"}
-                                value={inputKey}
-                                onChange={(e) => setInputKey(e.target.value)}
-                                placeholder="AIzaSy..."
-                                className="font-mono bg-background"
-                            />
-                            <Button variant="outline" onClick={() => setShowKey(!showKey)}>
-                                {showKey ? 'Hide' : 'Show'}
-                            </Button>
-                        </div>
-                        <p className="text-label text-muted-foreground">
-                            Stored locally in AgentEval settings on this machine.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Section 2: Evaluator Agent Configuration */}
-                <div className="pt-6 border-t border-border space-y-4">
-                    <h2 className="text-title flex items-center gap-2">
-                        <Cpu className="w-5 h-5 text-purple-400" /> Evaluator Agent Configuration
-                    </h2>
-                    <p className="text-body text-muted-foreground max-w-[75ch]">
-                        Choose the model that AgentEval will use to analyze, grade, and generate prompt improvements for the final conversational transcripts.
-                    </p>
-
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-label">Evaluation Model</label>
-                            <select
-                                value={selectedModel}
-                                onChange={(e) => setSelectedModel(e.target.value)}
-                                className="w-full bg-background border border-border/80 focus:border-primary/80 rounded-lg p-2.5 text-body text-white outline-none cursor-pointer hover:bg-muted/40 transition-colors"
-                            >
-                                {EVAL_MODELS.map((model) => (
-                                    <option key={model.id} value={model.id} className="bg-card">
-                                        {model.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Model Pricing & Limits Info Card */}
-                        <div className="border border-border/50 bg-[#1C2026]/40 p-5 rounded-xl space-y-3 animate-fade-in">
-                            <div className="flex items-start justify-between">
-                                <h3 className="text-title text-sm text-white font-bold">{activeModelInfo.name}</h3>
-                                {!activeModelInfo.isFreeTier && (
-                                    <span className="inline-flex px-2 py-0.5 rounded text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                                        Paid Tier Only
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-body text-slate-300 text-xs italic">
-                                {activeModelInfo.description}
-                            </p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/30">
-                                {/* Pricing column */}
-                                <div className="space-y-1.5">
-                                    <span className="text-label text-muted-foreground">Paid Tier Pricing (per 1M tokens)</span>
-                                    <div className="space-y-0.5 font-mono text-xs tabular-nums text-white">
-                                        <div>Input Cost: <span className="font-bold">{activeModelInfo.inputCostPaid} USD</span></div>
-                                        <div>Output Cost: <span className="font-bold">{activeModelInfo.outputCostPaid} USD</span></div>
-                                    </div>
-                                </div>
-
-                                {/* Free Tier column */}
-                                <div className="space-y-1.5">
-                                    <span className="text-label text-muted-foreground">Free Tier Limits</span>
-                                    {activeModelInfo.isFreeTier ? (
-                                        <div className="space-y-0.5 font-mono text-xs tabular-nums text-emerald-400">
-                                            <div>RPM: <span className="font-bold">{activeModelInfo.rpmLimitFree} reqs/min</span></div>
-                                            <div>RPD: <span className="font-bold">{activeModelInfo.rpdLimitFree?.toLocaleString()} reqs/day</span></div>
-                                            <div>TPM: <span className="font-bold">{activeModelInfo.tpmLimitFree?.toLocaleString()} tokens/min</span></div>
-                                        </div>
-                                    ) : (
-                                        <div className="font-mono text-xs text-rose-400 font-bold flex items-center gap-1.5">
-                                            <Info className="w-3.5 h-3.5" /> No Free Tier Available
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="pt-2 border-t border-border/30 flex flex-col gap-1 text-[10px] text-muted-foreground leading-relaxed font-mono">
-                                <div>Max Context Window: <span className="text-slate-300">{activeModelInfo.contextLimit}</span></div>
-                                {activeModelInfo.releaseDate && (
-                                    <div>Release Date: <span className="text-slate-300">{activeModelInfo.releaseDate}</span></div>
-                                )}
-                                {activeModelInfo.knowledgeCutoff && (
-                                    <div>Knowledge Cutoff: <span className="text-slate-300">{activeModelInfo.knowledgeCutoff}</span></div>
-                                )}
-                                <div className="italic text-[9px] pt-1">
-                                    * Rate pricing and limits are governed directly by Google AI Studio's terms.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Save controls */}
-                <div className="pt-4 border-t border-border flex items-center gap-4">
-                    <Button onClick={handleSave}>Save Settings</Button>
-                    {saved && <span className="text-body text-green-500 font-medium">Saved successfully!</span>}
+            <div className="overflow-x-auto border-b border-border">
+                <div className="flex min-w-max gap-1" role="tablist" aria-label="Settings sections">
+                    {sections.map(({ key, label, shortLabel, icon: Icon }) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-label={label}
+                            aria-selected={activeSection === key}
+                            aria-controls={`settings-panel-${key}`}
+                            onClick={() => setActiveSection(key)}
+                            className={`min-h-11 px-4 inline-flex items-center gap-2 border-b-2 text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
+                                activeSection === key
+                                    ? 'border-[#4A72FF] text-white'
+                                    : 'border-transparent text-muted-foreground hover:text-white hover:bg-muted/30'
+                            }`}
+                        >
+                            <Icon className="w-4 h-4" />
+                            <span className="sm:hidden">{shortLabel}</span>
+                            <span className="hidden sm:inline">{label}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            <div className="border border-border bg-card rounded-xl shadow-sm p-6 space-y-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-3">
-                        <h2 className="text-title flex items-center gap-2">
-                            <Upload className="w-5 h-5 text-primary" /> Workspace Migration
-                        </h2>
-                        <p className="text-body text-muted-foreground max-w-[75ch]">
-                            Export projects, missions, and global settings to move an AgentEval
-                            workspace between environments. Test histories and run logs are not
-                            included.
-                        </p>
-                    </div>
-                    <div className="flex shrink-0 gap-3">
-                        <Button variant="outline" onClick={handleExportConfiguration} className="gap-2">
-                            <Download className="w-4 h-4" /> Export
-                        </Button>
-                        <Button onClick={() => importInputRef.current?.click()} className="gap-2">
-                            <Upload className="w-4 h-4" /> Import
-                        </Button>
-                    </div>
-                </div>
-
-                <input
-                    ref={importInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="application/json,.json"
-                    onChange={handleImportConfiguration}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
-                        <span className="text-label text-muted-foreground">Projects</span>
-                        <div className="mt-1 text-title text-white">{projects.length}</div>
-                    </div>
-                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
-                        <span className="text-label text-muted-foreground">Missions</span>
-                        <div className="mt-1 text-title text-white">{missions.length}</div>
-                    </div>
-                    <div className="rounded-lg border border-border/60 bg-background/60 px-4 py-3">
-                        <span className="text-label text-muted-foreground">Histories</span>
-                        <div className="mt-1 text-title text-white">Excluded</div>
-                    </div>
-                </div>
-
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4 flex items-start gap-3">
-                    <ShieldAlert className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
-                    <p className="text-body text-amber-100/90">
-                        Import replaces the current projects, missions, and settings in this
-                        browser. Export files include configuration secrets such as Gemini API keys
-                        and environment authorization headers.
-                    </p>
-                </div>
+            <div id={`settings-panel-${activeSection}`} role="tabpanel" className="animate-fade-in">
+                {activeSection === 'ai' && <AiConfigurationSettings />}
+                {activeSection === 'usage' && (
+                    <Suspense fallback={<div className="h-80 animate-pulse rounded-lg bg-card" aria-label="Loading usage dashboard" />}>
+                        <AiUsageDashboard />
+                    </Suspense>
+                )}
+                {activeSection === 'workspace' && <WorkspaceMigrationSettings />}
             </div>
         </div>
     );

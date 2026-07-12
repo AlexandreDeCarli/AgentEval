@@ -84,7 +84,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto relative">
+        <main className="flex-1 overflow-y-auto relative pb-16 md:pb-0">
           <ErrorBoundary>
           <Routes>
             <Route path="/" element={<ProjectList />} />
@@ -109,4 +109,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

@@ -13,7 +13,8 @@ export const Sidebar: React.FC = () => {
     ];
 
     return (
-        <aside className="w-64 h-screen border-r border-border bg-card flex flex-col select-none">
+        <>
+        <aside className="hidden md:flex w-64 h-screen border-r border-border bg-card flex-col select-none">
             {/* Header with gradient logo ring and BETA tag */}
             <div id="sidebar-header" className="p-6 border-b border-border/40">
                 <Link to="/" className="flex items-center gap-2.5 group cursor-pointer decoration-none">
@@ -76,6 +77,23 @@ export const Sidebar: React.FC = () => {
                 v2.5.0
             </div>
         </aside>
+        <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 h-16 border-t border-border bg-card flex items-stretch select-none" aria-label="Primary navigation">
+            {links.map((link) => (
+                <NavLink
+                    key={link.path}
+                    to={link.path}
+                    end={link.path === '/'}
+                    className={({ isActive }) =>
+                        `flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                            isActive ? 'text-[#4A72FF] bg-[#4A72FF]/10' : 'text-muted-foreground'
+                        }`
+                    }
+                >
+                    {React.cloneElement(link.icon, { className: 'w-5 h-5' })}
+                    <span className="text-[11px] font-bold truncate max-w-full">{link.name}</span>
+                </NavLink>
+            ))}
+        </nav>
+        </>
     );
 };
-

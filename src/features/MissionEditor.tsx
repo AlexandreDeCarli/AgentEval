@@ -4,6 +4,7 @@ import { useMissionStore, defaultMockMission } from '../store/useMissionStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
+import { useAiUsageStore } from '../store/useAiUsageStore';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Mission } from '../types';
@@ -137,7 +138,12 @@ export const MissionEditor: React.FC = () => {
                 currentProject,
                 aiPrompt.trim() || undefined,
                 aiCount,
-                validSelectedPromptIds
+                validSelectedPromptIds,
+                (usage) =>
+                    useAiUsageStore.getState().recordMeasurement(
+                        { routine: 'mission_generation', projectId: currentProject.id },
+                        usage
+                    )
             );
 
             generated.forEach((m) => addMission(m));

@@ -246,7 +246,7 @@ export const TestRunner: React.FC = () => {
                                     <Button variant="ghost" size="sm" onClick={() => navigate('/history')}>View in History</Button>
                                 </div>
                                 <div className="p-6">
-                                    <EvaluationReport evaluation={currentRun.evaluation} mission={mission} />
+                                    <EvaluationReport evaluation={currentRun.evaluation} mission={mission} runId={currentRun.id} />
                                 </div>
                             </div>
                         </div>
