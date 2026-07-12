@@ -38,10 +38,11 @@ export interface AiCostBucket {
     totalCostUsd: number;
 }
 
-const periodDuration: Record<Exclude<AiUsagePeriod, 'all'>, number> = {
-    '24h': 24 * 60 * 60 * 1000,
-    '7d': 7 * 24 * 60 * 60 * 1000,
-    '30d': 30 * 24 * 60 * 60 * 1000,
+const getPeriodStart = (period: Exclude<AiUsagePeriod, 'all'>, now: number): number => {
+    if (period === '24h') return startOfHour(now) - 23 * 60 * 60 * 1000;
+    const date = new Date(startOfDay(now));
+    date.setDate(date.getDate() - (period === '7d' ? 6 : 29));
+    return date.getTime();
 };
 
 export const filterUsageByPeriod = (
@@ -50,7 +51,7 @@ export const filterUsageByPeriod = (
     now = Date.now()
 ): AiUsageEvent[] => {
     if (period === 'all') return [...events];
-    const startAt = now - periodDuration[period];
+    const startAt = getPeriodStart(period, now);
     return events.filter((event) => event.occurredAt >= startAt && event.occurredAt <= now);
 };
 
@@ -152,7 +153,11 @@ export const buildCostBuckets = (
             buckets.push(createBucket(date.getTime(), period));
         }
     } else if (events.length > 0) {
-        const firstMonth = startOfMonth(Math.min(...events.map((event) => event.occurredAt)));
+        const minOccurredAt = events.reduce(
+            (minimum, event) => Math.min(minimum, event.occurredAt),
+            events[0].occurredAt
+        );
+        const firstMonth = startOfMonth(minOccurredAt);
         const finalMonth = startOfMonth(now);
         const cursor = new Date(firstMonth);
         while (cursor.getTime() <= finalMonth) {

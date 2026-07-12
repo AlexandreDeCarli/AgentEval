@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
@@ -14,9 +14,12 @@ import { normalizeProjectTargetConfig } from '../utils/missionTarget';
 import { ArrowLeft, TrendingUp, Server, Target } from 'lucide-react';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
 import { useToastStore } from '../store/useToastStore';
-import { ProjectDashboardTab } from './project-editor/components/ProjectDashboardTab';
 import { ProjectMissionsTab } from './project-editor/components/ProjectMissionsTab';
 import { ProjectSettingsTab } from './project-editor/components/ProjectSettingsTab';
+
+const ProjectDashboardTab = React.lazy(() =>
+    import('./project-editor/components/ProjectDashboardTab').then((module) => ({ default: module.ProjectDashboardTab }))
+);
 
 type Tab = 'dashboard' | 'missions' | 'settings';
 type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments';
@@ -243,11 +246,13 @@ export const ProjectEditor: React.FC = () => {
 
             {/* Active Tab Views */}
             {activeTab === 'dashboard' && (
-                <ProjectDashboardTab
-                    projectMissions={projectMissions}
-                    runs={runs}
-                    setSelectedRun={setSelectedRun}
-                />
+                <Suspense fallback={<div className="h-64 rounded-xl bg-card animate-pulse" aria-label="Loading project dashboard" />}>
+                    <ProjectDashboardTab
+                        projectMissions={projectMissions}
+                        runs={runs}
+                        setSelectedRun={setSelectedRun}
+                    />
+                </Suspense>
             )}
 
             {activeTab === 'missions' && (

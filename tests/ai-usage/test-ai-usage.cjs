@@ -206,6 +206,26 @@ async function testAnalytics() {
 
         const localDay = new Date(sevenDayBuckets.at(-1).startAt);
         assert.equal(localDay.getHours(), 0, 'Daily buckets must start at local midnight');
+
+        const sevenDayStart = sevenDayBuckets[0].startAt;
+        const oldestDayEvent = event({ occurredAt: sevenDayStart + 30 * 60 * 1000 });
+        const alignedEvents = filterUsageByPeriod([oldestDayEvent], '7d', now);
+        assert.equal(alignedEvents.length, 1, 'Summary filtering must use the same boundary as chart buckets');
+        assertClose(
+            buildCostBuckets([oldestDayEvent], '7d', now).reduce((sum, bucket) => sum + bucket.totalCostUsd, 0),
+            summarizeAiUsage(alignedEvents).estimatedCostUsd
+        );
+        const beforeOldestBucket = event({ occurredAt: sevenDayStart - 30 * 60 * 1000 });
+        assert.equal(
+            filterUsageByPeriod([beforeOldestBucket], '7d', now).length,
+            0,
+            'Summary filtering must exclude events that have no chart bucket'
+        );
+
+        const largeHistory = Array.from({ length: 70_000 }, (_, index) =>
+            event({ occurredAt: now - index, responseId: `large-${index}` })
+        );
+        assert.doesNotThrow(() => buildCostBuckets(largeHistory, 'all', now));
     } finally {
         loaded.cleanup();
     }
@@ -333,26 +353,33 @@ async function testHighLevelUsageCallbacks() {
 }
 
 async function testUsageStore() {
-    const memory = new Map();
-    global.localStorage = {
-        getItem: (key) => memory.get(key) || null,
-        setItem: (key, value) => memory.set(key, value),
-        removeItem: (key) => memory.delete(key),
-    };
-
     const loaded = await loadModule('src/store/useAiUsageStore.ts');
     try {
-        const { useAiUsageStore } = loaded.module;
-        useAiUsageStore.setState({ events: [] });
+        const storedEvent = event({ id: 'stored-event', responseId: 'stored-response' });
+        const appended = [];
+        let clearCalls = 0;
+        const repository = {
+            load: async () => [storedEvent],
+            append: async (value) => appended.push(value),
+            clear: async () => { clearCalls += 1; },
+        };
+        const { createAiUsageStore } = loaded.module;
+        const useAiUsageStore = createAiUsageStore(repository);
+        await useAiUsageStore.getState().hydrateUsage();
+        assert.deepEqual(useAiUsageStore.getState().events, [storedEvent]);
+
         const record = useAiUsageStore.getState().recordMeasurement;
         record({ routine: 'tester_conversation', runId: 'run-1' }, measurement());
         record({ routine: 'tester_conversation', runId: 'run-1' }, measurement());
-        assert.equal(useAiUsageStore.getState().events.length, 1);
-        useAiUsageStore.getState().clearUsage();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.equal(useAiUsageStore.getState().events.length, 2);
+        assert.equal(appended.length, 1, 'Each new event must be appended without rewriting existing history');
+
+        await useAiUsageStore.getState().clearUsage();
         assert.equal(useAiUsageStore.getState().events.length, 0);
+        assert.equal(clearCalls, 1);
     } finally {
         loaded.cleanup();
-        delete global.localStorage;
     }
 }
 
