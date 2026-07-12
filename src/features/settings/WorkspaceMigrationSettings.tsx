@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Download, ShieldAlert, Upload } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { createConfigurationExport, parseConfigurationExport } from '../../services/configurationTransfer';
@@ -13,12 +13,13 @@ export const WorkspaceMigrationSettings: React.FC = () => {
     const { geminiApiKey, evaluatorModel, setGeminiApiKey, setEvaluatorModel } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
+    const [includeApiKey, setIncludeApiKey] = useState(false);
 
     const handleExport = useCallback(() => {
         const exported = createConfigurationExport({
             projects,
             missions,
-            settings: { geminiApiKey, evaluatorModel },
+            settings: { geminiApiKey: includeApiKey ? geminiApiKey : '', evaluatorModel },
         });
         const url = URL.createObjectURL(
             new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' })
@@ -31,8 +32,11 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         link.click();
         document.body.removeChild(link);
         window.setTimeout(() => URL.revokeObjectURL(url), 100);
-        addToast('Configuration export generated. Histories and usage were not included.', 'success');
-    }, [addToast, evaluatorModel, geminiApiKey, missions, projects]);
+        addToast(
+            `Configuration export generated. Histories, usage${includeApiKey ? '' : ', and the API key'} were not included.`,
+            'success'
+        );
+    }, [addToast, evaluatorModel, geminiApiKey, includeApiKey, missions, projects]);
 
     const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -92,6 +96,20 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                 accept="application/json,.json"
                 onChange={handleImport}
             />
+            <label className="flex min-h-11 items-start gap-3 rounded-lg border border-border/60 bg-background/60 px-4 py-3 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={includeApiKey}
+                    onChange={(event) => setIncludeApiKey(event.target.checked)}
+                    className="mt-1 h-4 w-4 accent-[#4A72FF]"
+                />
+                <span>
+                    <span className="text-body font-bold text-white block">Include Gemini API key</span>
+                    <span className="text-body text-muted-foreground block mt-0.5">
+                        Off by default. Enable only when transferring to a workspace you control.
+                    </span>
+                </span>
+            </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                     ['Projects', projects.length],
@@ -108,7 +126,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                 <ShieldAlert className="w-4 h-4 text-amber-300 mt-0.5 shrink-0" />
                 <p className="text-body text-amber-100/90">
                     Import replaces projects, missions, and settings. Usage and histories are kept,
-                    and exported files include configuration secrets.
+                    and the API key is exported only when explicitly enabled above.
                 </p>
             </div>
         </section>

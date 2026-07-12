@@ -34,8 +34,11 @@ interface GeminiRequestOptions {
     model: string;
     requestBody: Record<string, unknown>;
     signal?: AbortSignal;
+    timeoutMs?: number;
     onUsage?: (usage: GeminiUsageMeasurement) => void;
 }
+
+const DEFAULT_GEMINI_TIMEOUT_MS = 120_000;
 
 export const buildGeminiApiUrl = (model: string) =>
     `${GEMINI_API_BASE_URL}/${model}:generateContent`;
@@ -82,24 +85,43 @@ export const requestGeminiGenerateContent = async ({
     model,
     requestBody,
     signal,
+    timeoutMs = DEFAULT_GEMINI_TIMEOUT_MS,
     onUsage,
 }: GeminiRequestOptions): Promise<GeminiRequestResult> => {
     const url = buildGeminiApiUrl(model);
     const startedAt = Date.now();
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
-        signal,
-    });
-    const duration = Date.now() - startedAt;
-    const rawBody = await response.text();
-    const body = parseGeminiResponseBody(rawBody);
-    const usage = extractUsageMeasurement(body, model);
-    if (usage) onUsage?.(usage);
+    const requestController = new AbortController();
+    const handleCallerAbort = () => requestController.abort(signal?.reason);
+    if (signal?.aborted) handleCallerAbort();
+    else signal?.addEventListener('abort', handleCallerAbort, { once: true });
+    const timeoutId = globalThis.setTimeout(() => {
+        requestController.abort(new DOMException('Gemini request timed out.', 'TimeoutError'));
+    }, timeoutMs);
 
-    return { url, status: response.status, duration, ok: response.ok, body };
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify(requestBody),
+            signal: requestController.signal,
+        });
+        const rawBody = await response.text();
+        const body = parseGeminiResponseBody(rawBody);
+        const usage = extractUsageMeasurement(body, model);
+        if (usage) onUsage?.(usage);
+
+        return {
+            url,
+            status: response.status,
+            duration: Date.now() - startedAt,
+            ok: response.ok,
+            body,
+        };
+    } finally {
+        globalThis.clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', handleCallerAbort);
+    }
 };

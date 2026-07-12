@@ -269,6 +269,19 @@ async function testGeminiClient() {
             onUsage: (usage) => captured.push(usage),
         });
         assert.equal(captured.length, 1);
+
+        global.fetch = (_url, options) => new Promise((_resolve, reject) => {
+            options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+        });
+        await assert.rejects(
+            () => requestGeminiGenerateContent({
+                apiKey: 'test-key',
+                model: 'gemini-2.5-flash',
+                requestBody: { contents: [] },
+                timeoutMs: 5,
+            }),
+            (error) => error?.name === 'TimeoutError'
+        );
     } finally {
         global.fetch = originalFetch;
         loaded.cleanup();

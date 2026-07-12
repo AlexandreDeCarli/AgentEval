@@ -28,6 +28,7 @@ const mergeEvents = (loaded: AiUsageEvent[], current: AiUsageEvent[]): AiUsageEv
 export const createAiUsageStore = (
     repository: AiUsageRepository
 ): UseBoundStore<StoreApi<AiUsageState>> => {
+    const responseIds = new Set<string>();
     const store = create<AiUsageState>((set, get) => ({
         events: [],
         isHydrating: true,
@@ -35,11 +36,14 @@ export const createAiUsageStore = (
         hydrateUsage: async () => {
             try {
                 const loaded = await repository.load();
-                set((state) => ({
-                    events: mergeEvents(loaded, state.events),
-                    isHydrating: false,
-                    storageError: null,
-                }));
+                set((state) => {
+                    const events = mergeEvents(loaded, state.events);
+                    responseIds.clear();
+                    events.forEach((event) => {
+                        if (event.responseId) responseIds.add(event.responseId);
+                    });
+                    return { events, isHydrating: false, storageError: null };
+                });
             } catch (error) {
                 set({
                     isHydrating: false,
@@ -50,13 +54,9 @@ export const createAiUsageStore = (
         recordMeasurement: (context, measurement) => {
             let createdEvent: AiUsageEvent | null = null;
             set((state) => {
-                if (
-                    measurement.responseId &&
-                    state.events.some((event) => event.responseId === measurement.responseId)
-                ) {
-                    return state;
-                }
+                if (measurement.responseId && responseIds.has(measurement.responseId)) return state;
                 createdEvent = createAiUsageEvent(context, measurement);
+                if (createdEvent.responseId) responseIds.add(createdEvent.responseId);
                 return { events: [createdEvent, ...state.events], storageError: null };
             });
             if (!createdEvent) return;
@@ -66,10 +66,14 @@ export const createAiUsageStore = (
         },
         clearUsage: async () => {
             const previousEvents = get().events;
+            responseIds.clear();
             set({ events: [], storageError: null });
             try {
                 await repository.clear();
             } catch (error) {
+                previousEvents.forEach((event) => {
+                    if (event.responseId) responseIds.add(event.responseId);
+                });
                 set({
                     events: previousEvents,
                     storageError: error instanceof Error ? error.message : 'Unable to clear AI usage history.',

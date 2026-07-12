@@ -92,6 +92,13 @@ const stores = {
         version: 0,
     }),
     'agent-qa-ai-usage': usageStoreSeed,
+    'agent-qa-settings': JSON.stringify({
+        state: {
+            geminiApiKey: 'seeded-secret-key',
+            evaluatorModel: 'gemini-3.5-flash',
+        },
+        version: 0,
+    }),
     'agent-qa-missions': JSON.stringify({
         state: {
             missions: [{
@@ -103,7 +110,15 @@ const stores = {
                 mission_goal: 'Validate the seeded run.',
                 variables: {},
                 max_turns: 2,
-                api_config: {},
+                api_config: {
+                    post_url: '',
+                    get_url: '',
+                    auth_header: '',
+                    payload_template: '',
+                    response_path: '',
+                    polling_interval: 2000,
+                    max_timeout: 30,
+                },
                 evaluation_criteria: [],
             }],
         },
@@ -227,14 +242,17 @@ async function assertSettingsKeyboardAndExport(page) {
 
     await page.getByRole('tab', { name: 'Workspace Migration' }).click();
     const downloadState = await page.evaluate(() => {
-        const state = { attachedAtClick: false, revoked: false };
+        const state = { attachedAtClick: false, revoked: false, exportedText: '' };
         const originalClick = HTMLAnchorElement.prototype.click;
         HTMLAnchorElement.prototype.click = function click() {
             state.attachedAtClick = document.body.contains(this);
         };
         const originalCreate = URL.createObjectURL;
         const originalRevoke = URL.revokeObjectURL;
-        URL.createObjectURL = () => 'blob:test-export';
+        URL.createObjectURL = (blob) => {
+            void blob.text().then((text) => { state.exportedText = text; });
+            return 'blob:test-export';
+        };
         URL.revokeObjectURL = () => { state.revoked = true; };
         window.__downloadAudit = { state, originalClick, originalCreate, originalRevoke };
         return true;
@@ -244,9 +262,43 @@ async function assertSettingsKeyboardAndExport(page) {
     const immediately = await page.evaluate(() => window.__downloadAudit.state);
     if (!immediately.attachedAtClick) throw new Error('Export link was not attached to the DOM before click');
     if (immediately.revoked) throw new Error('Export object URL was revoked synchronously');
+    await page.waitForFunction(() => window.__downloadAudit.state.exportedText.length > 0);
+    const exported = await page.evaluate(() => JSON.parse(window.__downloadAudit.state.exportedText));
+    if (exported.data.settings.geminiApiKey !== '') {
+        throw new Error('Configuration export included the Gemini API key without explicit opt-in');
+    }
     await page.waitForTimeout(150);
     const eventually = await page.evaluate(() => window.__downloadAudit.state.revoked);
     if (!eventually) throw new Error('Export object URL was not eventually revoked');
+}
+
+async function assertMobileNavigationAccess(page) {
+    await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'More navigation options' }).click();
+    const aboutItem = page.getByRole('menuitem', { name: 'About the Developer' });
+    await aboutItem.waitFor();
+    if (!(await aboutItem.evaluate((element) => element === document.activeElement))) {
+        throw new Error('Expected the first mobile overflow action to receive focus');
+    }
+    await page.getByRole('menuitem', { name: 'Help & Tutorials' }).waitFor();
+    await page.keyboard.press('Escape');
+    if (await page.getByRole('menuitem', { name: 'Help & Tutorials' }).isVisible()) {
+        throw new Error('Expected the mobile navigation menu to close on Escape');
+    }
+}
+
+async function assertTestRunnerMobileInset(page) {
+    await page.goto(`${BASE_URL}/run/mission-1`, { waitUntil: 'domcontentloaded' });
+    const runner = page.getByTestId('test-runner');
+    await runner.waitFor({ timeout: 5_000 }).catch(async () => {
+        throw new Error(`TestRunner did not render. Page content:\n${await page.locator('body').innerText()}`);
+    });
+    const runnerBottom = await runner.evaluate((element) => element.getBoundingClientRect().bottom);
+    const navigationTop = await page.getByRole('navigation', { name: 'Primary navigation' })
+        .evaluate((element) => element.getBoundingClientRect().top);
+    if (runnerBottom > navigationTop + 0.5) {
+        throw new Error(`TestRunner extends beneath mobile navigation: ${runnerBottom} > ${navigationTop}`);
+    }
 }
 
 async function assertRunSummary(page) {
@@ -275,6 +327,11 @@ async function main() {
     let serverProcess;
     let browser;
     const consoleErrors = [];
+    const attachConsoleGuard = (page) => {
+        page.on('console', (message) => {
+            if (message.type() === 'error') consoleErrors.push(message.text());
+        });
+    };
 
     try {
         if (!(await isPortOpen())) {
@@ -282,6 +339,9 @@ async function main() {
                 `${process.execPath} ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`,
                 { cwd: PROJECT_ROOT, env: process.env }
             );
+            serverProcess.on('error', (error) => {
+                console.error('Failed to start Vite dev server:', error);
+            });
             serverProcess.stderr.on('data', (data) => process.stderr.write(data));
             await waitForServer();
         }
@@ -289,9 +349,7 @@ async function main() {
         browser = await chromium.launch({ headless: true });
         const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
         const desktopPage = await desktop.newPage();
-        desktopPage.on('console', (message) => {
-            if (message.type() === 'error') consoleErrors.push(message.text());
-        });
+        attachConsoleGuard(desktopPage);
         await installStoreRoutes(desktopPage);
         await assertDashboard(desktopPage);
         await assertSettingsKeyboardAndExport(desktopPage);
@@ -306,6 +364,7 @@ async function main() {
 
         const mobile = await browser.newContext({ viewport: { width: 390, height: 844 } });
         const mobilePage = await mobile.newPage();
+        attachConsoleGuard(mobilePage);
         stores['agent-qa-ai-usage'] = usageStoreSeed;
         await installStoreRoutes(mobilePage);
         await assertDashboard(mobilePage);
@@ -327,10 +386,13 @@ async function main() {
             fullPage: true,
             animations: 'disabled',
         });
+        await assertMobileNavigationAccess(mobilePage);
+        await assertTestRunnerMobileInset(mobilePage);
         await mobile.close();
 
         const emptyState = await browser.newContext({ viewport: { width: 1280, height: 800 } });
         const emptyStatePage = await emptyState.newPage();
+        attachConsoleGuard(emptyStatePage);
         stores['agent-qa-ai-usage'] = usageStoreSeed;
         await installStoreRoutes(emptyStatePage);
         await assertClearHistory(emptyStatePage);
