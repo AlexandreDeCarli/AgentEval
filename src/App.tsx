@@ -82,9 +82,9 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      <div className="flex h-[calc(100dvh-4rem)] md:h-screen bg-background text-foreground overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto relative pb-16 md:pb-0">
+        <main className="flex-1 overflow-y-auto relative">
           <ErrorBoundary>
           <Routes>
             <Route path="/" element={<ProjectList />} />

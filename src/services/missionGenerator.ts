@@ -1,5 +1,5 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
-import { getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
+import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
 
 const GENERATOR_MODEL = 'gemini-2.5-pro';
 
@@ -174,10 +174,7 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
         throw new Error(`Gemini API Error: ${result.status} - ${getGeminiErrorBody(result.body)}`);
     }
 
-    const data = result.body as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = extractGeminiText(result.body);
 
     if (!rawText) throw new Error('Empty response from Gemini');
 

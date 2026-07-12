@@ -1,16 +1,44 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info } from 'lucide-react';
+import { Ellipsis, FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info } from 'lucide-react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 
 export const Sidebar: React.FC = () => {
     const { setShowHelpMenu, setShowWelcomeModal } = useOnboardingStore();
+    const [showMobileMore, setShowMobileMore] = useState(false);
+    const mobileMoreButtonRef = useRef<HTMLButtonElement>(null);
+    const mobileMoreMenuRef = useRef<HTMLDivElement>(null);
+    const firstMobileMenuItemRef = useRef<HTMLButtonElement>(null);
     const links = [
         { name: 'Projects', path: '/', icon: <FolderOpen className="w-5 h-5" />, domId: 'sidebar-projects' },
         { name: 'All Missions', path: '/missions', icon: <LayoutDashboard className="w-5 h-5" />, domId: 'sidebar-missions' },
         { name: 'History', path: '/history', icon: <ListRestart className="w-5 h-5" />, domId: 'sidebar-history' },
         { name: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, domId: 'sidebar-settings' },
     ];
+
+    useEffect(() => {
+        if (!showMobileMore) return;
+        firstMobileMenuItemRef.current?.focus();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            setShowMobileMore(false);
+            mobileMoreButtonRef.current?.focus();
+        };
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target as Node;
+            if (
+                mobileMoreMenuRef.current?.contains(target) ||
+                mobileMoreButtonRef.current?.contains(target)
+            ) return;
+            setShowMobileMore(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('pointerdown', handlePointerDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('pointerdown', handlePointerDown);
+        };
+    }, [showMobileMore]);
 
     return (
         <>
@@ -77,6 +105,38 @@ export const Sidebar: React.FC = () => {
                 v2.5.0
             </div>
         </aside>
+        {showMobileMore && (
+            <div
+                ref={mobileMoreMenuRef}
+                id="mobile-more-menu"
+                role="menu"
+                className="md:hidden fixed right-3 bottom-[4.75rem] z-50 w-56 overflow-hidden rounded-lg border border-border bg-card shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+            >
+                <button
+                    ref={firstMobileMenuItemRef}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                        setShowMobileMore(false);
+                        setShowWelcomeModal(true);
+                    }}
+                    className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                >
+                    <Info className="w-5 h-5" /> About the Developer
+                </button>
+                <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                        setShowMobileMore(false);
+                        setShowHelpMenu(true);
+                    }}
+                    className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                >
+                    <HelpCircle className="w-5 h-5" /> Help & Tutorials
+                </button>
+            </div>
+        )}
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 h-16 border-t border-border bg-card flex items-stretch select-none" aria-label="Primary navigation">
             {links.map((link) => (
                 <NavLink
@@ -93,6 +153,21 @@ export const Sidebar: React.FC = () => {
                     <span className="text-xs font-bold truncate max-w-full">{link.name}</span>
                 </NavLink>
             ))}
+            <button
+                ref={mobileMoreButtonRef}
+                type="button"
+                aria-label="More navigation options"
+                aria-haspopup="menu"
+                aria-expanded={showMobileMore}
+                aria-controls="mobile-more-menu"
+                onClick={() => setShowMobileMore((visible) => !visible)}
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                    showMobileMore ? 'text-[#4A72FF] bg-[#4A72FF]/10' : 'text-muted-foreground'
+                }`}
+            >
+                <Ellipsis className="w-5 h-5" />
+                <span className="text-xs font-bold">More</span>
+            </button>
         </nav>
         </>
     );

@@ -115,14 +115,15 @@ export const AiUsageDashboard: React.FC = () => {
     const [period, setPeriod] = useState<AiUsagePeriod>('30d');
     const [page, setPage] = useState(0);
     const [confirmClear, setConfirmClear] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
     const prefersReducedMotion = usePrefersReducedMotion();
 
     const filteredEvents = useMemo(
-        () => filterUsageByPeriod(events, period).sort((left, right) => right.occurredAt - left.occurredAt),
-        [events, period]
+        () => filterUsageByPeriod(events, period, now).sort((left, right) => right.occurredAt - left.occurredAt),
+        [events, now, period]
     );
     const summary = useMemo(() => summarizeAiUsage(filteredEvents), [filteredEvents]);
-    const buckets = useMemo(() => buildCostBuckets(events, period), [events, period]);
+    const buckets = useMemo(() => buildCostBuckets(events, period, now), [events, now, period]);
     const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
     const pageEvents = filteredEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
     const routineCosts = useMemo(
@@ -153,6 +154,11 @@ export const AiUsageDashboard: React.FC = () => {
     );
 
     useEffect(() => setPage(0), [period]);
+    useEffect(() => {
+        setNow(Date.now());
+        const intervalId = window.setInterval(() => setNow(Date.now()), 60_000);
+        return () => window.clearInterval(intervalId);
+    }, [events, period]);
     useEffect(() => {
         if (page >= pageCount) setPage(pageCount - 1);
     }, [page, pageCount]);

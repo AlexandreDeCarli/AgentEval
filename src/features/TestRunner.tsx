@@ -73,7 +73,7 @@ export const TestRunner: React.FC = () => {
     }
 
     return (
-        <div className="h-screen flex flex-col bg-background">
+        <div data-testid="test-runner" className="h-full flex flex-col bg-background">
             {/* Header */}
             <header className="flex-none p-4 border-b border-border bg-card flex items-center justify-between">
                 <div className="flex items-center gap-4">
