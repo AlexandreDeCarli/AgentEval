@@ -63,6 +63,23 @@ function usageEvent(overrides = {}) {
     };
 }
 
+const usageStoreSeed = JSON.stringify({
+    state: {
+        events: [
+            usageEvent(),
+            usageEvent({
+                id: 'evaluation-event',
+                responseId: 'evaluation-response',
+                routine: 'evaluation',
+                estimatedInputCostUsd: 0.004,
+                estimatedOutputCostUsd: 0.006,
+                estimatedCostUsd: 0.01,
+            }),
+        ],
+    },
+    version: 1,
+});
+
 const stores = {
     'agent-qa-onboarding': JSON.stringify({
         state: {
@@ -74,22 +91,7 @@ const stores = {
         },
         version: 0,
     }),
-    'agent-qa-ai-usage': JSON.stringify({
-        state: {
-            events: [
-                usageEvent(),
-                usageEvent({
-                    id: 'evaluation-event',
-                    responseId: 'evaluation-response',
-                    routine: 'evaluation',
-                    estimatedInputCostUsd: 0.004,
-                    estimatedOutputCostUsd: 0.006,
-                    estimatedCostUsd: 0.01,
-                }),
-            ],
-        },
-        version: 1,
-    }),
+    'agent-qa-ai-usage': usageStoreSeed,
     'agent-qa-missions': JSON.stringify({
         state: {
             missions: [{
@@ -182,10 +184,22 @@ async function assertDashboard(page) {
     await page.getByRole('tab', { name: 'Usage & Costs' }).click();
     await page.getByRole('heading', { name: 'AI Usage & Costs' }).waitFor();
     await page.getByText('$0.0130', { exact: true }).waitFor();
-    await page.getByText('Tester Conversation', { exact: true }).first().waitFor();
-    await page.getByText('Evaluation', { exact: true }).first().waitFor();
+    await page.waitForFunction(() =>
+        Array.from(document.querySelectorAll('span')).some((element) =>
+            element.textContent?.trim() === 'Tester Conversation' && element.getBoundingClientRect().height > 0
+        )
+    );
+    await page.waitForFunction(() =>
+        Array.from(document.querySelectorAll('span')).some((element) =>
+            element.textContent?.trim() === 'Evaluation' && element.getBoundingClientRect().height > 0
+        )
+    );
     await page.getByRole('button', { name: '24h' }).click();
     await page.getByRole('button', { name: 'Clear history' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Delete Usage History?' });
+    await dialog.waitFor();
+    const focusedButton = await page.evaluate(() => document.activeElement?.textContent?.trim());
+    if (focusedButton !== 'Cancel') throw new Error(`Expected modal focus on Cancel, got ${focusedButton}`);
     await page.getByRole('heading', { name: 'Delete Usage History?' }).waitFor();
     await page.getByRole('button', { name: 'Cancel' }).click();
 
@@ -199,6 +213,40 @@ async function assertDashboard(page) {
         return false;
     });
     if (!canvasHasData) throw new Error('Expected the usage chart canvas to contain rendered pixels');
+}
+
+async function assertSettingsKeyboardAndExport(page) {
+    await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded' });
+    const aiTab = page.getByRole('tab', { name: 'AI Configuration' });
+    await aiTab.focus();
+    await page.keyboard.press('ArrowRight');
+    const usageTab = page.getByRole('tab', { name: 'Usage & Costs' });
+    if ((await usageTab.getAttribute('aria-selected')) !== 'true') {
+        throw new Error('Expected ArrowRight to activate the next settings tab');
+    }
+
+    await page.getByRole('tab', { name: 'Workspace Migration' }).click();
+    const downloadState = await page.evaluate(() => {
+        const state = { attachedAtClick: false, revoked: false };
+        const originalClick = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function click() {
+            state.attachedAtClick = document.body.contains(this);
+        };
+        const originalCreate = URL.createObjectURL;
+        const originalRevoke = URL.revokeObjectURL;
+        URL.createObjectURL = () => 'blob:test-export';
+        URL.revokeObjectURL = () => { state.revoked = true; };
+        window.__downloadAudit = { state, originalClick, originalCreate, originalRevoke };
+        return true;
+    });
+    if (!downloadState) throw new Error('Unable to install download audit');
+    await page.getByRole('button', { name: 'Export' }).click();
+    const immediately = await page.evaluate(() => window.__downloadAudit.state);
+    if (!immediately.attachedAtClick) throw new Error('Export link was not attached to the DOM before click');
+    if (immediately.revoked) throw new Error('Export object URL was revoked synchronously');
+    await page.waitForTimeout(150);
+    const eventually = await page.evaluate(() => window.__downloadAudit.state.revoked);
+    if (!eventually) throw new Error('Export object URL was not eventually revoked');
 }
 
 async function assertRunSummary(page) {
@@ -220,7 +268,7 @@ async function assertClearHistory(page) {
     await page.getByRole('button', { name: 'Yes, Delete' }).click();
     await page.getByText('No Gemini usage in this period', { exact: true }).waitFor();
     await page.getByText('$0.0000', { exact: true }).waitFor();
-    await page.getByText('No usage events match this period.', { exact: true }).waitFor();
+    await page.getByRole('cell', { name: 'No usage events match this period.' }).waitFor();
 }
 
 async function main() {
@@ -246,6 +294,7 @@ async function main() {
         });
         await installStoreRoutes(desktopPage);
         await assertDashboard(desktopPage);
+        await assertSettingsKeyboardAndExport(desktopPage);
         await assertRunSummary(desktopPage);
         await assertDashboard(desktopPage);
         await desktopPage.screenshot({
@@ -257,8 +306,18 @@ async function main() {
 
         const mobile = await browser.newContext({ viewport: { width: 390, height: 844 } });
         const mobilePage = await mobile.newPage();
+        stores['agent-qa-ai-usage'] = usageStoreSeed;
         await installStoreRoutes(mobilePage);
         await assertDashboard(mobilePage);
+        const smallTargets = await mobilePage.locator('button').evaluateAll((buttons) =>
+            buttons
+                .filter((button) => {
+                    const rect = button.getBoundingClientRect();
+                    return !button.disabled && rect.width > 0 && rect.height > 0 && rect.height < 44;
+                })
+                .map((button) => ({ label: button.getAttribute('aria-label') || button.textContent?.trim(), height: button.getBoundingClientRect().height }))
+        );
+        if (smallTargets.length > 0) throw new Error(`Touch targets below 44px: ${JSON.stringify(smallTargets)}`);
         const mainWidth = await mobilePage.locator('main').evaluate((element) => element.getBoundingClientRect().width);
         if (mainWidth < 360) throw new Error(`Expected at least 360px of mobile content width, got ${mainWidth}px`);
         const bodyOverflow = await mobilePage.evaluate(() => document.body.scrollWidth > document.body.clientWidth);
@@ -272,6 +331,7 @@ async function main() {
 
         const emptyState = await browser.newContext({ viewport: { width: 1280, height: 800 } });
         const emptyStatePage = await emptyState.newPage();
+        stores['agent-qa-ai-usage'] = usageStoreSeed;
         await installStoreRoutes(emptyStatePage);
         await assertClearHistory(emptyStatePage);
         await emptyState.close();

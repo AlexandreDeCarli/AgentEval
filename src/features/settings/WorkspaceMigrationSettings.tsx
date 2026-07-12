@@ -26,8 +26,11 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         const link = document.createElement('a');
         link.href = url;
         link.download = `agenteval-config-${new Date().toISOString().slice(0, 10)}.json`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(url), 100);
         addToast('Configuration export generated. Histories and usage were not included.', 'success');
     }, [addToast, evaluatorModel, geminiApiKey, missions, projects]);
 

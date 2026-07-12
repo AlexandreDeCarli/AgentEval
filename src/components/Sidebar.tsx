@@ -26,7 +26,7 @@ export const Sidebar: React.FC = () => {
                     <div>
                         <div className="flex items-center gap-1.5">
                             <h1 className="text-sm font-extrabold text-[#F9FAFB] tracking-tight group-hover:text-[#4A72FF] transition-colors">AgentEval</h1>
-                            <span className="text-[7.5px] font-extrabold px-1.5 py-0.5 bg-[#4A72FF]/20 text-[#4A72FF] rounded uppercase tracking-widest border border-[#4A72FF]/30">BETA</span>
+                            <span className="text-label px-1.5 py-0.5 bg-[#4A72FF]/20 text-[#4A72FF] rounded border border-[#4A72FF]/30">BETA</span>
                         </div>
                         <span className="text-label text-muted-foreground block font-bold">AI Test Mission Engine</span>
                     </div>
@@ -90,7 +90,7 @@ export const Sidebar: React.FC = () => {
                     }
                 >
                     {React.cloneElement(link.icon, { className: 'w-5 h-5' })}
-                    <span className="text-[11px] font-bold truncate max-w-full">{link.name}</span>
+                    <span className="text-xs font-bold truncate max-w-full">{link.name}</span>
                 </NavLink>
             ))}
         </nav>

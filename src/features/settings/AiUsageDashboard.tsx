@@ -58,6 +58,18 @@ const formatEventCost = (value: number | null) => {
 
 const formatTotalCost = (value: number) => `$${value.toFixed(4)}`;
 
+const usePrefersReducedMotion = () => {
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+    useEffect(() => {
+        const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const updatePreference = () => setPrefersReducedMotion(media.matches);
+        updatePreference();
+        media.addEventListener('change', updatePreference);
+        return () => media.removeEventListener('change', updatePreference);
+    }, []);
+    return prefersReducedMotion;
+};
+
 const Metric = ({
     icon,
     label,
@@ -96,11 +108,14 @@ const ContextCell = ({ event, label }: { event: AiUsageEvent; label: string }) =
 export const AiUsageDashboard: React.FC = () => {
     const events = useAiUsageStore((state) => state.events);
     const clearUsage = useAiUsageStore((state) => state.clearUsage);
+    const isHydrating = useAiUsageStore((state) => state.isHydrating);
+    const storageError = useAiUsageStore((state) => state.storageError);
     const projects = useProjectStore((state) => state.projects);
     const missions = useMissionStore((state) => state.missions);
     const [period, setPeriod] = useState<AiUsagePeriod>('30d');
     const [page, setPage] = useState(0);
     const [confirmClear, setConfirmClear] = useState(false);
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const filteredEvents = useMemo(
         () => filterUsageByPeriod(events, period).sort((left, right) => right.occurredAt - left.occurredAt),
@@ -110,6 +125,24 @@ export const AiUsageDashboard: React.FC = () => {
     const buckets = useMemo(() => buildCostBuckets(events, period), [events, period]);
     const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
     const pageEvents = filteredEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+    const routineCosts = useMemo(
+        () => AI_ROUTINES.reduce<Record<AiRoutine, number>>((totals, routine) => {
+            totals[routine] = filteredEvents.reduce(
+                (total, event) => total + (event.routine === routine ? event.estimatedCostUsd || 0 : 0),
+                0
+            );
+            return totals;
+        }, {
+            mission_generation: 0,
+            tester_conversation: 0,
+            gemini_target: 0,
+            evaluation: 0,
+        }),
+        [filteredEvents]
+    );
+    const chartDescription = `${period === 'all' ? 'All recorded usage' : `Last ${period}`}. Total ${formatTotalCost(summary.estimatedCostUsd)}. ${AI_ROUTINES.map(
+        (routine) => `${AI_ROUTINE_LABELS[routine]} ${formatEventCost(routineCosts[routine])}`
+    ).join(', ')}.`;
     const projectNames = useMemo(
         () => new Map(projects.map((project) => [project.id, project.name])),
         [projects]
@@ -143,7 +176,7 @@ export const AiUsageDashboard: React.FC = () => {
         () => ({
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 180 },
+            animation: { duration: prefersReducedMotion ? 0 : 180 },
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: {
@@ -168,21 +201,21 @@ export const AiUsageDashboard: React.FC = () => {
                 legend: {
                     position: 'top',
                     align: 'start',
-                    labels: { color: '#D1D5DB', usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+                    labels: { color: '#F9FAFB', usePointStyle: true, boxWidth: 8, boxHeight: 8 },
                 },
                 tooltip: {
                     backgroundColor: '#13161B',
                     borderColor: '#2D3036',
                     borderWidth: 1,
                     titleColor: '#F9FAFB',
-                    bodyColor: '#D1D5DB',
+                    bodyColor: '#F9FAFB',
                     callbacks: {
                         label: (context) => `${context.dataset.label}: $${Number(context.raw).toFixed(6)}`,
                     },
                 },
             },
         }),
-        []
+        [prefersReducedMotion]
     );
 
     return (
@@ -203,7 +236,7 @@ export const AiUsageDashboard: React.FC = () => {
                                 type="button"
                                 onClick={() => setPeriod(value)}
                                 aria-pressed={period === value}
-                                className={`min-h-11 px-3 rounded-md text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                className={`min-h-11 px-3 rounded-md text-body font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                     period === value
                                         ? 'bg-[#4A72FF] text-white'
                                         : 'text-muted-foreground hover:text-white hover:bg-muted'
@@ -218,12 +251,22 @@ export const AiUsageDashboard: React.FC = () => {
                         size="md"
                         onClick={() => setConfirmClear(true)}
                         disabled={events.length === 0}
-                        className="gap-2 text-rose-300 hover:text-rose-200 hover:bg-rose-500/10"
+                        className="min-h-11 gap-2 text-rose-300 hover:text-rose-200 hover:bg-rose-500/10"
                     >
                         <Trash2 className="w-4 h-4" /> Clear history
                     </Button>
                 </div>
             </div>
+
+            {storageError && (
+                <div role="alert" className="flex items-start gap-3 rounded-lg border border-rose-500/25 bg-rose-500/[0.05] p-4">
+                    <AlertTriangle className="w-4 h-4 text-rose-300 mt-0.5 shrink-0" />
+                    <div>
+                        <p className="text-body font-bold text-rose-100">Usage history could not be saved</p>
+                        <p className="text-body text-rose-100/80 mt-0.5">{storageError}</p>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-border border border-border rounded-lg bg-card overflow-hidden">
                 <Metric icon={<DollarSign className="w-4 h-4 text-primary" />} label="Estimated cost" value={formatTotalCost(summary.estimatedCostUsd)} />
@@ -244,10 +287,14 @@ export const AiUsageDashboard: React.FC = () => {
 
             <div className="border border-border rounded-lg bg-card p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="text-body font-bold text-white">Estimated Cost by Routine</h3>
+                    <h3 id="usage-chart-title" className="text-body font-bold text-white">Estimated Cost by Routine</h3>
                     <span className="text-label text-muted-foreground">Pricing verified {GEMINI_PRICING_DATE}</span>
                 </div>
-                {filteredEvents.length === 0 ? (
+                {isHydrating ? (
+                    <div className="h-80 flex items-center justify-center text-body text-muted-foreground" role="status">
+                        Loading usage history...
+                    </div>
+                ) : filteredEvents.length === 0 ? (
                     <div className="h-80 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-lg px-6">
                         <Activity className="w-7 h-7 text-muted-foreground mb-3" />
                         <p className="text-body font-bold text-white">No Gemini usage in this period</p>
@@ -256,9 +303,10 @@ export const AiUsageDashboard: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="h-80 sm:h-96" role="img" aria-label="Stacked bar chart of estimated Gemini cost by routine over time">
-                        <Bar data={chartData} options={chartOptions} />
-                    </div>
+                    <figure className="h-80 sm:h-96" role="img" aria-labelledby="usage-chart-title" aria-describedby="usage-chart-description">
+                        <Bar data={chartData} options={chartOptions} aria-hidden="true" />
+                        <figcaption id="usage-chart-description" className="sr-only">{chartDescription}</figcaption>
+                    </figure>
                 )}
             </div>
 
@@ -266,11 +314,53 @@ export const AiUsageDashboard: React.FC = () => {
                 <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-border">
                     <div>
                         <h3 className="text-body font-bold text-white">Usage Ledger</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">Newest calls first</p>
+                        <p className="text-body text-muted-foreground mt-0.5">Newest calls first</p>
                     </div>
                     <span className="text-label text-muted-foreground">{filteredEvents.length} events</span>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="sm:hidden divide-y divide-border/60">
+                    {pageEvents.map((event) => (
+                        <article key={event.id} className="p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 text-body font-bold text-white">
+                                        <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: ROUTINE_COLORS[event.routine] }} />
+                                        <span className="truncate">{AI_ROUTINE_LABELS[event.routine]}</span>
+                                    </div>
+                                    <p className="text-body text-muted-foreground mt-1 tabular-nums">
+                                        {new Date(event.occurredAt).toLocaleString()}
+                                    </p>
+                                </div>
+                                <span className={`text-body font-mono tabular-nums font-bold whitespace-nowrap ${event.estimatedCostUsd === null ? 'text-amber-300' : 'text-white'}`}>
+                                    {formatEventCost(event.estimatedCostUsd)}
+                                </span>
+                            </div>
+                            <div className="text-body text-slate-200 break-words">
+                                {(event.missionId && missionNames.get(event.missionId)) ||
+                                    (event.projectId && projectNames.get(event.projectId)) ||
+                                    'Global'}
+                            </div>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-body">
+                                <div className="min-w-0">
+                                    <dt className="text-muted-foreground">Model</dt>
+                                    <dd className="font-mono text-slate-300 truncate" title={event.resolvedModel}>
+                                        {event.resolvedModel.replace(/^models\//, '')}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-muted-foreground">Input / output</dt>
+                                    <dd className="font-mono tabular-nums text-slate-300">
+                                        {event.inputTokens.toLocaleString()} / {event.outputTokens.toLocaleString()}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </article>
+                    ))}
+                    {pageEvents.length === 0 && (
+                        <p className="px-4 py-10 text-center text-body text-muted-foreground">No usage events match this period.</p>
+                    )}
+                </div>
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full min-w-[980px] text-left text-xs">
                         <thead className="bg-background/60 text-muted-foreground">
                             <tr>
@@ -318,14 +408,14 @@ export const AiUsageDashboard: React.FC = () => {
                     </table>
                 </div>
                 <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-background/30">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-body text-muted-foreground">
                         Page {page + 1} of {pageCount}
                     </span>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setPage((value) => value - 1)} disabled={page === 0} aria-label="Previous usage page">
+                        <Button variant="outline" size="sm" className="min-w-11 min-h-11" onClick={() => setPage((value) => value - 1)} disabled={page === 0} aria-label="Previous usage page">
                             <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => setPage((value) => value + 1)} disabled={page + 1 >= pageCount} aria-label="Next usage page">
+                        <Button variant="outline" size="sm" className="min-w-11 min-h-11" onClick={() => setPage((value) => value + 1)} disabled={page + 1 >= pageCount} aria-label="Next usage page">
                             <ChevronRight className="w-4 h-4" />
                         </Button>
                     </div>
@@ -339,8 +429,9 @@ export const AiUsageDashboard: React.FC = () => {
                     warningDescription="Token and estimated cost history will be permanently removed. Projects, missions, and test runs are not affected."
                     onCancel={() => setConfirmClear(false)}
                     onConfirm={() => {
-                        clearUsage();
-                        setConfirmClear(false);
+                        void clearUsage()
+                            .then(() => setConfirmClear(false))
+                            .catch(() => undefined);
                     }}
                 />
             )}
