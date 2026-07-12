@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { build } = require('esbuild');
+const { IDBFactory } = require('fake-indexeddb');
 
 const PROJECT_ROOT = path.join(__dirname, '../..');
 
@@ -396,12 +397,60 @@ async function testUsageStore() {
     }
 }
 
+async function testAiUsageRepository() {
+    const memory = new Map();
+    global.localStorage = {
+        getItem: (key) => memory.get(key) || null,
+        setItem: (key, value) => memory.set(key, value),
+        removeItem: (key) => memory.delete(key),
+    };
+    const loaded = await loadModule('src/services/aiUsageRepository.ts');
+    try {
+        const { createAiUsageRepository } = loaded.module;
+        const legacyEvent = event({ id: 'legacy-event', responseId: 'legacy-response' });
+        memory.set('agent-qa-ai-usage', JSON.stringify({ state: { events: [legacyEvent] }, version: 1 }));
+        const repository = createAiUsageRepository(new IDBFactory());
+
+        assert.deepEqual(await repository.load(), [legacyEvent]);
+        assert.equal(memory.has('agent-qa-ai-usage'), false, 'Migration must remove the legacy payload');
+
+        const appendedEvent = event({ id: 'appended-event', responseId: 'appended-response' });
+        await repository.append(appendedEvent);
+        assert.deepEqual(
+            (await repository.load()).map((value) => value.id).sort(),
+            ['appended-event', 'legacy-event']
+        );
+        await repository.clear();
+        assert.deepEqual(await repository.load(), []);
+
+        const workingFactory = new IDBFactory();
+        let openCalls = 0;
+        const flakyFactory = {
+            open: (...args) => {
+                openCalls += 1;
+                if (openCalls > 1) return workingFactory.open(...args);
+                const request = { error: new Error('temporary open failure') };
+                queueMicrotask(() => request.onerror?.());
+                return request;
+            },
+        };
+        const retryingRepository = createAiUsageRepository(flakyFactory);
+        await assert.rejects(() => retryingRepository.load(), /temporary open failure/);
+        await retryingRepository.load();
+        assert.equal(openCalls, 2, 'A failed IndexedDB open must be retried on the next operation');
+    } finally {
+        loaded.cleanup();
+        delete global.localStorage;
+    }
+}
+
 async function main() {
     await testPricing();
     await testAnalytics();
     await testGeminiClient();
     await testHighLevelUsageCallbacks();
     await testUsageStore();
+    await testAiUsageRepository();
     console.log('PASS AI usage pricing, analytics, Gemini capture, and persistence');
 }
 

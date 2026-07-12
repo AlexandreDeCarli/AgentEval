@@ -258,18 +258,50 @@ async function assertSettingsKeyboardAndExport(page) {
         return true;
     });
     if (!downloadState) throw new Error('Unable to install download audit');
-    await page.getByRole('button', { name: 'Export' }).click();
-    const immediately = await page.evaluate(() => window.__downloadAudit.state);
-    if (!immediately.attachedAtClick) throw new Error('Export link was not attached to the DOM before click');
-    if (immediately.revoked) throw new Error('Export object URL was revoked synchronously');
-    await page.waitForFunction(() => window.__downloadAudit.state.exportedText.length > 0);
-    const exported = await page.evaluate(() => JSON.parse(window.__downloadAudit.state.exportedText));
-    if (exported.data.settings.geminiApiKey !== '') {
-        throw new Error('Configuration export included the Gemini API key without explicit opt-in');
+    try {
+        await page.getByRole('button', { name: 'Export' }).click();
+        const immediately = await page.evaluate(() => window.__downloadAudit.state);
+        if (!immediately.attachedAtClick) throw new Error('Export link was not attached to the DOM before click');
+        if (immediately.revoked) throw new Error('Export object URL was revoked synchronously');
+        await page.waitForFunction(() => window.__downloadAudit.state.exportedText.length > 0);
+        const exported = await page.evaluate(() => JSON.parse(window.__downloadAudit.state.exportedText));
+        if (exported.data.settings.geminiApiKey !== '') {
+            throw new Error('Configuration export included the Gemini API key without explicit opt-in');
+        }
+        await page.waitForTimeout(150);
+        const eventually = await page.evaluate(() => window.__downloadAudit.state.revoked);
+        if (!eventually) throw new Error('Export object URL was not eventually revoked');
+    } finally {
+        await page.evaluate(() => {
+            const audit = window.__downloadAudit;
+            if (!audit) return;
+            HTMLAnchorElement.prototype.click = audit.originalClick;
+            URL.createObjectURL = audit.originalCreate;
+            URL.revokeObjectURL = audit.originalRevoke;
+            delete window.__downloadAudit;
+        });
     }
-    await page.waitForTimeout(150);
-    const eventually = await page.evaluate(() => window.__downloadAudit.state.revoked);
-    if (!eventually) throw new Error('Export object URL was not eventually revoked');
+
+    const importedProjects = JSON.parse(stores['agent-qa-projects']).state.projects;
+    const importedMissions = JSON.parse(stores['agent-qa-missions']).state.missions;
+    const importPayload = {
+        schema: 'agenteval.configuration-export',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        data: {
+            projects: importedProjects,
+            missions: importedMissions,
+            settings: { geminiApiKey: 'imported-key', evaluatorModel: 'gemini-3.5-flash' },
+        },
+    };
+    await page.locator('input[type="file"]').setInputFiles({
+        name: 'workspace.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(importPayload)),
+    });
+    await page.getByRole('dialog', { name: 'Replace Workspace Configuration?' }).waitFor();
+    await page.getByRole('button', { name: 'Yes, Replace' }).click();
+    await page.getByText('Imported 1 projects and 1 missions. Histories and usage were unchanged.').waitFor();
 }
 
 async function assertMobileNavigationAccess(page) {
