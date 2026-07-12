@@ -96,6 +96,14 @@ const usageStoreSeed = JSON.stringify({
     version: 1,
 });
 
+const settingsStoreSeed = JSON.stringify({
+    state: {
+        geminiApiKey: 'seeded-secret-key',
+        evaluatorModel: 'gemini-3.5-flash',
+    },
+    version: 0,
+});
+
 const stores = {
     'agent-qa-onboarding': JSON.stringify({
         state: {
@@ -108,13 +116,7 @@ const stores = {
         version: 0,
     }),
     'agent-qa-ai-usage': usageStoreSeed,
-    'agent-qa-settings': JSON.stringify({
-        state: {
-            geminiApiKey: 'seeded-secret-key',
-            evaluatorModel: 'gemini-3.5-flash',
-        },
-        version: 0,
-    }),
+    'agent-qa-settings': settingsStoreSeed,
     'agent-qa-missions': JSON.stringify({
         state: {
             missions: [{
@@ -422,6 +424,7 @@ async function main() {
         const mobilePage = await mobile.newPage();
         attachConsoleGuard(mobilePage);
         stores['agent-qa-ai-usage'] = usageStoreSeed;
+        stores['agent-qa-settings'] = settingsStoreSeed;
         await installStoreRoutes(mobilePage);
         await assertDashboard(mobilePage);
         const smallTargets = await mobilePage.locator('button').evaluateAll((buttons) =>
@@ -450,6 +453,7 @@ async function main() {
         const emptyStatePage = await emptyState.newPage();
         attachConsoleGuard(emptyStatePage);
         stores['agent-qa-ai-usage'] = usageStoreSeed;
+        stores['agent-qa-settings'] = settingsStoreSeed;
         await installStoreRoutes(emptyStatePage);
         await assertClearHistory(emptyStatePage);
         await emptyState.close();
