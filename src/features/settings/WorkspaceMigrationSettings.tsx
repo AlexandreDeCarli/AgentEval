@@ -1,7 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Download, ShieldAlert, Upload } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { createConfigurationExport, parseConfigurationExport } from '../../services/configurationTransfer';
+import { ConfirmDeleteModal } from '../../components/ui/ConfirmDeleteModal';
+import {
+    ConfigurationTransferData,
+    createConfigurationExport,
+    parseConfigurationExport,
+} from '../../services/configurationTransfer';
 import { useMissionStore } from '../../store/useMissionStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -14,6 +19,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [includeApiKey, setIncludeApiKey] = useState(false);
+    const [pendingImport, setPendingImport] = useState<ConfigurationTransferData | null>(null);
 
     const handleExport = useCallback(() => {
         const exported = createConfigurationExport({
@@ -47,15 +53,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             try {
                 const raw = readerEvent.target?.result;
                 const imported = parseConfigurationExport(typeof raw === 'string' ? raw : '');
-                useProjectStore.setState({ projects: imported.projects });
-                useMissionStore.setState({ missions: imported.missions });
-                setGeminiApiKey(imported.settings.geminiApiKey);
-                setEvaluatorModel(imported.settings.evaluatorModel);
-                addToast(
-                    `Imported ${imported.projects.length} projects and ${imported.missions.length} missions. Histories and usage were unchanged.`,
-                    'success',
-                    6000
-                );
+                setPendingImport(imported);
             } catch (error) {
                 addToast(
                     error instanceof Error ? error.message : 'Unable to import configuration file.',
@@ -66,7 +64,21 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         };
         reader.onerror = () => addToast('Unable to read configuration file.', 'error');
         reader.readAsText(file);
-    }, [addToast, setEvaluatorModel, setGeminiApiKey]);
+    }, [addToast]);
+
+    const confirmImport = useCallback(() => {
+        if (!pendingImport) return;
+        useProjectStore.setState({ projects: pendingImport.projects });
+        useMissionStore.setState({ missions: pendingImport.missions });
+        setGeminiApiKey(pendingImport.settings.geminiApiKey);
+        setEvaluatorModel(pendingImport.settings.evaluatorModel);
+        addToast(
+            `Imported ${pendingImport.projects.length} projects and ${pendingImport.missions.length} missions. Histories and usage were unchanged.`,
+            'success',
+            6000
+        );
+        setPendingImport(null);
+    }, [addToast, pendingImport, setEvaluatorModel, setGeminiApiKey]);
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">
@@ -129,6 +141,16 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                     and the API key is exported only when explicitly enabled above.
                 </p>
             </div>
+            {pendingImport && (
+                <ConfirmDeleteModal
+                    intent="replace"
+                    itemType="Workspace Configuration"
+                    itemName={`${pendingImport.projects.length} projects · ${pendingImport.missions.length} missions`}
+                    warningDescription="Current projects, missions, API key, and evaluator model will be replaced. Test histories and AI usage will remain unchanged."
+                    onCancel={() => setPendingImport(null)}
+                    onConfirm={confirmImport}
+                />
+            )}
         </section>
     );
 };

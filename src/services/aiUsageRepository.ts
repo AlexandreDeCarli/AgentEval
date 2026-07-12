@@ -61,7 +61,10 @@ export const createAiUsageRepository = (
                 }
             };
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error || new Error('Unable to open AI usage database'));
+            request.onerror = () => {
+                databasePromise = null;
+                reject(request.error || new Error('Unable to open AI usage database'));
+            };
         });
         return databasePromise;
     };
