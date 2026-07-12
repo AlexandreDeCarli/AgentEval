@@ -143,6 +143,7 @@ export const Sidebar: React.FC = () => {
                     key={link.path}
                     to={link.path}
                     end={link.path === '/'}
+                    onClick={() => setShowMobileMore(false)}
                     className={({ isActive }) =>
                         `flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
                             isActive ? 'text-[#4A72FF] bg-[#4A72FF]/10' : 'text-muted-foreground'

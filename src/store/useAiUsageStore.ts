@@ -29,6 +29,18 @@ export const createAiUsageStore = (
     repository: AiUsageRepository
 ): UseBoundStore<StoreApi<AiUsageState>> => {
     const responseIds = new Set<string>();
+    let mutationQueue = Promise.resolve();
+    const syncResponseIds = (events: AiUsageEvent[]) => {
+        responseIds.clear();
+        events.forEach((event) => {
+            if (event.responseId) responseIds.add(event.responseId);
+        });
+    };
+    const enqueueMutation = (operation: () => Promise<void>) => {
+        const result = mutationQueue.then(operation);
+        mutationQueue = result.catch(() => undefined);
+        return result;
+    };
     const store = create<AiUsageState>((set, get) => ({
         events: [],
         isHydrating: true,
@@ -38,10 +50,7 @@ export const createAiUsageStore = (
                 const loaded = await repository.load();
                 set((state) => {
                     const events = mergeEvents(loaded, state.events);
-                    responseIds.clear();
-                    events.forEach((event) => {
-                        if (event.responseId) responseIds.add(event.responseId);
-                    });
+                    syncResponseIds(events);
                     return { events, isHydrating: false, storageError: null };
                 });
             } catch (error) {
@@ -60,7 +69,8 @@ export const createAiUsageStore = (
                 return { events: [createdEvent, ...state.events], storageError: null };
             });
             if (!createdEvent) return;
-            void repository.append(createdEvent).catch((error) => {
+            const eventToPersist = createdEvent;
+            void enqueueMutation(() => repository.append(eventToPersist)).catch((error) => {
                 set({ storageError: error instanceof Error ? error.message : 'Unable to save AI usage event.' });
             });
         },
@@ -69,13 +79,12 @@ export const createAiUsageStore = (
             responseIds.clear();
             set({ events: [], storageError: null });
             try {
-                await repository.clear();
+                await enqueueMutation(() => repository.clear());
             } catch (error) {
-                previousEvents.forEach((event) => {
-                    if (event.responseId) responseIds.add(event.responseId);
-                });
+                const events = mergeEvents(previousEvents, get().events);
+                syncResponseIds(events);
                 set({
-                    events: previousEvents,
+                    events,
                     storageError: error instanceof Error ? error.message : 'Unable to clear AI usage history.',
                 });
                 throw error;

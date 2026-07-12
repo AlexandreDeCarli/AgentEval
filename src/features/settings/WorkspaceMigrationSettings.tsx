@@ -70,7 +70,9 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         if (!pendingImport) return;
         useProjectStore.setState({ projects: pendingImport.projects });
         useMissionStore.setState({ missions: pendingImport.missions });
-        setGeminiApiKey(pendingImport.settings.geminiApiKey);
+        if (pendingImport.settings.geminiApiKey) {
+            setGeminiApiKey(pendingImport.settings.geminiApiKey);
+        }
         setEvaluatorModel(pendingImport.settings.evaluatorModel);
         addToast(
             `Imported ${pendingImport.projects.length} projects and ${pendingImport.missions.length} missions. Histories and usage were unchanged.`,
@@ -146,7 +148,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                     intent="replace"
                     itemType="Workspace Configuration"
                     itemName={`${pendingImport.projects.length} projects · ${pendingImport.missions.length} missions`}
-                    warningDescription="Current projects, missions, API key, and evaluator model will be replaced. Test histories and AI usage will remain unchanged."
+                    warningDescription="Current projects, missions, evaluator model, and the API key when included will be replaced. Test histories and AI usage will remain unchanged."
                     onCancel={() => setPendingImport(null)}
                     onConfirm={confirmImport}
                 />
