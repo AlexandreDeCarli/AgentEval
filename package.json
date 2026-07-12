@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:configuration-transfer": "node scratch/test-configuration-transfer.cjs"
+    "test:configuration-transfer": "node scratch/test-configuration-transfer.cjs",
+    "test:ai-usage": "node tests/ai-usage/test-ai-usage.cjs",
+    "test:e2e:ai-usage": "node tests/e2e/ai-usage-dashboard.cjs"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

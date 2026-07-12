@@ -1,24 +1,20 @@
-import { ChatMessage, DebugLogEntry, Evaluation, EvaluationCriterion } from '../types';
+import {
+    ChatMessage,
+    DebugLogEntry,
+    Evaluation,
+    EvaluationCriterion,
+    GeminiUsageMeasurement,
+} from '../types';
 import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
+import {
+    extractGeminiText,
+    getGeminiErrorBody,
+    requestGeminiGenerateContent,
+} from './geminiClient';
 
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const PRIMARY_TESTER_MODEL = 'gemini-2.5-flash';
-const FALLBACK_TESTER_MODEL = 'gemini-2.0-flash';
+const FALLBACK_TESTER_MODEL = 'gemini-3.1-flash-lite';
 const EVAL_MODEL = 'gemini-2.5-pro';
-
-interface GeminiPart {
-    text?: string;
-}
-
-interface GeminiCandidate {
-    content?: {
-        parts?: GeminiPart[];
-    };
-}
-
-interface GeminiResponseEnvelope {
-    candidates?: GeminiCandidate[];
-}
 
 interface TesterResponsePayload {
     message?: string;
@@ -33,60 +29,6 @@ interface EvaluationResponsePayload {
     metrics?: Evaluation['metrics'];
 }
 
-const buildGeminiApiUrl = (model: string) =>
-    `${GEMINI_API_BASE_URL}/${model}:generateContent`;
-
-const getGeminiErrorBody = (body: unknown) => {
-    return typeof body === 'string' ? body : JSON.stringify(body);
-};
-
-const parseGeminiResponseBody = (rawBody: string): unknown => {
-    try {
-        return rawBody ? JSON.parse(rawBody) : null;
-    } catch {
-        return rawBody;
-    }
-};
-
-const extractGeminiText = (body: unknown) => {
-    if (!body || typeof body !== 'object') {
-        return undefined;
-    }
-
-    const { candidates } = body as GeminiResponseEnvelope;
-    return candidates?.[0]?.content?.parts?.[0]?.text;
-};
-
-const requestGeminiGenerateContent = async (
-    apiKey: string,
-    model: string,
-    requestBody: Record<string, unknown>,
-    signal?: AbortSignal
-) => {
-    const url = buildGeminiApiUrl(model);
-    const t0 = Date.now();
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
-        signal,
-    });
-    const duration = Date.now() - t0;
-    const rawBody = await response.text();
-    const body = parseGeminiResponseBody(rawBody);
-
-    return {
-        url,
-        status: response.status,
-        duration,
-        ok: response.ok,
-        body,
-    };
-};
-
 const buildGeminiConversation = (chatHistory: ChatMessage[]) => {
     return chatHistory
         .filter((message) => message.role === 'tester' || message.role === 'target')
@@ -100,7 +42,8 @@ export const generateTesterMessage = async (
     apiKey: string,
     persona: string,
     goal: string,
-    chatHistory: ChatMessage[]
+    chatHistory: ChatMessage[],
+    onUsage?: (usage: GeminiUsageMeasurement) => void
 ): Promise<{ message: string; missionCompleted: boolean }> => {
     if (!apiKey) throw new Error('API Key is missing');
 
@@ -125,10 +68,10 @@ ${historyText || '(No messages yet)'}
 Based on the chat history, what is your next message to the TARGET?`.trim();
 
     const attemptGeneration = async (model: string) => {
-        const result = await requestGeminiGenerateContent(
+        const result = await requestGeminiGenerateContent({
             apiKey,
             model,
-            {
+            requestBody: {
                 contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
                 generationConfig: {
                     responseMimeType: 'application/json',
@@ -141,8 +84,9 @@ Based on the chat history, what is your next message to the TARGET?`.trim();
                         required: ['message', 'missionCompleted'],
                     },
                 },
-            }
-        );
+            },
+            onUsage,
+        });
 
         if (!result.ok) {
             throw new Error(
@@ -187,7 +131,8 @@ export const generateEvaluation = async (
     maxTurns: number,
     criteria: EvaluationCriterion[],
     metrics: { avg_time_to_first_response_ms: number; avg_time_to_complete_response_ms: number; },
-    evalModel?: string
+    evalModel?: string,
+    onUsage?: (usage: GeminiUsageMeasurement) => void
 ): Promise<Evaluation> => {
     if (!apiKey) throw new Error('API Key is missing');
 
@@ -236,10 +181,10 @@ Use the full scale (0-100 for overall, 0-10 for individual criteria).
 Did the Target agent fulfill the goal efficiently? How did it perform against each criterion?
 Are there specific parts of the Target's Original System Prompt that should be improved to avoid the issues you saw?`.trim();
 
-    const result = await requestGeminiGenerateContent(
+    const result = await requestGeminiGenerateContent({
         apiKey,
-        evalModel || EVAL_MODEL,
-        {
+        model: evalModel || EVAL_MODEL,
+        requestBody: {
             contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
             generationConfig: {
                 responseMimeType: 'application/json',
@@ -302,8 +247,9 @@ Are there specific parts of the Target's Original System Prompt that should be i
                     ],
                 },
             },
-        }
-    );
+        },
+        onUsage,
+    });
 
     if (!result.ok) {
         throw new Error(
@@ -335,7 +281,8 @@ export const generateGeminiTargetResponse = async (
     targetSystemPrompt: string,
     chatHistory: ChatMessage[],
     signal?: AbortSignal,
-    onDebugLog?: (entry: DebugLogEntry) => void
+    onDebugLog?: (entry: DebugLogEntry) => void,
+    onUsage?: (usage: GeminiUsageMeasurement) => void
 ): Promise<string> => {
     if (!apiKey) throw new Error('API Key is missing');
 
@@ -353,12 +300,13 @@ export const generateGeminiTargetResponse = async (
         };
     }
 
-    const result = await requestGeminiGenerateContent(
+    const result = await requestGeminiGenerateContent({
         apiKey,
-        targetModel,
+        model: targetModel,
         requestBody,
-        signal
-    );
+        signal,
+        onUsage,
+    });
 
     onDebugLog?.({
         id: crypto.randomUUID(),

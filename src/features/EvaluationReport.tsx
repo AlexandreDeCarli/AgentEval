@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Evaluation, Mission } from '../types';
 import { Copy, Check, Info, AlertTriangle, AlertCircle, Sparkles, Clock } from 'lucide-react';
+import { RunAiUsageSummary } from '../components/RunAiUsageSummary';
 
 interface Props {
     evaluation: Evaluation;
     mission?: Mission;
+    runId?: string;
 }
 
-export const EvaluationReport: React.FC<Props> = ({ evaluation, mission }) => {
+export const EvaluationReport: React.FC<Props> = ({ evaluation, mission, runId }) => {
     const [copiedId, setCopiedId] = useState<number | null>(null);
 
     const handleCopy = (text: string, id: number) => {
@@ -67,6 +69,8 @@ export const EvaluationReport: React.FC<Props> = ({ evaluation, mission }) => {
                     </div>
                 </div>
             </div>
+
+            {runId && <RunAiUsageSummary runId={runId} />}
 
             {/* Summary */}
             <div>
