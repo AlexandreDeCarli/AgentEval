@@ -392,6 +392,74 @@ async function testUsageStore() {
         await useAiUsageStore.getState().clearUsage();
         assert.equal(useAiUsageStore.getState().events.length, 0);
         assert.equal(clearCalls, 1);
+
+        const deferred = () => {
+            let resolve;
+            let reject;
+            const promise = new Promise((resolvePromise, rejectPromise) => {
+                resolve = resolvePromise;
+                reject = rejectPromise;
+            });
+            return { promise, resolve, reject };
+        };
+        const firstAppend = deferred();
+        const queuedClear = deferred();
+        const operations = [];
+        const queuedStore = createAiUsageStore({
+            load: async () => [],
+            append: async (value) => {
+                operations.push(`append:${value.responseId}`);
+                if (value.responseId === 'queued-before-clear') await firstAppend.promise;
+            },
+            clear: async () => {
+                operations.push('clear');
+                await queuedClear.promise;
+            },
+        });
+        await queuedStore.getState().hydrateUsage();
+        queuedStore.getState().recordMeasurement(
+            { routine: 'tester_conversation' },
+            measurement({ responseId: 'queued-before-clear' })
+        );
+        const clearPromise = queuedStore.getState().clearUsage();
+        queuedStore.getState().recordMeasurement(
+            { routine: 'evaluation' },
+            measurement({ responseId: 'queued-after-clear' })
+        );
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepEqual(operations, ['append:queued-before-clear']);
+        firstAppend.resolve();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepEqual(operations, ['append:queued-before-clear', 'clear']);
+        queuedClear.resolve();
+        await clearPromise;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepEqual(operations, [
+            'append:queued-before-clear',
+            'clear',
+            'append:queued-after-clear',
+        ]);
+        assert.deepEqual(
+            queuedStore.getState().events.map((value) => value.responseId),
+            ['queued-after-clear']
+        );
+
+        const failedClearStore = createAiUsageStore({
+            load: async () => [storedEvent],
+            append: async () => undefined,
+            clear: async () => { throw new Error('clear failed'); },
+        });
+        await failedClearStore.getState().hydrateUsage();
+        const failedClear = failedClearStore.getState().clearUsage();
+        failedClearStore.getState().recordMeasurement(
+            { routine: 'evaluation' },
+            measurement({ responseId: 'recorded-during-failed-clear' })
+        );
+        await assert.rejects(() => failedClear, /clear failed/);
+        assert.deepEqual(
+            new Set(failedClearStore.getState().events.map((value) => value.responseId)),
+            new Set(['stored-response', 'recorded-during-failed-clear'])
+        );
     } finally {
         loaded.cleanup();
     }

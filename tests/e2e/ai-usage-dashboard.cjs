@@ -46,6 +46,15 @@ async function waitForServer(timeoutMs = 15_000) {
     throw new Error(`Vite did not start on port ${PORT}`);
 }
 
+async function waitForCondition(predicate, message, timeoutMs = 5_000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (predicate()) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error(message);
+}
+
 function usageEvent(overrides = {}) {
     return {
         id: crypto.randomUUID(),
@@ -286,9 +295,11 @@ async function assertSettingsKeyboardAndExport(page) {
         if (exported.data.settings.geminiApiKey !== '') {
             throw new Error('Configuration export included the Gemini API key without explicit opt-in');
         }
-        await page.waitForTimeout(150);
-        const eventually = await page.evaluate(() => window.__downloadAudit.state.revoked);
-        if (!eventually) throw new Error('Export object URL was not eventually revoked');
+        await page.waitForFunction(
+            () => window.__downloadAudit?.state.revoked,
+            undefined,
+            { timeout: 5_000 }
+        );
     } finally {
         await page.evaluate(() => {
             const audit = window.__downloadAudit;
@@ -300,8 +311,14 @@ async function assertSettingsKeyboardAndExport(page) {
         });
     }
 
-    const importedProjects = JSON.parse(stores['agent-qa-projects']).state.projects;
-    const importedMissions = JSON.parse(stores['agent-qa-missions']).state.missions;
+    const importedProjects = JSON.parse(stores['agent-qa-projects']).state.projects.map((project) => ({
+        ...project,
+        name: 'Imported project',
+    }));
+    const importedMissions = JSON.parse(stores['agent-qa-missions']).state.missions.map((mission) => ({
+        ...mission,
+        titulo: 'Imported mission',
+    }));
     const importPayload = {
         schema: 'agenteval.configuration-export',
         version: 1,
@@ -309,7 +326,7 @@ async function assertSettingsKeyboardAndExport(page) {
         data: {
             projects: importedProjects,
             missions: importedMissions,
-            settings: { geminiApiKey: 'imported-key', evaluatorModel: 'gemini-3.5-flash' },
+            settings: { geminiApiKey: 'imported-key', evaluatorModel: 'gemini-2.5-pro' },
         },
     };
     await page.locator('input[type="file"]').setInputFiles({
@@ -320,6 +337,44 @@ async function assertSettingsKeyboardAndExport(page) {
     await page.getByRole('dialog', { name: 'Replace Workspace Configuration?' }).waitFor();
     await page.getByRole('button', { name: 'Yes, Replace' }).click();
     await page.getByText('Imported 1 projects and 1 missions. Histories and usage were unchanged.').waitFor();
+    await waitForCondition(
+        () => JSON.parse(stores['agent-qa-projects']).state.projects[0]?.name === 'Imported project',
+        'Imported projects were not persisted'
+    );
+    await waitForCondition(
+        () => JSON.parse(stores['agent-qa-missions']).state.missions[0]?.titulo === 'Imported mission',
+        'Imported missions were not persisted'
+    );
+    await waitForCondition(
+        () => JSON.parse(stores['agent-qa-settings']).state.evaluatorModel === 'gemini-2.5-pro',
+        'Imported evaluator model was not persisted'
+    );
+    await page.getByRole('tab', { name: 'AI Configuration' }).click();
+    if ((await page.locator('#gemini-api-key').inputValue()) !== 'imported-key') {
+        throw new Error('Imported Gemini API key was not applied');
+    }
+    if ((await page.locator('#evaluation-model').inputValue()) !== 'gemini-2.5-pro') {
+        throw new Error('Imported evaluator model was not applied');
+    }
+
+    await page.getByRole('tab', { name: 'Workspace Migration' }).click();
+    const keylessImport = {
+        ...importPayload,
+        data: {
+            ...importPayload.data,
+            settings: { ...importPayload.data.settings, geminiApiKey: '' },
+        },
+    };
+    await page.locator('input[type="file"]').setInputFiles({
+        name: 'workspace-without-key.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(keylessImport)),
+    });
+    await page.getByRole('button', { name: 'Yes, Replace' }).click();
+    await page.getByRole('tab', { name: 'AI Configuration' }).click();
+    if ((await page.locator('#gemini-api-key').inputValue()) !== 'imported-key') {
+        throw new Error('A keyless import erased the destination Gemini API key');
+    }
 }
 
 async function assertMobileNavigationAccess(page) {
@@ -334,6 +389,11 @@ async function assertMobileNavigationAccess(page) {
     await page.keyboard.press('Escape');
     if (await page.getByRole('menuitem', { name: 'Help & Tutorials' }).isVisible()) {
         throw new Error('Expected the mobile navigation menu to close on Escape');
+    }
+    await page.getByRole('button', { name: 'More navigation options' }).click();
+    await page.getByRole('link', { name: 'Projects' }).click();
+    if (await page.getByRole('menuitem', { name: 'Help & Tutorials' }).isVisible()) {
+        throw new Error('Expected the mobile navigation menu to close after route navigation');
     }
 }
 
