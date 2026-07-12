@@ -1,10 +1,10 @@
-const { exec } = require('node:child_process');
+const { execFile } = require('node:child_process');
 const net = require('node:net');
 const path = require('node:path');
 const { chromium } = require('playwright');
 
-const PORT = 5184;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let PORT;
+let BASE_URL;
 const PROJECT_ROOT = path.join(__dirname, '../..');
 
 function isPortOpen() {
@@ -18,6 +18,22 @@ function isPortOpen() {
         socket.once('error', () => done(false));
         socket.once('timeout', () => done(false));
         socket.connect(PORT, '127.0.0.1', () => done(true));
+    });
+}
+
+function allocatePort() {
+    return new Promise((resolve, reject) => {
+        const server = net.createServer();
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => {
+            const address = server.address();
+            const port = typeof address === 'object' && address ? address.port : null;
+            server.close((error) => {
+                if (error) reject(error);
+                else if (port) resolve(port);
+                else reject(new Error('Unable to allocate an E2E server port'));
+            });
+        });
     });
 }
 
@@ -366,17 +382,25 @@ async function main() {
     };
 
     try {
-        if (!(await isPortOpen())) {
-            serverProcess = exec(
-                `${process.execPath} ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`,
-                { cwd: PROJECT_ROOT, env: process.env }
-            );
-            serverProcess.on('error', (error) => {
-                console.error('Failed to start Vite dev server:', error);
-            });
-            serverProcess.stderr.on('data', (data) => process.stderr.write(data));
-            await waitForServer();
-        }
+        PORT = await allocatePort();
+        BASE_URL = `http://127.0.0.1:${PORT}`;
+        serverProcess = execFile(
+            process.execPath,
+            [
+                './node_modules/vite/bin/vite.js',
+                '--host',
+                '127.0.0.1',
+                '--port',
+                String(PORT),
+                '--strictPort',
+            ],
+            { cwd: PROJECT_ROOT, env: process.env }
+        );
+        serverProcess.on('error', (error) => {
+            console.error('Failed to start Vite dev server:', error);
+        });
+        serverProcess.stderr.on('data', (data) => process.stderr.write(data));
+        await waitForServer();
 
         browser = await chromium.launch({ headless: true });
         const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
