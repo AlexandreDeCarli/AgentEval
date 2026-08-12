@@ -11,6 +11,7 @@ interface MissionState {
     updateMission: (id: string, mission: Mission) => void;
     deleteMission: (id: string) => void;
     importMissions: (missions: Mission[]) => void;
+    syncProjectSystemPrompts: (projectId: string, systemPrompts: { id: string; content: string }[]) => void;
 }
 
 export const defaultMockMission: Mission = {
@@ -82,13 +83,25 @@ export const useMissionStore = create<MissionState>()(
                 })),
             importMissions: (newMissions) =>
                 set((state) => {
-                    // For simplicity, we just append non-duplicate IDs. 
-                    // If user wants to overwrite, we could map. 
-                    // Let's go with Overwrite if ID exists for better "sync" feel.
                     const missionMap = new Map(state.missions.map(m => [m.id, m]));
                     newMissions.forEach(m => missionMap.set(m.id, m));
 
                     return { missions: Array.from(missionMap.values()) };
+                }),
+            syncProjectSystemPrompts: (projectId, systemPrompts) =>
+                set((state) => {
+                    const promptMap = new Map(systemPrompts.map((sp) => [sp.id, sp.content]));
+                    return {
+                        missions: state.missions.map((m) => {
+                            if (m.project_id === projectId && m.system_prompt_id && promptMap.has(m.system_prompt_id)) {
+                                return {
+                                    ...m,
+                                    target_system_prompt: promptMap.get(m.system_prompt_id)!,
+                                };
+                            }
+                            return m;
+                        }),
+                    };
                 }),
         }),
         {
