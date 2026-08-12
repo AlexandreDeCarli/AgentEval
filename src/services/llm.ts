@@ -17,6 +17,7 @@ const FALLBACK_TESTER_MODEL = 'gemini-3.1-flash-lite';
 const EVAL_MODEL = 'gemini-2.5-pro';
 
 interface TesterResponsePayload {
+    reasoning?: string;
     message?: string;
     missionCompleted?: boolean;
 }
@@ -47,25 +48,39 @@ export const generateTesterMessage = async (
 ): Promise<{ message: string; missionCompleted: boolean }> => {
     if (!apiKey) throw new Error('API Key is missing');
 
-    // Convert history to Gemini format (user/model)    
-    // Our 'tester' acts as 'user', and the 'target' acts as 'model' to the LLM
-    // Actually, we are simulating the tester. So we prompt the LLM to BE the tester.
-    // The LLM playing tester gets history of what target said (user) and its own previous sayings (model).
-    // Wait, let's just pass all history as text.
-
     const historyText = chatHistory
         .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
         .join('\n');
 
     const systemPrompt = `
-You are the TESTER in an automated QA system.
-Your instructions: ${persona}
-Your goal: ${goal}
+You are the TESTER in an automated QA system evaluating an AI agent (TARGET).
 
-Current Chat History:
-${historyText || '(No messages yet)'}
+YOUR PERSONA: ${persona}
+YOUR MISSION GOAL: ${goal}
 
-Based on the chat history, what is your next message to the TARGET?`.trim();
+CURRENT CHAT HISTORY:
+${historyText || '(No messages exchanged yet)'}
+
+RULES FOR GENERATING YOUR NEXT MESSAGE AND DETERMINING "missionCompleted":
+1. YOUR MESSAGE:
+   - Stay in persona.
+   - Advance the conversation towards fulfilling the MISSION GOAL.
+   - If the TARGET asked a question or requested details (e.g., ID, order number, confirmation), provide the requested information if allowed by your persona.
+
+2. RULES FOR "missionCompleted" (CRITICAL ANALYSIS):
+   - Set "missionCompleted" to TRUE ONLY IF the TARGET agent has FULLY satisfied and completed the MISSION GOAL in the chat history.
+   - Set "missionCompleted" to FALSE if ANY of the following apply:
+     a) The TARGET agent has not yet provided the final answer, confirmation, or action required by the goal.
+     b) The TARGET agent asked a question, requested data, or gave an intermediate response, and needs to process your next reply.
+     c) You are providing a necessary answer or input that the TARGET still needs to act upon.
+     d) The scenario requires multi-turn interaction and all steps have not been completed by the TARGET.
+   - DO NOT set "missionCompleted" to true prematurely.
+
+Output JSON with:
+- "reasoning": A brief evaluation of whether the TARGET agent has fully satisfied the goal yet.
+- "message": Your next message to the TARGET.
+- "missionCompleted": boolean (strictly following the rules above).
+`.trim();
 
     const attemptGeneration = async (model: string) => {
         const result = await requestGeminiGenerateContent({
@@ -78,6 +93,7 @@ Based on the chat history, what is your next message to the TARGET?`.trim();
                     responseSchema: {
                         type: 'object',
                         properties: {
+                            reasoning: { type: 'string' },
                             message: { type: 'string' },
                             missionCompleted: { type: 'boolean' },
                         },

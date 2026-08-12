@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
@@ -13,6 +13,7 @@ import { Project, Mission, TestRun } from '../types';
 import { normalizeProjectTargetConfig } from '../utils/missionTarget';
 import { ArrowLeft, TrendingUp, Server, Target } from 'lucide-react';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
+import { UnsavedChangesModal } from '../components/ui/UnsavedChangesModal';
 import { useToastStore } from '../store/useToastStore';
 import { ProjectMissionsTab } from './project-editor/components/ProjectMissionsTab';
 import { ProjectSettingsTab } from './project-editor/components/ProjectSettingsTab';
@@ -47,6 +48,12 @@ export const ProjectEditor: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
     const tabFromQuery = searchParams.get('tab');
 
+    // Unsaved changes tracking
+    const savedDataRef = useRef<string>('');
+    const [isDirty, setIsDirty] = useState(false);
+    const [unsavedModalOpen, setUnsavedModalOpen] = useState(false);
+    const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
     useEffect(() => {
         if (selectedRun) {
             setDetailTab('score');
@@ -56,17 +63,31 @@ export const ProjectEditor: React.FC = () => {
     useEffect(() => {
         const found = projects.find((p) => p.id === id);
         if (found) {
-            setProject(normalizeProjectTargetConfig({
+            const normalized = normalizeProjectTargetConfig({
                 ...found,
                 documentation: found.documentation || '',
                 description: found.description || '',
                 system_prompts: found.system_prompts || [],
                 environments: found.environments || [],
-            }));
+            });
+            const serialized = JSON.stringify(normalized);
+            if (!savedDataRef.current || !isDirty) {
+                setProject(normalized);
+                savedDataRef.current = serialized;
+                setIsDirty(false);
+            }
         } else {
             navigate('/projects');
         }
-    }, [id, projects, navigate]);
+    }, [id, projects, navigate, isDirty]);
+
+    // Track dirty state when project state mutates
+    useEffect(() => {
+        if (savedDataRef.current && project) {
+            const currentSerialized = JSON.stringify(normalizeProjectTargetConfig(project));
+            setIsDirty(currentSerialized !== savedDataRef.current);
+        }
+    }, [project]);
 
     useEffect(() => {
         if (
@@ -95,17 +116,30 @@ export const ProjectEditor: React.FC = () => {
 
     const projectMissions = project ? missions.filter((m) => m.project_id === project.id) : [];
 
-    const handleTabChange = (tab: Tab) => {
-        setActiveTab(tab);
-
-        const nextSearchParams = new URLSearchParams(searchParams);
-        if (tab === 'dashboard') {
-            nextSearchParams.delete('tab');
+    const requestNavigation = (action: () => void) => {
+        if (isDirty) {
+            setPendingNavigation(() => action);
+            setUnsavedModalOpen(true);
         } else {
-            nextSearchParams.set('tab', tab);
+            action();
         }
+    };
 
-        setSearchParams(nextSearchParams, { replace: true });
+    const handleTabChange = (tab: Tab) => {
+        const doChange = () => {
+            setActiveTab(tab);
+
+            const nextSearchParams = new URLSearchParams(searchParams);
+            if (tab === 'dashboard') {
+                nextSearchParams.delete('tab');
+            } else {
+                nextSearchParams.set('tab', tab);
+            }
+
+            setSearchParams(nextSearchParams, { replace: true });
+        };
+
+        requestNavigation(doChange);
     };
 
     const handleSettingsTabChange = (subtab: SettingsTab) => {
@@ -159,6 +193,9 @@ export const ProjectEditor: React.FC = () => {
 
         try {
             updateProject(project.id, project);
+            useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
+            savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
+            setIsDirty(false);
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus('idle'), 2500);
         } catch {
@@ -205,7 +242,7 @@ export const ProjectEditor: React.FC = () => {
             {/* Nav & Title */}
             <div className="flex flex-col gap-4">
                 <button
-                    onClick={() => navigate('/projects')}
+                    onClick={() => requestNavigation(() => navigate('/projects'))}
                     className="flex items-center gap-2 text-xs font-extrabold text-muted-foreground hover:text-white transition-colors w-fit group select-none cursor-pointer"
                 >
                     <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
@@ -273,8 +310,46 @@ export const ProjectEditor: React.FC = () => {
                     saveStatus={saveStatus}
                     onSave={handleSave}
                     onChange={setProject}
+                    isDirty={isDirty}
                 />
             )}
+
+            {/* Unsaved Changes Modal */}
+            <UnsavedChangesModal
+                isOpen={unsavedModalOpen}
+                onSave={() => {
+                    handleSave();
+                    setUnsavedModalOpen(false);
+                    if (pendingNavigation) {
+                        pendingNavigation();
+                        setPendingNavigation(null);
+                    }
+                }}
+                onDiscard={() => {
+                    setUnsavedModalOpen(false);
+                    const found = projects.find((p) => p.id === id);
+                    if (found) {
+                        const normalized = normalizeProjectTargetConfig({
+                            ...found,
+                            documentation: found.documentation || '',
+                            description: found.description || '',
+                            system_prompts: found.system_prompts || [],
+                            environments: found.environments || [],
+                        });
+                        setProject(normalized);
+                        savedDataRef.current = JSON.stringify(normalized);
+                        setIsDirty(false);
+                    }
+                    if (pendingNavigation) {
+                        pendingNavigation();
+                        setPendingNavigation(null);
+                    }
+                }}
+                onCancel={() => {
+                    setUnsavedModalOpen(false);
+                    setPendingNavigation(null);
+                }}
+            />
 
             {/* Delete Confirmation Modal */}
             {missionToDelete && (

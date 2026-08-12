@@ -153,11 +153,15 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             }
         }
 
+        // 0. Resolver System Prompt live do projeto se existir
+        const resolvedPrompt = project?.system_prompts?.find((sp) => sp.id === mission.system_prompt_id);
+        const activeTargetSystemPrompt = resolvedPrompt?.content || mission.target_system_prompt || '';
+
         // 1. Resolver variáveis
         const resolvedVars = resolveVariables(mission.variables || {});
         const contextVars = {
             ...resolvedVars,
-            target_system_prompt: mission.target_system_prompt,
+            target_system_prompt: activeTargetSystemPrompt,
             mission_goal: mission.mission_goal,
             tester_persona: mission.tester_persona,
             titulo: mission.titulo,
@@ -219,11 +223,6 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 chatHistory.push(testerMsg);
                 useTestRunStore.getState().addMessage(runId, testerMsg);
 
-                if (testerResult.missionCompleted) {
-                    missionCompleted = true;
-                    break;
-                }
-
                 // ==== DELAY: Simular tempo de digitação (40ms por caracter) ====
                 const typingDelay = Math.min(testerResult.message.length * 40, 4000); // Teto de 4s para evitar loops travados
                 await new Promise((resolve, reject) => {
@@ -265,7 +264,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     const targetResponse = await generateGeminiTargetResponse(
                         geminiApiKey,
                         targetGeminiModel,
-                        mission.target_system_prompt,
+                        activeTargetSystemPrompt,
                         chatHistory,
                         signal,
                         appendDebugLog,
@@ -310,6 +309,11 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     }, signal, appendDebugLog);
                 }
 
+                if (testerResult.missionCompleted) {
+                    missionCompleted = true;
+                    break;
+                }
+
                 currentTurn++;
             }
 
@@ -350,7 +354,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             const evalResult = await generateEvaluation(
                 geminiApiKey,
                 chatHistory,
-                mission.target_system_prompt,
+                activeTargetSystemPrompt,
                 missionGoal,
                 mission.max_turns,
                 mission.evaluation_criteria || [],

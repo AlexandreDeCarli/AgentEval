@@ -16,6 +16,7 @@ interface ProjectSettingsTabProps {
     saveStatus: 'idle' | 'saved' | 'error';
     onSave: () => void;
     onChange: (updatedProject: Project) => void;
+    isDirty?: boolean;
 }
 
 export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
@@ -25,6 +26,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
     saveStatus,
     onSave,
     onChange,
+    isDirty = false,
 }) => {
     const targetProvider = project.target_provider || 'http';
 
@@ -69,9 +71,15 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
                     )}
                     <Button
                         onClick={onSave}
-                        className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5"
+                        className={`gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5 ${
+                            isDirty ? 'ring-2 ring-amber-400/50' : ''
+                        }`}
                     >
-                        <Save className="w-4 h-4" /> Save Project
+                        {isDirty && (
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Unsaved changes" />
+                        )}
+                        <Save className="w-4 h-4" />
+                        <span>{isDirty ? 'Save Project *' : 'Save Project'}</span>
                     </Button>
                 </div>
             </div>
