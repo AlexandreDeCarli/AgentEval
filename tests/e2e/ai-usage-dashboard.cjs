@@ -77,8 +77,8 @@ function usageEvent(overrides = {}) {
         estimatedOutputCostUsd: 0.002,
         estimatedCostUsd: 0.003,
         pricingSnapshot: {
-            pricingVersion: 'gemini-standard-2026-07-10',
-            pricingDate: '2026-07-10',
+            pricingVersion: 'gemini-standard-2026-08-13',
+            pricingDate: '2026-08-13',
             currency: 'USD',
             inputPerMillionUsd: 0.3,
             outputPerMillionUsd: 2.5,

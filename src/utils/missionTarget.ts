@@ -3,9 +3,12 @@ import { Mission, Project, TargetProvider } from '../types';
 export const DEFAULT_GEMINI_TARGET_MODEL = 'gemini-2.5-flash';
 
 export const SUGGESTED_GEMINI_TARGET_MODELS = [
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
     'gemini-3.5-flash',
-    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
     'gemini-3.1-pro-preview',
+    'gemini-3.1-flash-lite',
     'gemini-3-flash-preview',
     'gemini-2.5-pro',
     'gemini-2.5-flash',

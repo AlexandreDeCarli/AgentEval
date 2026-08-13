@@ -70,8 +70,8 @@ function event(overrides = {}) {
         estimatedOutputCostUsd: 0.002,
         estimatedCostUsd: 0.003,
         pricingSnapshot: {
-            pricingVersion: 'gemini-standard-2026-07-10',
-            pricingDate: '2026-07-10',
+            pricingVersion: 'gemini-standard-2026-08-13',
+            pricingDate: '2026-08-13',
             currency: 'USD',
             inputPerMillionUsd: 0.3,
             outputPerMillionUsd: 2.5,
@@ -92,8 +92,8 @@ async function testPricing() {
         assert.equal(flash.inputCostUsd, 0.3);
         assert.equal(flash.outputCostUsd, 0.375);
         assert.equal(flash.totalCostUsd, 0.675);
-        assert.equal(flash.snapshot.pricingVersion, 'gemini-standard-2026-07-10');
-        assert.equal(flash.snapshot.pricingDate, '2026-07-10');
+        assert.equal(flash.snapshot.pricingVersion, 'gemini-standard-2026-08-13');
+        assert.equal(flash.snapshot.pricingDate, '2026-08-13');
 
         const proShort = calculateAiUsageCost(measurement({
             resolvedModel: 'gemini-2.5-pro',
@@ -115,10 +115,10 @@ async function testPricing() {
 
         const aliasResolved = calculateAiUsageCost(measurement({
             requestedModel: 'gemini-flash-latest',
-            resolvedModel: 'models/gemini-3.5-flash-001',
+            resolvedModel: 'models/gemini-3.7-flash-001',
         }));
-        assert.equal(aliasResolved.snapshot.inputPerMillionUsd, 1.5);
-        assert.equal(aliasResolved.snapshot.outputPerMillionUsd, 9);
+        assert.equal(aliasResolved.snapshot.inputPerMillionUsd, 0.75);
+        assert.equal(aliasResolved.snapshot.outputPerMillionUsd, 3.75);
 
         const unknown = calculateAiUsageCost(measurement({ resolvedModel: 'gemini-future' }));
         assert.equal(unknown.status, 'unpriced');
