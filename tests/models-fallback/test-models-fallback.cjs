@@ -137,6 +137,61 @@ async function testFetchAvailableGeminiModels() {
     }
 }
 
+async function testFetchAvailableGeminiModelsPagination() {
+    const loaded = await loadModule('src/services/geminiClient.ts');
+    const originalFetch = global.fetch;
+
+    try {
+        const { fetchAvailableGeminiModels } = loaded.module;
+        const requestedUrls = [];
+
+        global.fetch = async (url) => {
+            requestedUrls.push(url);
+            if (!url.includes('pageToken=')) {
+                // First page
+                return new Response(
+                    JSON.stringify({
+                        models: [
+                            {
+                                name: 'models/gemini-page1-model',
+                                displayName: 'Gemini Page 1',
+                                supportedGenerationMethods: ['generateContent'],
+                            },
+                        ],
+                        nextPageToken: 'token-page-2',
+                    }),
+                    { status: 200 }
+                );
+            } else if (url.includes('pageToken=token-page-2')) {
+                // Second page
+                return new Response(
+                    JSON.stringify({
+                        models: [
+                            {
+                                name: 'models/gemini-page2-model',
+                                displayName: 'Gemini Page 2',
+                                supportedGenerationMethods: ['generateContent'],
+                            },
+                        ],
+                    }),
+                    { status: 200 }
+                );
+            }
+            return new Response('Not found', { status: 404 });
+        };
+
+        const result = await fetchAvailableGeminiModels('test-api-key');
+        assert.equal(result.length, 2, 'Should combine models across multiple pages');
+        assert.equal(requestedUrls.length, 2, 'Should make 2 requests following nextPageToken');
+        const ids = result.map((m) => m.id);
+        assert.ok(ids.includes('gemini-page1-model'));
+        assert.ok(ids.includes('gemini-page2-model'));
+    } finally {
+        global.fetch = originalFetch;
+        loaded.cleanup();
+    }
+}
+
 async function testMissionGeneratorFallback() {
     const loaded = await loadModule('src/services/missionGenerator.ts');
     const originalFetch = global.fetch;
@@ -337,17 +392,100 @@ async function testEvaluationFallback() {
     }
 }
 
+async function testNonRetryableErrorHaltsFallback() {
+    const loaded = await loadModule('src/services/llm.ts');
+    const originalFetch = global.fetch;
+
+    try {
+        const { generateTesterMessage } = loaded.module;
+        const requestedModels = [];
+
+        global.fetch = async (url) => {
+            const match = url.match(/\/models\/([^:]+):generateContent/);
+            const model = match ? match[1] : '';
+            requestedModels.push(model);
+
+            // 401 Unauthorized should fail fast and NOT proceed to fallbacks
+            return new Response(
+                JSON.stringify({ error: { message: 'API_KEY_INVALID' } }),
+                { status: 401 }
+            );
+        };
+
+        await assert.rejects(
+            async () => {
+                await generateTesterMessage('invalid-key', 'Persona', 'Goal', []);
+            },
+            /Fatal non-retryable error/
+        );
+
+        assert.equal(requestedModels.length, 1, 'Should halt immediately on non-retryable 401 error');
+        assert.equal(requestedModels[0], 'gemini-3.5-flash-lite');
+    } finally {
+        global.fetch = originalFetch;
+        loaded.cleanup();
+    }
+}
+
+async function testAllModelsFailErrorAggregation() {
+    const loaded = await loadModule('src/services/llm.ts');
+    const originalFetch = global.fetch;
+
+    try {
+        const { generateTesterMessage } = loaded.module;
+        const requestedModels = [];
+
+        global.fetch = async (url) => {
+            const match = url.match(/\/models\/([^:]+):generateContent/);
+            const model = match ? match[1] : '';
+            requestedModels.push(model);
+
+            return new Response('500 Internal Error', { status: 500 });
+        };
+
+        await assert.rejects(
+            async () => {
+                await generateTesterMessage('test-key', 'Persona', 'Goal', []);
+            },
+            (err) => {
+                const msg = err.message;
+                return (
+                    msg.includes('All attempted models failed') &&
+                    msg.includes('gemini-3.5-flash-lite') &&
+                    msg.includes('gemini-3.1-flash-lite') &&
+                    msg.includes('gemini-2.5-flash')
+                );
+            }
+        );
+
+        assert.deepEqual(requestedModels, [
+            'gemini-3.5-flash-lite',
+            'gemini-3.1-flash-lite',
+            'gemini-2.5-flash',
+        ]);
+    } finally {
+        global.fetch = originalFetch;
+        loaded.cleanup();
+    }
+}
+
 async function main() {
     console.log('Testing Gemini Models Catalog...');
     await testGeminiModelsCatalog();
     console.log('Testing Fetch Available Gemini Models API...');
     await testFetchAvailableGeminiModels();
+    console.log('Testing Fetch Available Gemini Models Pagination...');
+    await testFetchAvailableGeminiModelsPagination();
     console.log('Testing Mission Generator Fallback (3.7 -> 3.6)...');
     await testMissionGeneratorFallback();
     console.log('Testing Tester Message Fallback (3.5-lite -> 3.1-lite -> 2.5-flash)...');
     await testTesterMessageFallback();
     console.log('Testing Evaluation Fallback (3.5-lite -> 3.1-lite -> 2.5-flash)...');
     await testEvaluationFallback();
+    console.log('Testing Non-Retryable Error Fast Fail (401)...');
+    await testNonRetryableErrorHaltsFallback();
+    console.log('Testing All Models Fail Error Aggregation...');
+    await testAllModelsFailErrorAggregation();
     console.log('ALL MODEL AND FALLBACK TESTS PASSED ✅');
 }
 

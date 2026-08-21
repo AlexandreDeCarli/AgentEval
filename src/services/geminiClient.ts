@@ -140,6 +140,11 @@ interface GeminiApiListedModel {
     topK?: number;
 }
 
+interface GeminiListModelsResponse {
+    models?: GeminiApiListedModel[];
+    nextPageToken?: string;
+}
+
 const formatTokenLimit = (limit?: number): string => {
     if (!limit) return '1M tokens';
     if (limit >= 1_000_000) {
@@ -155,32 +160,64 @@ const formatTokenLimit = (limit?: number): string => {
 
 export const fetchAvailableGeminiModels = async (
     apiKey: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    timeoutMs = DEFAULT_GEMINI_TIMEOUT_MS
 ): Promise<GeminiModelInfo[]> => {
     if (!apiKey?.trim()) {
         throw new Error('API Key is required to fetch available Gemini models.');
     }
 
-    const url = `${GEMINI_API_BASE_URL}?pageSize=100`;
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey.trim(),
-        },
-        signal,
-    });
+    const requestController = new AbortController();
+    const handleCallerAbort = () => requestController.abort(signal?.reason);
+    if (signal?.aborted) handleCallerAbort();
+    else signal?.addEventListener('abort', handleCallerAbort, { once: true });
+    const timeoutId = globalThis.setTimeout(() => {
+        requestController.abort(
+            new DOMException('Gemini ListModels request timed out.', 'TimeoutError')
+        );
+    }, timeoutMs);
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to list Gemini models (${response.status}): ${errorText}`);
+    const accumulatedRawModels: GeminiApiListedModel[] = [];
+
+    try {
+        let nextPageToken: string | undefined = undefined;
+
+        do {
+            const params = new URLSearchParams({ pageSize: '100' });
+            if (nextPageToken) {
+                params.set('pageToken', nextPageToken);
+            }
+
+            const url = `${GEMINI_API_BASE_URL}?${params.toString()}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey.trim(),
+                },
+                signal: requestController.signal,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(
+                    `Failed to list Gemini models (${response.status}): ${errorText}`
+                );
+            }
+
+            const data = (await response.json()) as GeminiListModelsResponse;
+            if (data.models && Array.isArray(data.models)) {
+                accumulatedRawModels.push(...data.models);
+            }
+            nextPageToken = data.nextPageToken;
+        } while (nextPageToken);
+    } finally {
+        globalThis.clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', handleCallerAbort);
     }
 
-    const data = (await response.json()) as { models?: GeminiApiListedModel[] };
-    const rawModels = data.models || [];
-
     // Filter only models that support text/content generation
-    const contentModels = rawModels.filter((m) =>
+    const contentModels = accumulatedRawModels.filter((m) =>
         m.supportedGenerationMethods?.includes('generateContent')
     );
 
@@ -218,4 +255,5 @@ export const fetchAvailableGeminiModels = async (
 
     return result;
 };
+
 

@@ -310,26 +310,36 @@ export const EVALUATOR_MODELS: GeminiModelInfo[] = [
     ),
 ];
 
-export const getCombinedGeminiModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] => {
-    if (!discovered || discovered.length === 0) return GEMINI_MODELS;
-    const existingIds = new Set(GEMINI_MODELS.map((m) => m.id));
-    const extra = discovered.filter((m) => !existingIds.has(m.id));
-    return [...GEMINI_MODELS, ...extra];
+const mergeDiscovered = <T>(
+    baseItems: T[],
+    getId: (item: T) => string,
+    discovered?: GeminiModelInfo[],
+    transformDiscovered?: (model: GeminiModelInfo) => T
+): T[] => {
+    if (!discovered || discovered.length === 0) return baseItems;
+    const existingIds = new Set(baseItems.map(getId));
+    const extra: T[] = [];
+    for (const model of discovered) {
+        if (!existingIds.has(model.id)) {
+            existingIds.add(model.id);
+            extra.push(transformDiscovered ? transformDiscovered(model) : (model as unknown as T));
+        }
+    }
+    return [...baseItems, ...extra];
 };
 
-export const getCombinedEvaluatorModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] => {
-    const base = EVALUATOR_MODELS;
-    if (!discovered || discovered.length === 0) return base;
-    const existingIds = new Set(base.map((m) => m.id));
-    const extra = discovered.filter((m) => !existingIds.has(m.id));
-    return [...base, ...extra];
-};
+export const getCombinedGeminiModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] =>
+    mergeDiscovered(GEMINI_MODELS, (m) => m.id, discovered);
 
-export const getCombinedSuggestedTargetModels = (discovered?: GeminiModelInfo[]): string[] => {
-    const baseIds = GEMINI_MODELS.map((m) => m.id);
-    if (!discovered || discovered.length === 0) return baseIds;
-    const existingIds = new Set(baseIds);
-    const extraIds = discovered.filter((m) => !existingIds.has(m.id)).map((m) => m.id);
-    return [...baseIds, ...extraIds];
-};
+export const getCombinedEvaluatorModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] =>
+    mergeDiscovered(EVALUATOR_MODELS, (m) => m.id, discovered);
+
+export const getCombinedSuggestedTargetModels = (discovered?: GeminiModelInfo[]): string[] =>
+    mergeDiscovered(
+        GEMINI_MODELS.map((m) => m.id),
+        (id) => id,
+        discovered,
+        (m) => m.id
+    );
+
 

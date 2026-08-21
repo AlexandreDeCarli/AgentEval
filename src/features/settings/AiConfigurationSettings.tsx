@@ -39,12 +39,16 @@ export const AiConfigurationSettings: React.FC = () => {
     }, [geminiApiKey]);
 
     useEffect(() => {
-        if (availableEvaluatorModels.some((model) => model.id === evaluatorModel)) {
-            setSelectedModel(evaluatorModel);
-        } else if (availableEvaluatorModels.length > 0 && !availableEvaluatorModels.some((m) => m.id === selectedModel)) {
-            setSelectedModel(availableEvaluatorModels[0].id);
-        }
-    }, [availableEvaluatorModels, evaluatorModel, selectedModel]);
+        setSelectedModel((current) => {
+            if (availableEvaluatorModels.some((m) => m.id === current)) {
+                return current;
+            }
+            if (availableEvaluatorModels.some((m) => m.id === evaluatorModel)) {
+                return evaluatorModel;
+            }
+            return availableEvaluatorModels[0]?.id || evaluatorModel;
+        });
+    }, [availableEvaluatorModels, evaluatorModel]);
 
     const handleSave = useCallback(() => {
         setGeminiApiKey(inputKey);

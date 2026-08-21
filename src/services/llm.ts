@@ -11,6 +11,7 @@ import {
     getGeminiErrorBody,
     requestGeminiGenerateContent,
 } from './geminiClient';
+import { executeWithModelFallback } from './modelFallbackRunner';
 
 const PRIMARY_TESTER_MODEL = 'gemini-3.5-flash-lite';
 const FALLBACK_TESTER_MODEL_1 = 'gemini-3.1-flash-lite';
@@ -122,29 +123,11 @@ Output JSON with:
         FALLBACK_TESTER_MODEL_2,
     ];
 
-    let responseBody: unknown;
-    const errors: string[] = [];
-
-    for (let i = 0; i < modelsToTry.length; i++) {
-        const model = modelsToTry[i];
-        try {
-            responseBody = await attemptGeneration(model);
-            break;
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            errors.push(`[${model}]: ${msg}`);
-            if (i < modelsToTry.length - 1) {
-                console.warn(
-                    `Tester model (${model}) failed, trying fallback (${modelsToTry[i + 1]})...`,
-                    err
-                );
-            }
-        }
-    }
-
-    if (!responseBody) {
-        throw new Error(`All tester models failed:\n${errors.join('\n')}`);
-    }
+    const { result: responseBody } = await executeWithModelFallback(
+        modelsToTry,
+        attemptGeneration,
+        'TesterAgent'
+    );
 
     const rawText = extractGeminiText(responseBody);
 
@@ -307,29 +290,11 @@ Are there specific parts of the Target's Original System Prompt that should be i
         modelsToTry.push(FALLBACK_EVAL_MODEL_2);
     }
 
-    let responseBody: unknown;
-    const errors: string[] = [];
-
-    for (let i = 0; i < modelsToTry.length; i++) {
-        const model = modelsToTry[i];
-        try {
-            responseBody = await attemptEval(model);
-            break;
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            errors.push(`[${model}]: ${msg}`);
-            if (i < modelsToTry.length - 1) {
-                console.warn(
-                    `Evaluator model (${model}) failed, trying fallback (${modelsToTry[i + 1]})...`,
-                    err
-                );
-            }
-        }
-    }
-
-    if (!responseBody) {
-        throw new Error(`All evaluation models failed:\n${errors.join('\n')}`);
-    }
+    const { result: responseBody } = await executeWithModelFallback(
+        modelsToTry,
+        attemptEval,
+        'EvaluatorAgent'
+    );
 
     const rawText = extractGeminiText(responseBody);
 

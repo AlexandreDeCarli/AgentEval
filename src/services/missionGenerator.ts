@@ -1,5 +1,6 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
 import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
+import { executeWithModelFallback } from './modelFallbackRunner';
 
 const PRIMARY_GENERATOR_MODEL = 'gemini-3.7-flash';
 const FALLBACK_GENERATOR_MODEL = 'gemini-3.6-flash';
@@ -178,22 +179,16 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
         return result.body;
     };
 
-    let responseBody: unknown;
-    try {
-        responseBody = await attemptGeneration(PRIMARY_GENERATOR_MODEL);
-    } catch (primaryError) {
-        console.warn(
-            `Primary mission generator model (${PRIMARY_GENERATOR_MODEL}) failed, trying fallback (${FALLBACK_GENERATOR_MODEL})...`,
-            primaryError
-        );
-        try {
-            responseBody = await attemptGeneration(FALLBACK_GENERATOR_MODEL);
-        } catch (fallbackError) {
-            throw new Error(
-                `Mission generation failed on both models. Primary (${PRIMARY_GENERATOR_MODEL}): ${primaryError instanceof Error ? primaryError.message : String(primaryError)}. Fallback (${FALLBACK_GENERATOR_MODEL}): ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
-            );
-        }
-    }
+    const modelsToTry = [
+        PRIMARY_GENERATOR_MODEL,
+        FALLBACK_GENERATOR_MODEL,
+    ];
+
+    const { result: responseBody } = await executeWithModelFallback(
+        modelsToTry,
+        attemptGeneration,
+        'MissionGenerator'
+    );
 
     const rawText = extractGeminiText(responseBody);
 
