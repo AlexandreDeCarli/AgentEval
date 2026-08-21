@@ -12,9 +12,13 @@ import {
     requestGeminiGenerateContent,
 } from './geminiClient';
 
-const PRIMARY_TESTER_MODEL = 'gemini-2.5-flash';
-const FALLBACK_TESTER_MODEL = 'gemini-3.1-flash-lite';
-const EVAL_MODEL = 'gemini-2.5-pro';
+const PRIMARY_TESTER_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_TESTER_MODEL_1 = 'gemini-3.1-flash-lite';
+const FALLBACK_TESTER_MODEL_2 = 'gemini-2.5-flash';
+
+const DEFAULT_EVAL_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_EVAL_MODEL_1 = 'gemini-3.1-flash-lite';
+const FALLBACK_EVAL_MODEL_2 = 'gemini-2.5-flash';
 
 interface TesterResponsePayload {
     reasoning?: string;
@@ -112,16 +116,34 @@ Output JSON with:
         return result.body;
     };
 
+    const modelsToTry = [
+        PRIMARY_TESTER_MODEL,
+        FALLBACK_TESTER_MODEL_1,
+        FALLBACK_TESTER_MODEL_2,
+    ];
+
     let responseBody: unknown;
-    try {
-        responseBody = await attemptGeneration(PRIMARY_TESTER_MODEL);
-    } catch (primaryError) {
-        console.warn(`Primary model (${PRIMARY_TESTER_MODEL}) failed, trying fallback (${FALLBACK_TESTER_MODEL})...`, primaryError);
+    const errors: string[] = [];
+
+    for (let i = 0; i < modelsToTry.length; i++) {
+        const model = modelsToTry[i];
         try {
-            responseBody = await attemptGeneration(FALLBACK_TESTER_MODEL);
-        } catch (fallbackError) {
-            throw new Error(`Both models failed. Primary Error: ${primaryError instanceof Error ? primaryError.message : String(primaryError)}. Fallback Error: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+            responseBody = await attemptGeneration(model);
+            break;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            errors.push(`[${model}]: ${msg}`);
+            if (i < modelsToTry.length - 1) {
+                console.warn(
+                    `Tester model (${model}) failed, trying fallback (${modelsToTry[i + 1]})...`,
+                    err
+                );
+            }
         }
+    }
+
+    if (!responseBody) {
+        throw new Error(`All tester models failed:\n${errors.join('\n')}`);
     }
 
     const rawText = extractGeminiText(responseBody);
@@ -197,83 +219,119 @@ Use the full scale (0-100 for overall, 0-10 for individual criteria).
 Did the Target agent fulfill the goal efficiently? How did it perform against each criterion?
 Are there specific parts of the Target's Original System Prompt that should be improved to avoid the issues you saw?`.trim();
 
-    const result = await requestGeminiGenerateContent({
-        apiKey,
-        model: evalModel || EVAL_MODEL,
-        requestBody: {
-            contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: 'object',
-                    properties: {
-                        overall_score: { type: 'number' },
-                        summary: { type: 'string' },
-                        criteria_scores: {
-                            type: 'array',
-                            items: {
-                                type: 'object',
-                                properties: {
-                                    criterion_id: { type: 'string' },
-                                    score: { type: 'number' },
-                                    justification: { type: 'string' },
-                                },
-                                required: ['criterion_id', 'score', 'justification'],
-                            },
-                        },
-                        prompt_improvements: {
-                            type: 'array',
-                            items: {
-                                type: 'object',
-                                properties: {
-                                    target_text: { type: 'string' },
-                                    suggested_text: { type: 'string' },
-                                    justification: { type: 'string' },
-                                    severity: {
-                                        type: 'string',
-                                        enum: ['critico', 'importante', 'sugestão'],
+    const attemptEval = async (model: string) => {
+        const result = await requestGeminiGenerateContent({
+            apiKey,
+            model,
+            requestBody: {
+                contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: 'object',
+                        properties: {
+                            overall_score: { type: 'number' },
+                            summary: { type: 'string' },
+                            criteria_scores: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        criterion_id: { type: 'string' },
+                                        score: { type: 'number' },
+                                        justification: { type: 'string' },
                                     },
+                                    required: ['criterion_id', 'score', 'justification'],
+                                },
+                            },
+                            prompt_improvements: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        target_text: { type: 'string' },
+                                        suggested_text: { type: 'string' },
+                                        justification: { type: 'string' },
+                                        severity: {
+                                            type: 'string',
+                                            enum: ['critico', 'importante', 'sugestão'],
+                                        },
+                                    },
+                                    required: [
+                                        'target_text',
+                                        'suggested_text',
+                                        'justification',
+                                        'severity',
+                                    ],
+                                },
+                            },
+                            metrics: {
+                                type: 'object',
+                                properties: {
+                                    avg_time_to_first_response_ms: { type: 'number' },
+                                    avg_time_to_complete_response_ms: { type: 'number' },
                                 },
                                 required: [
-                                    'target_text',
-                                    'suggested_text',
-                                    'justification',
-                                    'severity',
+                                    'avg_time_to_first_response_ms',
+                                    'avg_time_to_complete_response_ms',
                                 ],
                             },
                         },
-                        metrics: {
-                            type: 'object',
-                            properties: {
-                                avg_time_to_first_response_ms: { type: 'number' },
-                                avg_time_to_complete_response_ms: { type: 'number' },
-                            },
-                            required: [
-                                'avg_time_to_first_response_ms',
-                                'avg_time_to_complete_response_ms',
-                            ],
-                        },
+                        required: [
+                            'overall_score',
+                            'summary',
+                            'criteria_scores',
+                            'prompt_improvements',
+                            'metrics',
+                        ],
                     },
-                    required: [
-                        'overall_score',
-                        'summary',
-                        'criteria_scores',
-                        'prompt_improvements',
-                        'metrics',
-                    ],
                 },
             },
-        },
-        onUsage,
-    });
+            onUsage,
+        });
 
-    if (!result.ok) {
-        throw new Error(
-            `Gemini Eval API Error: ${result.status} - ${getGeminiErrorBody(result.body)}`
-        );
+        if (!result.ok) {
+            throw new Error(
+                `Gemini Eval API Error (${model}): ${result.status} - ${getGeminiErrorBody(result.body)}`
+            );
+        }
+        return result.body;
+    };
+
+    const initialModel = evalModel?.trim() || DEFAULT_EVAL_MODEL;
+    const modelsToTry: string[] = [initialModel];
+    if (!modelsToTry.includes(FALLBACK_EVAL_MODEL_1)) {
+        modelsToTry.push(FALLBACK_EVAL_MODEL_1);
+    }
+    if (!modelsToTry.includes(FALLBACK_EVAL_MODEL_2)) {
+        modelsToTry.push(FALLBACK_EVAL_MODEL_2);
     }
 
-    const rawText = extractGeminiText(result.body);
+    let responseBody: unknown;
+    const errors: string[] = [];
+
+    for (let i = 0; i < modelsToTry.length; i++) {
+        const model = modelsToTry[i];
+        try {
+            responseBody = await attemptEval(model);
+            break;
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            errors.push(`[${model}]: ${msg}`);
+            if (i < modelsToTry.length - 1) {
+                console.warn(
+                    `Evaluator model (${model}) failed, trying fallback (${modelsToTry[i + 1]})...`,
+                    err
+                );
+            }
+        }
+    }
+
+    if (!responseBody) {
+        throw new Error(`All evaluation models failed:\n${errors.join('\n')}`);
+    }
+
+    const rawText = extractGeminiText(responseBody);
 
     if (!rawText) throw new Error('Empty response from Gemini');
 

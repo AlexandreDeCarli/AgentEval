@@ -34,7 +34,7 @@ export const GEMINI_MODELS: GeminiModelInfo[] = [
         rpmLimitFree: 5,
         rpdLimitFree: 20,
         tpmLimitFree: 250_000,
-        description: 'High-performance frontier Flash model with advanced reasoning, coding, and agentic capabilities.',
+        description: 'Frontier performance Flash model with advanced reasoning, coding, and multi-step agentic capabilities.',
         contextLimit: '1M tokens',
         releaseDate: 'Aug. 13, 2026',
         knowledgeCutoff: 'Jan. 2025',
@@ -57,7 +57,7 @@ export const GEMINI_MODELS: GeminiModelInfo[] = [
     },
     {
         id: 'gemini-3.5-flash',
-        name: 'Gemini 3.5 Flash (Default)',
+        name: 'Gemini 3.5 Flash',
         isFreeTier: true,
         inputCostPaid: '$1.50',
         outputCostPaid: '$9.00',
@@ -72,7 +72,7 @@ export const GEMINI_MODELS: GeminiModelInfo[] = [
     },
     {
         id: 'gemini-3.5-flash-lite',
-        name: 'Gemini 3.5 Flash-Lite',
+        name: 'Gemini 3.5 Flash-Lite (Default)',
         isFreeTier: true,
         inputCostPaid: '$0.30',
         outputCostPaid: '$2.50',
@@ -179,6 +179,96 @@ export const GEMINI_MODELS: GeminiModelInfo[] = [
         knowledgeCutoff: 'Jan. 2025',
         standardRate: { inputPerMillionUsd: 0.1, outputPerMillionUsd: 0.4 },
     },
+    {
+        id: 'gemini-2.0-flash',
+        name: 'Gemini 2.0 Flash',
+        isFreeTier: true,
+        inputCostPaid: '$0.10',
+        outputCostPaid: '$0.40',
+        rpmLimitFree: 15,
+        rpdLimitFree: 1500,
+        tpmLimitFree: 1_000_000,
+        description: 'Next generation multimodal workhorse model with high speed and multimodal search.',
+        contextLimit: '1M tokens',
+        releaseDate: 'Feb. 5, 2025',
+        knowledgeCutoff: 'Aug. 2024',
+        standardRate: { inputPerMillionUsd: 0.1, outputPerMillionUsd: 0.4 },
+    },
+    {
+        id: 'gemini-2.0-flash-lite',
+        name: 'Gemini 2.0 Flash-Lite',
+        isFreeTier: true,
+        inputCostPaid: '$0.075',
+        outputCostPaid: '$0.30',
+        rpmLimitFree: 30,
+        rpdLimitFree: 1500,
+        tpmLimitFree: 1_000_000,
+        description: 'Optimized for high-frequency, low-latency agent tasks.',
+        contextLimit: '1M tokens',
+        releaseDate: 'Feb. 5, 2025',
+        knowledgeCutoff: 'Aug. 2024',
+        standardRate: { inputPerMillionUsd: 0.075, outputPerMillionUsd: 0.3 },
+    },
+    {
+        id: 'gemini-1.5-pro',
+        name: 'Gemini 1.5 Pro',
+        isFreeTier: true,
+        inputCostPaid: '$1.25 (<=128K) / $2.50 (>128K)',
+        outputCostPaid: '$5.00 (<=128K) / $10.00 (>128K)',
+        rpmLimitFree: 2,
+        rpdLimitFree: 50,
+        tpmLimitFree: 32_000,
+        description: 'Mid-size multimodal model optimized for a wide-range of reasoning tasks with up to 2M context.',
+        contextLimit: '2M tokens',
+        releaseDate: 'Feb. 15, 2024',
+        knowledgeCutoff: 'Nov. 2023',
+        standardRate: { inputPerMillionUsd: 1.25, outputPerMillionUsd: 5 },
+        longContextRate: {
+            promptThresholdTokens: 128_000,
+            inputPerMillionUsd: 2.5,
+            outputPerMillionUsd: 10,
+        },
+    },
+    {
+        id: 'gemini-1.5-flash',
+        name: 'Gemini 1.5 Flash',
+        isFreeTier: true,
+        inputCostPaid: '$0.075 (<=128K) / $0.15 (>128K)',
+        outputCostPaid: '$0.30 (<=128K) / $0.60 (>128K)',
+        rpmLimitFree: 15,
+        rpdLimitFree: 1500,
+        tpmLimitFree: 1_000_000,
+        description: 'Fast and versatile multimodal model for scaling across diverse tasks.',
+        contextLimit: '1M tokens',
+        releaseDate: 'May 14, 2024',
+        knowledgeCutoff: 'Nov. 2023',
+        standardRate: { inputPerMillionUsd: 0.075, outputPerMillionUsd: 0.3 },
+        longContextRate: {
+            promptThresholdTokens: 128_000,
+            inputPerMillionUsd: 0.15,
+            outputPerMillionUsd: 0.6,
+        },
+    },
+    {
+        id: 'gemini-1.5-flash-8b',
+        name: 'Gemini 1.5 Flash-8B',
+        isFreeTier: true,
+        inputCostPaid: '$0.0375 (<=128K) / $0.075 (>128K)',
+        outputCostPaid: '$0.15 (<=128K) / $0.30 (>128K)',
+        rpmLimitFree: 15,
+        rpdLimitFree: 1500,
+        tpmLimitFree: 1_000_000,
+        description: 'Smallest and most cost-effective model in the Gemini 1.5 family.',
+        contextLimit: '1M tokens',
+        releaseDate: 'Oct. 3, 2024',
+        knowledgeCutoff: 'Nov. 2023',
+        standardRate: { inputPerMillionUsd: 0.0375, outputPerMillionUsd: 0.15 },
+        longContextRate: {
+            promptThresholdTokens: 128_000,
+            inputPerMillionUsd: 0.075,
+            outputPerMillionUsd: 0.3,
+        },
+    },
 ];
 
 export const GEMINI_MODEL_ALIASES: Record<string, string> = {
@@ -219,3 +309,27 @@ export const EVALUATOR_MODELS: GeminiModelInfo[] = [
         'Alias that currently resolves to Gemini 3.1 Pro Preview.'
     ),
 ];
+
+export const getCombinedGeminiModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] => {
+    if (!discovered || discovered.length === 0) return GEMINI_MODELS;
+    const existingIds = new Set(GEMINI_MODELS.map((m) => m.id));
+    const extra = discovered.filter((m) => !existingIds.has(m.id));
+    return [...GEMINI_MODELS, ...extra];
+};
+
+export const getCombinedEvaluatorModels = (discovered?: GeminiModelInfo[]): GeminiModelInfo[] => {
+    const base = EVALUATOR_MODELS;
+    if (!discovered || discovered.length === 0) return base;
+    const existingIds = new Set(base.map((m) => m.id));
+    const extra = discovered.filter((m) => !existingIds.has(m.id));
+    return [...base, ...extra];
+};
+
+export const getCombinedSuggestedTargetModels = (discovered?: GeminiModelInfo[]): string[] => {
+    const baseIds = GEMINI_MODELS.map((m) => m.id);
+    if (!discovered || discovered.length === 0) return baseIds;
+    const existingIds = new Set(baseIds);
+    const extraIds = discovered.filter((m) => !existingIds.has(m.id)).map((m) => m.id);
+    return [...baseIds, ...extraIds];
+};
+

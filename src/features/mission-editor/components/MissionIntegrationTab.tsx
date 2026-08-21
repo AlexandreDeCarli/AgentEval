@@ -3,7 +3,8 @@ import { HelpCircle, ExternalLink, Eye, ChevronUp, ChevronDown } from 'lucide-re
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Project, Mission, SystemPrompt, Environment, TargetProvider, ApiConfig } from '../../../types';
-import { SUGGESTED_GEMINI_TARGET_MODELS } from '../../../utils/missionTarget';
+import { getSuggestedGeminiTargetModels } from '../../../utils/missionTarget';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 
 interface MissionIntegrationTabProps {
     formData: Mission;
@@ -30,6 +31,8 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
     selectedEnv,
     requestNavigate,
 }) => {
+    const { discoveredModels } = useSettingsStore();
+    const suggestedModels = getSuggestedGeminiTargetModels(discoveredModels);
     const [showPromptPreview, setShowPromptPreview] = useState(false);
     const [showApiPreview, setShowApiPreview] = useState(false);
 
@@ -308,12 +311,12 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                     onChange={(e) => onChange({ ...formData, target_gemini_model: e.target.value })}
                                     className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer font-mono"
                                 >
-                                    {!SUGGESTED_GEMINI_TARGET_MODELS.includes(targetGeminiModel) && targetGeminiModel && (
+                                    {!suggestedModels.includes(targetGeminiModel) && targetGeminiModel && (
                                         <option value={targetGeminiModel} className="bg-card font-mono">
                                             {targetGeminiModel} (Custom)
                                         </option>
                                     )}
-                                    {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
+                                    {suggestedModels.map((model) => (
                                         <option key={model} value={model} className="bg-card font-mono">
                                             {model}
                                         </option>

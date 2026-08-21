@@ -1,29 +1,50 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Cpu, Eye, EyeOff, Info, Key } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { EVALUATOR_MODELS } from '../../config/geminiModels';
+import { getCombinedEvaluatorModels } from '../../config/geminiModels';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 export const AiConfigurationSettings: React.FC = () => {
-    const { geminiApiKey, setGeminiApiKey, evaluatorModel, setEvaluatorModel } = useSettingsStore();
+    const {
+        geminiApiKey,
+        setGeminiApiKey,
+        evaluatorModel,
+        setEvaluatorModel,
+        discoveredModels,
+        refreshDiscoveredModels,
+    } = useSettingsStore();
+
     const [inputKey, setInputKey] = useState(geminiApiKey);
+    const availableEvaluatorModels = useMemo(
+        () => getCombinedEvaluatorModels(discoveredModels),
+        [discoveredModels]
+    );
+
     const [selectedModel, setSelectedModel] = useState(() =>
-        EVALUATOR_MODELS.some((model) => model.id === evaluatorModel)
+        availableEvaluatorModels.some((model) => model.id === evaluatorModel)
             ? evaluatorModel
-            : EVALUATOR_MODELS[0].id
+            : availableEvaluatorModels[0]?.id || 'gemini-3.5-flash-lite'
     );
     const [showKey, setShowKey] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+    const [refreshStatus, setRefreshStatus] = useState<{
+        type: 'success' | 'error';
+        message: string;
+    } | null>(null);
 
     useEffect(() => {
         setInputKey(geminiApiKey);
-        setSelectedModel(
-            EVALUATOR_MODELS.some((model) => model.id === evaluatorModel)
-                ? evaluatorModel
-                : EVALUATOR_MODELS[0].id
-        );
-    }, [evaluatorModel, geminiApiKey]);
+    }, [geminiApiKey]);
+
+    useEffect(() => {
+        if (availableEvaluatorModels.some((model) => model.id === evaluatorModel)) {
+            setSelectedModel(evaluatorModel);
+        } else if (availableEvaluatorModels.length > 0 && !availableEvaluatorModels.some((m) => m.id === selectedModel)) {
+            setSelectedModel(availableEvaluatorModels[0].id);
+        }
+    }, [availableEvaluatorModels, evaluatorModel, selectedModel]);
 
     const handleSave = useCallback(() => {
         setGeminiApiKey(inputKey);
@@ -31,6 +52,47 @@ export const AiConfigurationSettings: React.FC = () => {
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2000);
     }, [inputKey, selectedModel, setEvaluatorModel, setGeminiApiKey]);
+
+    const handleRefreshModels = async () => {
+        const keyToUse = inputKey.trim() || geminiApiKey.trim();
+        if (!keyToUse) {
+            setRefreshStatus({
+                type: 'error',
+                message: 'Informe e salve uma chave de API Gemini para verificar novos modelos.',
+            });
+            window.setTimeout(() => setRefreshStatus(null), 4000);
+            return;
+        }
+
+        setIsRefreshingModels(true);
+        setRefreshStatus(null);
+
+        try {
+            const result = await refreshDiscoveredModels(keyToUse);
+            if (result.newCount > 0) {
+                setRefreshStatus({
+                    type: 'success',
+                    message: `${result.newCount} novo(s) modelo(s) encontrado(s) e adicionado(s) à lista! (${result.totalCount} modelos disponíveis)`,
+                });
+            } else {
+                setRefreshStatus({
+                    type: 'success',
+                    message: `Todos os modelos estão atualizados. (${result.totalCount} modelos disponíveis no Google AI)`,
+                });
+            }
+        } catch (error) {
+            setRefreshStatus({
+                type: 'error',
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : 'Falha ao buscar modelos na API do Gemini.',
+            });
+        } finally {
+            setIsRefreshingModels(false);
+            window.setTimeout(() => setRefreshStatus(null), 5000);
+        }
+    };
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -44,7 +106,17 @@ export const AiConfigurationSettings: React.FC = () => {
     }, [handleSave]);
 
     const activeModelInfo =
-        EVALUATOR_MODELS.find((model) => model.id === selectedModel) || EVALUATOR_MODELS[0];
+        availableEvaluatorModels.find((model) => model.id === selectedModel) ||
+        availableEvaluatorModels[0] || {
+            id: selectedModel,
+            name: selectedModel,
+            isFreeTier: true,
+            inputCostPaid: 'Custom',
+            outputCostPaid: 'Custom',
+            description: 'Custom Gemini model',
+            contextLimit: '1M tokens',
+            standardRate: { inputPerMillionUsd: 0, outputPerMillionUsd: 0 },
+        };
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-8">
@@ -84,21 +156,60 @@ export const AiConfigurationSettings: React.FC = () => {
             </div>
 
             <div className="pt-6 border-t border-border space-y-4">
-                <h2 className="text-title flex items-center gap-2">
-                    <Cpu className="w-5 h-5 text-primary" /> Evaluator Agent
-                </h2>
-                <p className="text-body text-muted-foreground max-w-[75ch]">
-                    Choose the model used to grade transcripts and generate prompt improvements.
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h2 className="text-title flex items-center gap-2">
+                            <Cpu className="w-5 h-5 text-primary" /> Evaluator Agent & Model Catalog
+                        </h2>
+                        <p className="text-body text-muted-foreground max-w-[75ch]">
+                            Choose the model used to grade transcripts and generate prompt improvements.
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefreshModels}
+                        disabled={isRefreshingModels}
+                        className="gap-2 shrink-0 border-primary/40 hover:border-primary text-slate-200"
+                        title="Consultar a API do Google Gemini para verificar novos modelos disponíveis"
+                    >
+                        <RefreshCw className={`w-4 h-4 text-primary ${isRefreshingModels ? 'animate-spin' : ''}`} />
+                        {isRefreshingModels ? 'Verificando...' : 'Verificar Novos Modelos'}
+                    </Button>
+                </div>
+
+                {refreshStatus && (
+                    <div
+                        className={`p-3 rounded-lg flex items-center gap-2.5 text-body border transition-all ${
+                            refreshStatus.type === 'success'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                        }`}
+                        role="alert"
+                    >
+                        {refreshStatus.type === 'success' ? (
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                        ) : (
+                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        )}
+                        <span>{refreshStatus.message}</span>
+                    </div>
+                )}
+
                 <div className="space-y-2">
-                    <label htmlFor="evaluation-model" className="text-label">Evaluation Model</label>
+                    <div className="flex items-center justify-between">
+                        <label htmlFor="evaluation-model" className="text-label">Evaluation Model</label>
+                        <span className="text-xs text-muted-foreground font-mono">
+                            {availableEvaluatorModels.length} modelos na lista
+                        </span>
+                    </div>
                     <select
                         id="evaluation-model"
                         value={selectedModel}
                         onChange={(event) => setSelectedModel(event.target.value)}
                         className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
                     >
-                        {EVALUATOR_MODELS.map((model) => (
+                        {availableEvaluatorModels.map((model) => (
                             <option key={model.id} value={model.id}>{model.name}</option>
                         ))}
                     </select>
@@ -128,9 +239,9 @@ export const AiConfigurationSettings: React.FC = () => {
                             <span className="text-label text-muted-foreground">Free tier</span>
                             {activeModelInfo.isFreeTier ? (
                                 <div className="font-mono text-xs tabular-nums text-emerald-300 space-y-1">
-                                    <div>RPM: <strong>{activeModelInfo.rpmLimitFree}</strong></div>
-                                    <div>RPD: <strong>{activeModelInfo.rpdLimitFree?.toLocaleString()}</strong></div>
-                                    <div>TPM: <strong>{activeModelInfo.tpmLimitFree?.toLocaleString()}</strong></div>
+                                    <div>RPM: <strong>{activeModelInfo.rpmLimitFree ?? 'Standard'}</strong></div>
+                                    <div>RPD: <strong>{activeModelInfo.rpdLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
+                                    <div>TPM: <strong>{activeModelInfo.tpmLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
                                 </div>
                             ) : (
                                 <div className="text-xs text-rose-300 font-bold flex items-center gap-1.5">
@@ -141,7 +252,9 @@ export const AiConfigurationSettings: React.FC = () => {
                     </div>
                     <div className="pt-3 border-t border-border/40 text-xs text-muted-foreground font-mono space-y-1">
                         <div>Context: <span className="text-slate-300">{activeModelInfo.contextLimit}</span></div>
-                        <div>Release: <span className="text-slate-300">{activeModelInfo.releaseDate}</span></div>
+                        {activeModelInfo.releaseDate && (
+                            <div>Release: <span className="text-slate-300">{activeModelInfo.releaseDate}</span></div>
+                        )}
                         <div>Pricing and limits follow Google AI Studio terms.</div>
                     </div>
                 </div>
@@ -154,3 +267,4 @@ export const AiConfigurationSettings: React.FC = () => {
         </section>
     );
 };
+

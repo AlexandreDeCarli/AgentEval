@@ -3,20 +3,61 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { fileStorage } from '../utils/fileStorage';
 import { encryptApiKey, decryptApiKey } from '../utils/crypto';
 
+import { GeminiModelInfo, GEMINI_MODELS } from '../config/geminiModels';
+import { fetchAvailableGeminiModels } from '../services/geminiClient';
+
 interface SettingsState {
     geminiApiKey: string;
     setGeminiApiKey: (key: string) => void;
     evaluatorModel: string;
     setEvaluatorModel: (model: string) => void;
+    discoveredModels: GeminiModelInfo[];
+    setDiscoveredModels: (models: GeminiModelInfo[]) => void;
+    refreshDiscoveredModels: (apiKey?: string) => Promise<{
+        newCount: number;
+        totalCount: number;
+        models: GeminiModelInfo[];
+    }>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             geminiApiKey: '',
             setGeminiApiKey: (key) => set({ geminiApiKey: key }),
-            evaluatorModel: 'gemini-3.5-flash',
+            evaluatorModel: 'gemini-3.5-flash-lite',
             setEvaluatorModel: (model) => set({ evaluatorModel: model }),
+            discoveredModels: [],
+            setDiscoveredModels: (models) => set({ discoveredModels: models }),
+            refreshDiscoveredModels: async (apiKeyOverride?: string) => {
+                const key = apiKeyOverride?.trim() || get().geminiApiKey?.trim();
+                if (!key) {
+                    throw new Error('API Key is required to fetch available models.');
+                }
+                const fetchedModels = await fetchAvailableGeminiModels(key);
+                const currentDiscovered = get().discoveredModels || [];
+                const staticIds = new Set(GEMINI_MODELS.map((m) => m.id));
+                const prevKnownIds = new Set([
+                    ...staticIds,
+                    ...currentDiscovered.map((m) => m.id),
+                ]);
+
+                let newCount = 0;
+                for (const model of fetchedModels) {
+                    if (!prevKnownIds.has(model.id)) {
+                        newCount += 1;
+                    }
+                }
+
+                // Keep fetched models in store
+                set({ discoveredModels: fetchedModels });
+
+                return {
+                    newCount,
+                    totalCount: fetchedModels.length,
+                    models: fetchedModels,
+                };
+            },
         }),
         {
             name: 'agent-qa-settings',

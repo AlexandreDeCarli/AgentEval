@@ -1,3 +1,4 @@
+import { GeminiModelInfo, GEMINI_MODELS } from '../config/geminiModels';
 import { GeminiUsageMeasurement } from '../types';
 
 export const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -125,3 +126,96 @@ export const requestGeminiGenerateContent = async ({
         signal?.removeEventListener('abort', handleCallerAbort);
     }
 };
+
+interface GeminiApiListedModel {
+    name: string;
+    version?: string;
+    displayName?: string;
+    description?: string;
+    inputTokenLimit?: number;
+    outputTokenLimit?: number;
+    supportedGenerationMethods?: string[];
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+}
+
+const formatTokenLimit = (limit?: number): string => {
+    if (!limit) return '1M tokens';
+    if (limit >= 1_000_000) {
+        const millions = limit / 1_000_000;
+        return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M tokens`;
+    }
+    if (limit >= 1_000) {
+        const thousands = limit / 1_000;
+        return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(0)}K tokens`;
+    }
+    return `${limit} tokens`;
+};
+
+export const fetchAvailableGeminiModels = async (
+    apiKey: string,
+    signal?: AbortSignal
+): Promise<GeminiModelInfo[]> => {
+    if (!apiKey?.trim()) {
+        throw new Error('API Key is required to fetch available Gemini models.');
+    }
+
+    const url = `${GEMINI_API_BASE_URL}?pageSize=100`;
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey.trim(),
+        },
+        signal,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to list Gemini models (${response.status}): ${errorText}`);
+    }
+
+    const data = (await response.json()) as { models?: GeminiApiListedModel[] };
+    const rawModels = data.models || [];
+
+    // Filter only models that support text/content generation
+    const contentModels = rawModels.filter((m) =>
+        m.supportedGenerationMethods?.includes('generateContent')
+    );
+
+    const staticModelsMap = new Map<string, GeminiModelInfo>(
+        GEMINI_MODELS.map((m) => [m.id, m])
+    );
+
+    const result: GeminiModelInfo[] = [];
+
+    for (const raw of contentModels) {
+        const cleanId = (raw.name || '').replace(/^models\//, '').trim();
+        if (!cleanId) continue;
+
+        const known = staticModelsMap.get(cleanId);
+        if (known) {
+            result.push({
+                ...known,
+                description: raw.description || known.description,
+            });
+        } else {
+            result.push({
+                id: cleanId,
+                name: raw.displayName ? `${raw.displayName} (${cleanId})` : cleanId,
+                isFreeTier: true,
+                inputCostPaid: 'Custom/Dynamic',
+                outputCostPaid: 'Custom/Dynamic',
+                description:
+                    raw.description ||
+                    'Model discovered dynamically via Google AI Studio API.',
+                contextLimit: formatTokenLimit(raw.inputTokenLimit),
+                standardRate: { inputPerMillionUsd: 0, outputPerMillionUsd: 0 },
+            });
+        }
+    }
+
+    return result;
+};
+
