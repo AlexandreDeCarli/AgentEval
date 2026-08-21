@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Ellipsis, FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info } from 'lucide-react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
+import { APP_VERSION, APP_BUILD_TIME, formatBuildDate, formatBuildDateShort } from '../utils/buildInfo';
 
 export const Sidebar: React.FC = () => {
     const { setShowHelpMenu, setShowWelcomeModal } = useOnboardingStore();
@@ -101,8 +102,17 @@ export const Sidebar: React.FC = () => {
                     <span className="text-body font-bold">Help & Tutorials</span>
                 </button>
             </div>
-            <div className="p-3 border-t border-border text-label text-muted-foreground text-center bg-[#13161B]/50 font-bold">
-                v2.5.0
+            <div
+                className="p-3 border-t border-border text-center bg-[#13161B]/50 select-none group cursor-default"
+                title={`Build: ${formatBuildDate(APP_BUILD_TIME)} (${APP_BUILD_TIME})`}
+            >
+                <div className="text-label text-slate-300 font-bold flex items-center justify-center gap-1.5">
+                    <span>v{APP_VERSION}</span>
+                    <span className="w-1 h-1 rounded-full bg-primary/60"></span>
+                    <span className="text-muted-foreground font-mono text-[10px]" title={`Build timestamp: ${APP_BUILD_TIME}`}>
+                        {formatBuildDateShort(APP_BUILD_TIME)}
+                    </span>
+                </div>
             </div>
         </aside>
         {showMobileMore && (
@@ -135,6 +145,18 @@ export const Sidebar: React.FC = () => {
                 >
                     <HelpCircle className="w-5 h-5" /> Help & Tutorials
                 </button>
+                <div
+                    className="px-4 py-2 border-t border-border/40 text-center bg-[#13161B]/30"
+                    title={`Build: ${formatBuildDate(APP_BUILD_TIME)}`}
+                >
+                    <div className="text-[11px] text-slate-300 font-bold flex items-center justify-center gap-1.5">
+                        <span>v{APP_VERSION}</span>
+                        <span className="w-1 h-1 rounded-full bg-primary/60"></span>
+                        <span className="text-muted-foreground font-mono text-[10px]">
+                            {formatBuildDateShort(APP_BUILD_TIME)}
+                        </span>
+                    </div>
+                </div>
             </div>
         )}
         <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 h-16 border-t border-border bg-card flex items-stretch select-none" aria-label="Primary navigation">
