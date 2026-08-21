@@ -13,7 +13,10 @@ interface SettingsState {
     setEvaluatorModel: (model: string) => void;
     discoveredModels: GeminiModelInfo[];
     setDiscoveredModels: (models: GeminiModelInfo[]) => void;
-    refreshDiscoveredModels: (apiKey?: string) => Promise<{
+    refreshDiscoveredModels: (
+        apiKey?: string,
+        signal?: AbortSignal
+    ) => Promise<{
         newCount: number;
         totalCount: number;
         models: GeminiModelInfo[];
@@ -29,12 +32,15 @@ export const useSettingsStore = create<SettingsState>()(
             setEvaluatorModel: (model) => set({ evaluatorModel: model }),
             discoveredModels: [],
             setDiscoveredModels: (models) => set({ discoveredModels: models }),
-            refreshDiscoveredModels: async (apiKeyOverride?: string) => {
+            refreshDiscoveredModels: async (
+                apiKeyOverride?: string,
+                signal?: AbortSignal
+            ) => {
                 const key = apiKeyOverride?.trim() || get().geminiApiKey?.trim();
                 if (!key) {
                     throw new Error('API Key is required to fetch available models.');
                 }
-                const fetchedModels = await fetchAvailableGeminiModels(key);
+                const fetchedModels = await fetchAvailableGeminiModels(key, signal);
                 const currentDiscovered = get().discoveredModels || [];
                 const staticIds = new Set(GEMINI_MODELS.map((m) => m.id));
                 const prevKnownIds = new Set([

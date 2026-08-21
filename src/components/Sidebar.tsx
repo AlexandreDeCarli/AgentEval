@@ -118,36 +118,36 @@ export const Sidebar: React.FC = () => {
         {showMobileMore && (
             <div
                 ref={mobileMoreMenuRef}
-                id="mobile-more-menu"
-                role="menu"
                 className="md:hidden fixed right-3 bottom-[4.75rem] z-50 w-56 overflow-hidden rounded-lg border border-border bg-card shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
             >
-                <button
-                    ref={firstMobileMenuItemRef}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                        setShowMobileMore(false);
-                        setShowWelcomeModal(true);
-                    }}
-                    className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                >
-                    <Info className="w-5 h-5" /> About the Developer
-                </button>
-                <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                        setShowMobileMore(false);
-                        setShowHelpMenu(true);
-                    }}
-                    className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                >
-                    <HelpCircle className="w-5 h-5" /> Help & Tutorials
-                </button>
+                <div id="mobile-more-menu" role="menu" aria-label="More options">
+                    <button
+                        ref={firstMobileMenuItemRef}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                            setShowMobileMore(false);
+                            setShowWelcomeModal(true);
+                        }}
+                        className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                    >
+                        <Info className="w-5 h-5" /> About the Developer
+                    </button>
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                            setShowMobileMore(false);
+                            setShowHelpMenu(true);
+                        }}
+                        className="min-h-11 w-full px-4 flex items-center gap-3 text-body text-muted-foreground hover:bg-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                    >
+                        <HelpCircle className="w-5 h-5" /> Help & Tutorials
+                    </button>
+                </div>
                 <div
-                    className="px-4 py-2 border-t border-border/40 text-center bg-[#13161B]/30"
-                    title={`Build: ${formatBuildDate(APP_BUILD_TIME)}`}
+                    className="px-4 py-2 border-t border-border/40 text-center bg-[#13161B]/30 select-none"
+                    title={`Build: ${formatBuildDate(APP_BUILD_TIME)} (${APP_BUILD_TIME})`}
                 >
                     <div className="text-[11px] text-slate-300 font-bold flex items-center justify-center gap-1.5">
                         <span>v{APP_VERSION}</span>
