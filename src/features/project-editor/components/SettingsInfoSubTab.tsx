@@ -4,9 +4,10 @@ import { Input } from '../../../components/ui/Input';
 import { Project, TargetProvider } from '../../../types';
 import { 
     DEFAULT_GEMINI_TARGET_MODEL, 
-    SUGGESTED_GEMINI_TARGET_MODELS, 
-    getProjectGeminiModel 
+    getProjectGeminiModel,
+    getSuggestedGeminiTargetModels 
 } from '../../../utils/missionTarget';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 
 interface SettingsInfoSubTabProps {
     project: Project;
@@ -17,6 +18,9 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
     project,
     onChange,
 }) => {
+    const { discoveredModels } = useSettingsStore();
+    const suggestedModels = getSuggestedGeminiTargetModels(discoveredModels);
+
     const handleTargetProviderChange = (value: TargetProvider) => {
         const updatedProject = {
             ...project,
@@ -120,12 +124,12 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                                     }
                                     className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                                 >
-                                    {!SUGGESTED_GEMINI_TARGET_MODELS.includes(targetGeminiModel) && targetGeminiModel && (
+                                    {!suggestedModels.includes(targetGeminiModel) && targetGeminiModel && (
                                         <option value={targetGeminiModel} className="bg-card font-mono">
                                             {targetGeminiModel} (Custom)
                                         </option>
                                     )}
-                                    {SUGGESTED_GEMINI_TARGET_MODELS.map((model) => (
+                                    {suggestedModels.map((model) => (
                                         <option key={model} value={model} className="bg-card font-mono">
                                             {model}
                                         </option>

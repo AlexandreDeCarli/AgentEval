@@ -1,7 +1,8 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
 import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
 
-const GENERATOR_MODEL = 'gemini-2.5-pro';
+const PRIMARY_GENERATOR_MODEL = 'gemini-3.7-flash';
+const FALLBACK_GENERATOR_MODEL = 'gemini-3.6-flash';
 
 interface GeneratedCriterionPayload {
     name: string;
@@ -120,61 +121,81 @@ Return a JSON array of mission objects.
 ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 `.trim();
 
-    const result = await requestGeminiGenerateContent({
-        apiKey,
-        model: GENERATOR_MODEL,
-        requestBody: {
-            contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            titulo: { type: 'string' },
-                            system_prompt_id: { type: 'string' },
-                            environment_id: { type: 'string' },
-                            tester_persona: { type: 'string' },
-                            mission_goal: { type: 'string' },
-                            variables: {
-                                type: 'string',
-                                description: 'A JSON-stringified object where keys are variable names and values are arrays of strings. Example: {"mood":["polite","rude"],"amount":["100","500"]}',
-                            },
-                            max_turns: { type: 'number' },
-                            evaluation_criteria: {
-                                type: 'array',
-                                items: {
-                                    type: 'object',
-                                    properties: {
-                                        name: { type: 'string' },
-                                        description: { type: 'string' },
+    const attemptGeneration = async (model: string) => {
+        const result = await requestGeminiGenerateContent({
+            apiKey,
+            model,
+            requestBody: {
+                contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                titulo: { type: 'string' },
+                                system_prompt_id: { type: 'string' },
+                                environment_id: { type: 'string' },
+                                tester_persona: { type: 'string' },
+                                mission_goal: { type: 'string' },
+                                variables: {
+                                    type: 'string',
+                                    description: 'A JSON-stringified object where keys are variable names and values are arrays of strings. Example: {"mood":["polite","rude"],"amount":["100","500"]}',
+                                },
+                                max_turns: { type: 'number' },
+                                evaluation_criteria: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            description: { type: 'string' },
+                                        },
+                                        required: ['name', 'description'],
                                     },
-                                    required: ['name', 'description'],
                                 },
                             },
+                            required: [
+                                'titulo',
+                                'system_prompt_id',
+                                'tester_persona',
+                                'mission_goal',
+                                'variables',
+                                'max_turns',
+                                'evaluation_criteria',
+                            ],
                         },
-                        required: [
-                            'titulo',
-                            'system_prompt_id',
-                            'tester_persona',
-                            'mission_goal',
-                            'variables',
-                            'max_turns',
-                            'evaluation_criteria',
-                        ],
                     },
                 },
             },
-        },
-        onUsage,
-    });
+            onUsage,
+        });
 
-    if (!result.ok) {
-        throw new Error(`Gemini API Error: ${result.status} - ${getGeminiErrorBody(result.body)}`);
+        if (!result.ok) {
+            throw new Error(`Gemini API Error (${model}): ${result.status} - ${getGeminiErrorBody(result.body)}`);
+        }
+        return result.body;
+    };
+
+    let responseBody: unknown;
+    try {
+        responseBody = await attemptGeneration(PRIMARY_GENERATOR_MODEL);
+    } catch (primaryError) {
+        console.warn(
+            `Primary mission generator model (${PRIMARY_GENERATOR_MODEL}) failed, trying fallback (${FALLBACK_GENERATOR_MODEL})...`,
+            primaryError
+        );
+        try {
+            responseBody = await attemptGeneration(FALLBACK_GENERATOR_MODEL);
+        } catch (fallbackError) {
+            throw new Error(
+                `Mission generation failed on both models. Primary (${PRIMARY_GENERATOR_MODEL}): ${primaryError instanceof Error ? primaryError.message : String(primaryError)}. Fallback (${FALLBACK_GENERATOR_MODEL}): ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+            );
+        }
     }
 
-    const rawText = extractGeminiText(result.body);
+    const rawText = extractGeminiText(responseBody);
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
