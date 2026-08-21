@@ -2,6 +2,7 @@ import React, { KeyboardEvent, Suspense, useRef, useState } from 'react';
 import { BarChart3, KeyRound, Move } from 'lucide-react';
 import { AiConfigurationSettings } from './settings/AiConfigurationSettings';
 import { WorkspaceMigrationSettings } from './settings/WorkspaceMigrationSettings';
+import { APP_VERSION, APP_BUILD_TIME, formatBuildDate } from '../utils/buildInfo';
 
 const AiUsageDashboard = React.lazy(() =>
     import('./settings/AiUsageDashboard').then((module) => ({ default: module.AiUsageDashboard }))
@@ -81,6 +82,11 @@ export const Settings: React.FC = () => {
                 )}
                 {activeSection === 'workspace' && <WorkspaceMigrationSettings />}
             </div>
+
+            <footer className="pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground font-mono">
+                <div>AgentEval v{APP_VERSION}</div>
+                <div>Último build: <span className="text-slate-300">{formatBuildDate(APP_BUILD_TIME)}</span></div>
+            </footer>
         </div>
     );
 };
