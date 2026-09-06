@@ -107,6 +107,23 @@ export const useMissionStore = create<MissionState>()(
         {
             name: 'agent-qa-missions',
             storage: createJSONStorage(() => fileStorage),
+            merge: (persistedState, currentState) => {
+                const typedState = persistedState as Partial<MissionState> | undefined;
+                if (!typedState?.missions?.length) return { ...currentState };
+
+                // Merge by ID: persisted missions win, new seeds are appended
+                const mergedMap = new Map<string, Mission>();
+                // Start with seed/default missions
+                currentState.missions.forEach((m) => mergedMap.set(m.id, m));
+                // Overwrite with persisted missions (user data has priority)
+                typedState.missions.forEach((m) => mergedMap.set(m.id, m));
+
+                return {
+                    ...currentState,
+                    ...typedState,
+                    missions: Array.from(mergedMap.values()),
+                };
+            },
         }
     )
 );

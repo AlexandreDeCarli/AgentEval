@@ -65,6 +65,21 @@ export const useTestRunStore = create<TestRunState>()(
         {
             name: 'agent-qa-test-runs',
             storage: createJSONStorage(() => fileStorage),
+            merge: (persistedState, currentState) => {
+                const typedState = persistedState as Partial<TestRunState> | undefined;
+                const runs = typedState?.runs ?? currentState.runs;
+
+                return {
+                    ...currentState,
+                    ...typedState,
+                    // Mark orphaned running test runs as aborted (session interrupted)
+                    runs: runs.map((r) =>
+                        r.status === 'running'
+                            ? { ...r, status: 'failed' as const, error: 'Session interrupted', updated_at: Date.now() }
+                            : r
+                    ),
+                };
+            },
         }
     )
 );
