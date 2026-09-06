@@ -13,65 +13,115 @@ const isDevServer = (): boolean => {
     }
 };
 
-export const fileStorage = {
-    getItem: async (name: string): Promise<string | null> => {
-        if (!isDevServer()) return localStorage.getItem(name);
-        try {
-            // Adiciona timestamp e headers rigorosos para desativar cache agressivo do Safari
-            const res = await fetch(`${API_BASE}/${encodeURIComponent(name)}?t=${Date.now()}`, {
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                }
-            });
-            if (res.ok) {
-                const text = await res.text();
-                if (text) {
-                    localStorage.setItem(name, text);
-                } else {
-                    localStorage.removeItem(name);
-                }
-                return text || null;
-            }
-            // Arquivo não existe no servidor - tentar ler do localStorage
-            return localStorage.getItem(name);
-        } catch (e) {
-            console.warn(`[fileStorage] Fallback para localStorage (${name}):`, e);
-            return localStorage.getItem(name);
+import { StateStorage } from 'zustand/middleware';
+
+const getLocalStorage = (): Storage | null => {
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            return window.localStorage;
         }
+        if (typeof localStorage !== 'undefined') {
+            return localStorage;
+        }
+    } catch {
+        // Restricted or unavailable
+    }
+    return null;
+};
+
+export const fileStorage: StateStorage = {
+    getItem: (name: string): string | null | Promise<string | null> => {
+        const storage = getLocalStorage();
+        if (!isDevServer()) {
+            try {
+                return storage ? storage.getItem(name) : null;
+            } catch (e) {
+                console.warn(`[fileStorage] localStorage.getItem failed for "${name}":`, e);
+                return null;
+            }
+        }
+
+        return (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/${encodeURIComponent(name)}?t=${Date.now()}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                if (res.ok) {
+                    const text = await res.text();
+                    try {
+                        if (text) {
+                            localStorage.setItem(name, text);
+                        } else {
+                            localStorage.removeItem(name);
+                        }
+                    } catch {}
+                    return text || null;
+                }
+                try {
+                    return storage ? storage.getItem(name) : null;
+                } catch {
+                    return null;
+                }
+            } catch (e) {
+                console.warn(`[fileStorage] Fallback para localStorage (${name}):`, e);
+                try {
+                    return storage ? storage.getItem(name) : null;
+                } catch {
+                    return null;
+                }
+            }
+        })();
     },
 
-    setItem: async (name: string, value: string): Promise<void> => {
-        // Sempre atualiza o localStorage localmente como backup síncrono imediato
+    setItem: (name: string, value: string): void | Promise<void> => {
+        const storage = getLocalStorage();
         try {
-            localStorage.setItem(name, value);
+            if (storage) {
+                storage.setItem(name, value);
+            }
         } catch (e) {
             console.warn(`[fileStorage] localStorage quota exceeded for key "${name}" (${(value.length / 1024).toFixed(1)}KB):`, e);
         }
         
         if (!isDevServer()) return;
         
-        try {
-            await fetch(`${API_BASE}/${encodeURIComponent(name)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                body: value,
-            });
-        } catch (e) {
-            console.warn(`[fileStorage] Erro ao salvar no dev server (${name}):`, e);
-        }
+        return (async () => {
+            try {
+                await fetch(`${API_BASE}/${encodeURIComponent(name)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    body: value,
+                });
+            } catch (e) {
+                console.warn(`[fileStorage] Erro ao salvar no dev server (${name}):`, e);
+            }
+        })();
     },
 
-    removeItem: async (name: string): Promise<void> => {
-        localStorage.removeItem(name);
-        if (!isDevServer()) return;
+    removeItem: (name: string): void | Promise<void> => {
+        const storage = getLocalStorage();
         try {
-            await fetch(`${API_BASE}/${encodeURIComponent(name)}`, { 
-                method: 'DELETE',
-            });
+            if (storage) {
+                storage.removeItem(name);
+            }
         } catch (e) {
-            console.warn(`[fileStorage] Erro ao deletar no dev server (${name}):`, e);
+            console.warn(`[fileStorage] localStorage.removeItem failed for "${name}":`, e);
         }
+
+        if (!isDevServer()) return;
+
+        return (async () => {
+            try {
+                await fetch(`${API_BASE}/${encodeURIComponent(name)}`, { 
+                    method: 'DELETE',
+                });
+            } catch (e) {
+                console.warn(`[fileStorage] Erro ao deletar no dev server (${name}):`, e);
+            }
+        })();
     },
 };

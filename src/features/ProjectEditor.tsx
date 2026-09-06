@@ -11,7 +11,7 @@ import { ChatBubble } from '../components/ChatBubble';
 import { DebugLogPanel } from '../components/DebugLogPanel';
 import { Project, Mission, TestRun } from '../types';
 import { normalizeProjectTargetConfig } from '../utils/missionTarget';
-import { ArrowLeft, TrendingUp, Server, Target } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Server, Target, Save, Check } from 'lucide-react';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
 import { UnsavedChangesModal } from '../components/ui/UnsavedChangesModal';
 import { useToastStore } from '../store/useToastStore';
@@ -215,6 +215,58 @@ export const ProjectEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
+    // Keep references for unmount persistence
+    const projectRef = useRef(project);
+    projectRef.current = project;
+    const isDirtyRef = useRef(isDirty);
+    isDirtyRef.current = isDirty;
+
+    // Auto-save debounced after 1.2s of inactivity when dirty
+    useEffect(() => {
+        if (!isDirty || !project || !project.name?.trim()) return;
+
+        const timer = setTimeout(() => {
+            try {
+                updateProject(project.id, project);
+                useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
+                savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
+                setIsDirty(false);
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2500);
+            } catch (e) {
+                console.warn('[ProjectEditor] Auto-save error:', e);
+            }
+        }, 1200);
+
+        return () => clearTimeout(timer);
+    }, [isDirty, project, updateProject]);
+
+    // Warn on browser reload/close if unsaved changes exist
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirty]);
+
+    // Save on unmount if dirty
+    useEffect(() => {
+        return () => {
+            if (isDirtyRef.current && projectRef.current && projectRef.current.name?.trim()) {
+                try {
+                    useProjectStore.getState().updateProject(projectRef.current.id, projectRef.current);
+                    useMissionStore.getState().syncProjectSystemPrompts(projectRef.current.id, projectRef.current.system_prompts);
+                } catch (e) {
+                    console.warn('[ProjectEditor] Unmount save error:', e);
+                }
+            }
+        };
+    }, []);
+
     const handleRunAllMissions = (missionsToRun: Mission[]) => {
         if (!geminiApiKey) {
             addToast('Configure your Gemini API Key in Settings first.', 'error');
@@ -248,7 +300,7 @@ export const ProjectEditor: React.FC = () => {
                     <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
                     <span>Back to Projects list</span>
                 </button>
-                <div className="flex justify-between items-start select-none">
+                <div id="project-editor-header" className="flex justify-between items-start select-none">
                     <div>
                         <h1 className="text-display text-white">{project.name}</h1>
                         {project.description && (
@@ -256,6 +308,30 @@ export const ProjectEditor: React.FC = () => {
                                 {project.description}
                             </p>
                         )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {saveStatus === 'saved' && (
+                            <span className="text-xs text-emerald-400 flex items-center gap-1.5 animate-fade-in bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 font-semibold">
+                                <Check className="w-3.5 h-3.5" /> Saved
+                            </span>
+                        )}
+                        <button
+                            id="save-project-btn"
+                            onClick={handleSave}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                                isDirty
+                                    ? 'bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white shadow-md hover:scale-[1.02] active:scale-[0.98]'
+                                    : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                            }`}
+                            title={isDirty ? "Unsaved changes exist" : "All changes saved"}
+                        >
+                            {isDirty ? (
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                            ) : (
+                                <Save className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                            <span>Save Changes</span>
+                        </button>
                     </div>
                 </div>
             </div>

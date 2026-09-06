@@ -23,11 +23,23 @@ export const useProjectStore = create<ProjectState>()(
         (set) => ({
             projects: [seedProject],
             addProject: (project) =>
-                set((state) => ({ projects: [...state.projects, project] })),
+                set((state) => {
+                    const exists = state.projects.some((p) => p.id === project.id);
+                    return {
+                        projects: exists
+                            ? state.projects.map((p) => (p.id === project.id ? project : p))
+                            : [...state.projects, project],
+                    };
+                }),
             updateProject: (id, project) =>
-                set((state) => ({
-                    projects: state.projects.map((p) => (p.id === id ? project : p)),
-                })),
+                set((state) => {
+                    const exists = state.projects.some((p) => p.id === id);
+                    return {
+                        projects: exists
+                            ? state.projects.map((p) => (p.id === id ? project : p))
+                            : [...state.projects, project],
+                    };
+                }),
             deleteProject: (id) =>
                 set((state) => ({
                     projects: state.projects.filter((p) => p.id !== id),
@@ -106,17 +118,32 @@ export const useProjectStore = create<ProjectState>()(
             storage: createJSONStorage(() => fileStorage),
             merge: (persistedState, currentState) => {
                 const typedState = persistedState as Partial<ProjectState> | undefined;
-                const rawProjects = typedState?.projects ?? currentState.projects;
+                const persistedProjects = typedState?.projects;
+
+                if (!Array.isArray(persistedProjects) || persistedProjects.length === 0) {
+                    return {
+                        ...currentState,
+                        ...typedState,
+                        projects: currentState.projects,
+                    };
+                }
+
+                // Merge by ID: persisted projects take full precedence
+                const mergedMap = new Map<string, Project>();
+                currentState.projects.forEach((p) => mergedMap.set(p.id, p));
+                persistedProjects.forEach((p) => mergedMap.set(p.id, p));
+
+                const mergedProjects = Array.from(mergedMap.values()).map((project) => ({
+                    ...project,
+                    target_gemini_model:
+                        project.target_gemini_model?.trim() ||
+                        DEFAULT_GEMINI_TARGET_MODEL,
+                }));
 
                 return {
                     ...currentState,
                     ...typedState,
-                    projects: rawProjects.map((project) => ({
-                        ...project,
-                        target_gemini_model:
-                            project.target_gemini_model?.trim() ||
-                            DEFAULT_GEMINI_TARGET_MODEL,
-                    })),
+                    projects: mergedProjects,
                 };
             },
         }

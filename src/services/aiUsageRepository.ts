@@ -40,7 +40,9 @@ const createLegacyRepository = (): AiUsageRepository => ({
         const events = parseLegacyEvents(await fileStorage.getItem(LEGACY_STORAGE_KEY));
         await fileStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify({ state: { events: [event, ...events] }, version: 1 }));
     },
-    clear: async () => fileStorage.removeItem(LEGACY_STORAGE_KEY),
+    clear: async () => {
+        await fileStorage.removeItem(LEGACY_STORAGE_KEY);
+    },
 });
 
 export const createAiUsageRepository = (
