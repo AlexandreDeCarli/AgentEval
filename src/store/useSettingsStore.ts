@@ -98,6 +98,19 @@ export const useSettingsStore = create<SettingsState>()(
                     await fileStorage.removeItem(name);
                 }
             })),
+            merge: (persistedState, currentState) => {
+                const typedState = persistedState as Partial<SettingsState> | undefined;
+                return {
+                    ...currentState,
+                    ...typedState,
+                    // Preserve API key and discovered models from persisted state
+                    geminiApiKey: typedState?.geminiApiKey || currentState.geminiApiKey,
+                    evaluatorModel: typedState?.evaluatorModel || currentState.evaluatorModel,
+                    discoveredModels: typedState?.discoveredModels?.length
+                        ? typedState.discoveredModels
+                        : currentState.discoveredModels,
+                };
+            },
         }
     )
 );

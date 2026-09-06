@@ -44,7 +44,11 @@ export const fileStorage = {
 
     setItem: async (name: string, value: string): Promise<void> => {
         // Sempre atualiza o localStorage localmente como backup síncrono imediato
-        localStorage.setItem(name, value);
+        try {
+            localStorage.setItem(name, value);
+        } catch (e) {
+            console.warn(`[fileStorage] localStorage quota exceeded for key "${name}" (${(value.length / 1024).toFixed(1)}KB):`, e);
+        }
         
         if (!isDevServer()) return;
         

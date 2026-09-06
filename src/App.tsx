@@ -14,7 +14,8 @@ import { WelcomeModal } from './components/WelcomeModal';
 import { TestExecutionWidget } from './components/TestExecutionWidget';
 import { ToastContainer } from './components/ui/ToastContainer';
 
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { useHydrationGuard } from './hooks/useHydrationGuard';
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -80,6 +81,19 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 }
 
 const App: React.FC = () => {
+  const isHydrated = useHydrationGuard();
+
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background text-foreground">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-body text-muted-foreground">Loading your data…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <div className="flex h-[calc(100dvh-4rem)] md:h-screen bg-background text-foreground overflow-hidden">
