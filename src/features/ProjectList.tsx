@@ -8,32 +8,54 @@ import { Plus, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react
 import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 import { Project } from '../types';
 
+import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
+
 export const ProjectList: React.FC = () => {
     const { projects, deleteProject, addProject } = useProjectStore();
     const { missions } = useMissionStore();
     const navigate = useNavigate();
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-    const handleNew = () => {
+    // Create Project Modal State
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newProjectName, setNewProjectName] = useState('');
+    const [newProjectDesc, setNewProjectDesc] = useState('');
+    const [newTargetProvider, setNewTargetProvider] = useState<'http' | 'gemini'>('http');
+
+    const handleOpenNew = () => {
+        const isTourRunning = sessionStorage.getItem('dashboardTourRunning') === 'true';
+        if (isTourRunning) {
+            handleCreate('New Project', '', 'http');
+            return;
+        }
+        setNewProjectName('');
+        setNewProjectDesc('');
+        setNewTargetProvider('http');
+        setIsCreateModalOpen(true);
+    };
+
+    const handleCreate = (name: string, description: string, targetProvider: 'http' | 'gemini') => {
         const id = crypto.randomUUID();
         addProject({
             id,
-            name: 'New Project',
-            description: '',
+            name: name.trim() || 'New Project',
+            description: description.trim(),
             documentation: '',
-            target_provider: 'http',
+            target_provider: targetProvider,
             target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
             system_prompts: [],
             environments: [],
         });
-        
-        // If the dashboard tour is running, signal that we should trigger the project tutorial on the new page
+
+        setIsCreateModalOpen(false);
+
         const isTourRunning = sessionStorage.getItem('dashboardTourRunning') === 'true';
         if (isTourRunning) {
             sessionStorage.setItem('autoStartProjectTour', 'true');
         }
-        
-        navigate(`/projects/${id}`);
+
+        navigate(`/projects/${id}?tab=settings`);
     };
 
     return (
@@ -45,7 +67,7 @@ export const ProjectList: React.FC = () => {
                 </div>
                 <Button 
                     id="new-project-button" 
-                    onClick={handleNew} 
+                    onClick={handleOpenNew} 
                     className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-white font-bold text-xs shadow-lg shadow-[#4A72FF]/10 cursor-pointer"
                 >
                     <Plus className="w-4 h-4" /> New Project
@@ -119,7 +141,7 @@ export const ProjectList: React.FC = () => {
                         <FolderOpen className="w-12 h-12 text-zinc-600 mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground mb-4 text-body">No projects yet. Create one to organize your missions.</p>
                         <Button 
-                            onClick={handleNew} 
+                            onClick={handleOpenNew} 
                             className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-bold text-xs uppercase px-4 py-2 rounded-lg shadow-md cursor-pointer"
                         >
                             <Plus className="w-4 h-4" /> Create your first Project
@@ -127,6 +149,69 @@ export const ProjectList: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Create Project Modal */}
+            <Modal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                title="Create New Project"
+            >
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!newProjectName.trim()) return;
+                        handleCreate(newProjectName, newProjectDesc, newTargetProvider);
+                    }}
+                    className="space-y-4"
+                >
+                    <div>
+                        <label className="text-label text-slate-300 mb-1.5 block">Project Name *</label>
+                        <Input
+                            autoFocus
+                            placeholder="e.g. Customer Support AI, Sales Assistant..."
+                            value={newProjectName}
+                            onChange={(e) => setNewProjectName(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="text-label text-slate-300 mb-1.5 block">Description</label>
+                        <textarea
+                            className="w-full h-24 rounded-md border border-input bg-transparent px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            placeholder="Brief description of what this project tests..."
+                            value={newProjectDesc}
+                            onChange={(e) => setNewProjectDesc(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-label text-slate-300 mb-1.5 block">Target Provider</label>
+                        <select
+                            className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                            value={newTargetProvider}
+                            onChange={(e) => setNewTargetProvider(e.target.value as 'http' | 'gemini')}
+                        >
+                            <option value="http">HTTP API (External agent endpoint)</option>
+                            <option value="gemini">Gemini LLM (Direct model testing)</option>
+                        </select>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setIsCreateModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={!newProjectName.trim()}
+                            className="bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white font-bold px-5"
+                        >
+                            Create Project
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
 
             {/* Delete Confirmation Modal */}
             {projectToDelete && (
