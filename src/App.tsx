@@ -102,6 +102,7 @@ const App: React.FC = () => {
           <ErrorBoundary>
           <Routes>
             <Route path="/" element={<ProjectList />} />
+            <Route path="/projects" element={<ProjectList />} />
             <Route path="/projects/:id" element={<ProjectEditor />} />
             <Route path="/missions" element={<MissionList />} />
             <Route path="/missions/:id" element={<MissionEditor />} />
