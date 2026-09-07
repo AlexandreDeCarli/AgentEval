@@ -24,11 +24,6 @@ export const ProjectList: React.FC = () => {
     const [newTargetProvider, setNewTargetProvider] = useState<'http' | 'gemini'>('http');
 
     const handleOpenNew = () => {
-        const isTourRunning = sessionStorage.getItem('dashboardTourRunning') === 'true';
-        if (isTourRunning) {
-            handleCreate('New Project', '', 'http');
-            return;
-        }
         setNewProjectName('');
         setNewProjectDesc('');
         setNewTargetProvider('http');

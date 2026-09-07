@@ -25,6 +25,9 @@ export const WelcomeModal: React.FC = () => {
         isHydrated,
         hasCompletedWelcomeModal,
         setHasCompletedWelcomeModal,
+        setHasCompletedOnboarding,
+        setHasCompletedProjectOnboarding,
+        setHasCompletedMissionOnboarding,
         showWelcomeModal,
         setShowWelcomeModal,
         triggerTour
@@ -59,8 +62,13 @@ export const WelcomeModal: React.FC = () => {
         if (isFirstTime) {
             setHasCompletedWelcomeModal(true);
             setShowWelcomeModal(false);
-            // Always trigger the guided onboarding tour on first access
-            triggerTour();
+            if (startTutorial) {
+                triggerTour();
+            } else {
+                setHasCompletedOnboarding(true);
+                setHasCompletedProjectOnboarding(true);
+                setHasCompletedMissionOnboarding(true);
+            }
         } else {
             setShowWelcomeModal(false);
             if (startTutorial) {
@@ -89,11 +97,15 @@ export const WelcomeModal: React.FC = () => {
     // Save key and finish wizard
     const handleSaveAndFinish = () => {
         setGeminiApiKey(apiKeyInput.trim());
-        handleCloseOnboarding(true);
+        handleCloseOnboarding(false);
     };
 
     const handleSkip = () => {
-        handleCloseOnboarding(true);
+        setHasCompletedWelcomeModal(true);
+        setHasCompletedOnboarding(true);
+        setHasCompletedProjectOnboarding(true);
+        setHasCompletedMissionOnboarding(true);
+        setShowWelcomeModal(false);
     };
 
     const handleBackStep = () => {
