@@ -50,6 +50,8 @@ export const ProjectEditor: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
     const tabFromQuery = searchParams.get('tab');
 
+    const subtabFromQuery = searchParams.get('subtab');
+
     // Unsaved changes tracking
     const savedDataRef = useRef<string>('');
     const [isDirty, setIsDirty] = useState(false);
@@ -123,16 +125,25 @@ export const ProjectEditor: React.FC = () => {
     }, [project]);
 
     useEffect(() => {
-        if (
-            tabFromQuery === 'dashboard' ||
-            tabFromQuery === 'missions' ||
-            tabFromQuery === 'settings'
-        ) {
+        if (tabFromQuery === 'dashboard' || tabFromQuery === 'missions') {
             setActiveTab(tabFromQuery);
             return;
         }
 
-        // Sub-tabs backward compatibility
+        if (tabFromQuery === 'settings') {
+            setActiveTab('settings');
+            if (
+                subtabFromQuery === 'info' ||
+                subtabFromQuery === 'docs' ||
+                subtabFromQuery === 'prompts' ||
+                subtabFromQuery === 'environments'
+            ) {
+                setSettingsTab(subtabFromQuery as SettingsTab);
+            }
+            return;
+        }
+
+        // Sub-tabs backward compatibility & deep linking
         if (
             tabFromQuery === 'info' ||
             tabFromQuery === 'docs' ||
@@ -145,7 +156,7 @@ export const ProjectEditor: React.FC = () => {
         }
 
         setActiveTab('dashboard');
-    }, [tabFromQuery]);
+    }, [tabFromQuery, subtabFromQuery]);
 
     const projectMissions = project ? missions.filter((m) => m.project_id === project.id) : [];
 
@@ -165,8 +176,13 @@ export const ProjectEditor: React.FC = () => {
             const nextSearchParams = new URLSearchParams(searchParams);
             if (tab === 'dashboard') {
                 nextSearchParams.delete('tab');
+                nextSearchParams.delete('subtab');
+            } else if (tab === 'settings') {
+                nextSearchParams.set('tab', 'settings');
+                nextSearchParams.set('subtab', settingsTab);
             } else {
                 nextSearchParams.set('tab', tab);
+                nextSearchParams.delete('subtab');
             }
 
             setSearchParams(nextSearchParams, { replace: true });
@@ -179,7 +195,8 @@ export const ProjectEditor: React.FC = () => {
         setSettingsTab(subtab);
 
         const nextSearchParams = new URLSearchParams(searchParams);
-        nextSearchParams.set('tab', subtab);
+        nextSearchParams.set('tab', 'settings');
+        nextSearchParams.set('subtab', subtab);
         setSearchParams(nextSearchParams, { replace: true });
     };
 
@@ -192,47 +209,64 @@ export const ProjectEditor: React.FC = () => {
             return;
         }
 
-        // Validate System Prompts
+        // Informational checks for System Prompts (do not block draft save)
         for (const prompt of project.system_prompts) {
             if (!prompt.name || prompt.name.trim() === '') {
-                addToast('All system prompts must have a name', 'error');
-                setActiveTab('settings');
-                setSettingsTab('prompts');
-                return;
+                prompt.name = 'Untitled Prompt';
             }
             if (!prompt.content || prompt.content.trim() === '') {
-                addToast(`System prompt "${prompt.name}" content cannot be empty`, 'error');
-                setActiveTab('settings');
-                setSettingsTab('prompts');
-                return;
+                addToast(`Notice: System prompt "${prompt.name}" content is currently empty.`, 'info');
             }
         }
 
-        // Validate Environments
+        // Informational checks for Environments (do not block draft save)
         for (const env of project.environments) {
             if (!env.name || env.name.trim() === '') {
-                addToast('All environments must have a name', 'error');
-                setActiveTab('settings');
-                setSettingsTab('environments');
-                return;
+                env.name = 'Untitled Environment';
             }
             if (project.target_provider === 'http' && (!env.api_config?.post_url || env.api_config.post_url.trim() === '')) {
-                addToast(`Environment "${env.name}" requires a POST URL for HTTP projects`, 'error');
-                setActiveTab('settings');
-                setSettingsTab('environments');
-                return;
+                addToast(`Notice: Environment "${env.name}" requires a POST URL before executing tests.`, 'info');
             }
         }
 
         try {
             updateProject(project.id, project);
             useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
+
+            // Direct synchronous localStorage write safety net
+            const storage = getLocalStorage();
+            if (storage) {
+                try {
+                    const currentRaw = storage.getItem('agent-qa-projects');
+                    const currentState = currentRaw ? JSON.parse(currentRaw) : { state: { projects: [] }, version: 0 };
+                    const currentProjects = Array.isArray(currentState?.state?.projects) ? currentState.state.projects : [];
+                    const exists = currentProjects.some((p: Project) => p.id === project.id);
+                    const updatedProjects = exists
+                        ? currentProjects.map((p: Project) => p.id === project.id ? project : p)
+                        : [...currentProjects, project];
+                    storage.setItem('agent-qa-projects', JSON.stringify({
+                        ...currentState,
+                        state: {
+                            ...currentState.state,
+                            projects: updatedProjects,
+                            isHydrated: true,
+                        },
+                        version: 0
+                    }));
+                } catch (storageErr) {
+                    console.warn('[ProjectEditor] Direct storage sync warning:', storageErr);
+                }
+            }
+
             savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
             setIsDirty(false);
             setSaveStatus('saved');
+            addToast('Project saved successfully!', 'success');
             setTimeout(() => setSaveStatus('idle'), 2500);
-        } catch {
+        } catch (e) {
+            console.error('[ProjectEditor] Save error:', e);
             setSaveStatus('error');
+            addToast('Error saving project.', 'error');
             setTimeout(() => setSaveStatus('idle'), 3000);
         }
     }, [project, updateProject, addToast]);
@@ -248,68 +282,22 @@ export const ProjectEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
-    // Keep references for unmount persistence
-    const projectRef = useRef(project);
-    projectRef.current = project;
+    // Keep reference for dirty check on beforeunload
     const isDirtyRef = useRef(isDirty);
     isDirtyRef.current = isDirty;
 
-    // Auto-save debounced after 1.2s of inactivity when dirty
+    // Standard beforeunload warning ONLY if dirty (NO auto-save behind user's back)
     useEffect(() => {
-        if (!isDirty || !project || !project.name?.trim()) return;
-
-        const timer = setTimeout(() => {
-            try {
-                updateProject(project.id, project);
-                useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
-                savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
-                setIsDirty(false);
-                setSaveStatus('saved');
-                setTimeout(() => setSaveStatus('idle'), 2500);
-            } catch (e) {
-                console.warn('[ProjectEditor] Auto-save error:', e);
-            }
-        }, 1200);
-
-        return () => clearTimeout(timer);
-    }, [isDirty, project, updateProject]);
-
-    // Persist immediately on reload, tab close, navigation, or visibility change if dirty
-    useEffect(() => {
-        const persistCurrentDirty = () => {
-            if (isDirtyRef.current && projectRef.current && projectRef.current.name?.trim()) {
-                try {
-                    useProjectStore.getState().updateProject(projectRef.current.id, projectRef.current);
-                    useMissionStore.getState().syncProjectSystemPrompts(projectRef.current.id, projectRef.current.system_prompts);
-                } catch (e) {
-                    console.warn('[ProjectEditor] Persist on unload error:', e);
-                }
-            }
-        };
-
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            persistCurrentDirty();
             if (isDirtyRef.current) {
                 e.preventDefault();
                 e.returnValue = '';
             }
         };
 
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'hidden') {
-                persistCurrentDirty();
-            }
-        };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-        window.addEventListener('pagehide', persistCurrentDirty);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            window.removeEventListener('pagehide', persistCurrentDirty);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            persistCurrentDirty();
         };
     }, []);
 
@@ -376,14 +364,14 @@ export const ProjectEditor: React.FC = () => {
                                     ? 'bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white shadow-md hover:scale-[1.02] active:scale-[0.98]'
                                     : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
                             }`}
-                            title={isDirty ? "Unsaved changes exist" : "All changes saved"}
+                            title={isDirty ? "Unsaved changes exist (Ctrl+S / Cmd+S to save)" : "All changes saved"}
                         >
                             {isDirty ? (
                                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                             ) : (
                                 <Save className="w-3.5 h-3.5 text-slate-400" />
                             )}
-                            <span>Save Changes</span>
+                            <span>{isDirty ? 'Save Changes *' : 'Save Changes'}</span>
                         </button>
                     </div>
                 </div>

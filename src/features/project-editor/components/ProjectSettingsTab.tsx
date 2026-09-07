@@ -71,6 +71,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
                     )}
                     <Button
                         onClick={onSave}
+                        title={isDirty ? "Unsaved changes exist (Ctrl+S / Cmd+S to save)" : "All changes saved"}
                         className={`gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5 ${
                             isDirty ? 'ring-2 ring-amber-400/50' : ''
                         }`}

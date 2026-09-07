@@ -202,15 +202,10 @@ export const OnboardingTour: React.FC = () => {
             prevBtnText: '← Back',
             popoverClass: 'agent-eval-driver-popover',
             onHighlighted: () => {
+                // Focus/scroll without firing artificial clicks that interrupt user edits
                 const element = driverObj.getActiveElement();
-                // If it is a project tab element, click it programmatically to activate
-                if (element && element.id && element.id.startsWith('project-tab-')) {
-                    (element as HTMLElement).click();
-                }
-                // If it is the mission list card, activate the missions tab automatically
-                if (element && element.id === 'project-missions-list') {
-                    const missionsTab = document.getElementById('project-tab-missions');
-                    if (missionsTab) missionsTab.click();
+                if (element && typeof element.scrollIntoView === 'function') {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             },
             onDestroyed: () => {
@@ -462,7 +457,7 @@ export const OnboardingTour: React.FC = () => {
         const forceStart = sessionStorage.getItem('autoStartProjectTour') === 'true';
         
         if (isHydrated && isProjectRoute) {
-            if (forceStart || (!hasCompletedProjectOnboarding && !hasAutoStartedProject.current)) {
+            if (forceStart || (!hasCompletedProjectOnboarding && !hasCompletedOnboarding && !hasAutoStartedProject.current)) {
                 // Clear the force flag so it doesn't trigger again on refresh
                 sessionStorage.removeItem('autoStartProjectTour');
                 hasAutoStartedProject.current = true;
@@ -473,7 +468,7 @@ export const OnboardingTour: React.FC = () => {
                 return () => clearTimeout(timer);
             }
         }
-    }, [isHydrated, location.pathname, hasCompletedProjectOnboarding, startProjectTour]);
+    }, [isHydrated, location.pathname, hasCompletedProjectOnboarding, hasCompletedOnboarding, startProjectTour]);
 
     // 3. Mission Auto-Start (includes element checking for the manual creation method screen)
     useEffect(() => {
@@ -481,7 +476,7 @@ export const OnboardingTour: React.FC = () => {
         const forceStart = sessionStorage.getItem('autoStartMissionTour') === 'true';
         
         if (isHydrated && isMissionRoute) {
-            if (forceStart || (!hasCompletedMissionOnboarding && !hasAutoStartedMission.current)) {
+            if (forceStart || (!hasCompletedMissionOnboarding && !hasCompletedOnboarding && !hasAutoStartedMission.current)) {
                 // We check if the manual editor is in the DOM (checking #mission-editor-header)
                 const checkInterval = setInterval(() => {
                     const headerElement = document.getElementById('mission-editor-header');
@@ -500,7 +495,7 @@ export const OnboardingTour: React.FC = () => {
                 return () => clearInterval(checkInterval);
             }
         }
-    }, [isHydrated, location.pathname, hasCompletedMissionOnboarding, startMissionTour]);
+    }, [isHydrated, location.pathname, hasCompletedMissionOnboarding, hasCompletedOnboarding, startMissionTour]);
 
 
     // --- EFFECTS FOR MANUAL TRIGGER ---
