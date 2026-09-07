@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { TestRun, ChatMessage, Evaluation, DebugLogEntry } from '../types';
-import { fileStorage } from '../utils/fileStorage';
+import { idbStorage } from '../utils/idbStorage';
 
 interface TestRunState {
     runs: TestRun[];
@@ -18,7 +18,7 @@ export const useTestRunStore = create<TestRunState>()(
     persist(
         (set) => ({
             runs: [],
-            addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
+            addRun: (run) => set((state) => ({ runs: [run, ...state.runs].slice(0, 50) })),
             updateRunStatus: (id, status, error) =>
                 set((state) => ({
                     runs: state.runs.map((r) => (r.id === id ? { ...r, status, error, updated_at: Date.now() } : r)),
@@ -64,7 +64,7 @@ export const useTestRunStore = create<TestRunState>()(
         }),
         {
             name: 'agent-qa-test-runs',
-            storage: createJSONStorage(() => fileStorage),
+            storage: createJSONStorage(() => idbStorage),
             merge: (persistedState, currentState) => {
                 const typedState = persistedState as Partial<TestRunState> | undefined;
                 const runs = typedState?.runs ?? currentState.runs;
@@ -72,8 +72,8 @@ export const useTestRunStore = create<TestRunState>()(
                 return {
                     ...currentState,
                     ...typedState,
-                    // Mark orphaned running test runs as aborted (session interrupted)
-                    runs: runs.map((r) =>
+                    // Limit to 50 most recent runs and mark orphaned running runs as aborted
+                    runs: runs.slice(0, 50).map((r) =>
                         r.status === 'running'
                             ? { ...r, status: 'failed' as const, error: 'Session interrupted', updated_at: Date.now() }
                             : r

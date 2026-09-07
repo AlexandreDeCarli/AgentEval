@@ -16,6 +16,7 @@ import { ToastContainer } from './components/ui/ToastContainer';
 
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useHydrationGuard } from './hooks/useHydrationGuard';
+import { cleanBulkyLocalStorage } from './utils/fileStorage';
 
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -82,6 +83,10 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Er
 
 const App: React.FC = () => {
   const isHydrated = useHydrationGuard();
+
+  React.useEffect(() => {
+    cleanBulkyLocalStorage();
+  }, []);
 
   if (!isHydrated) {
     return (

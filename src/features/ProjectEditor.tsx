@@ -25,7 +25,7 @@ const ProjectDashboardTab = React.lazy(() =>
 type Tab = 'dashboard' | 'missions' | 'settings';
 type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments';
 
-import { getLocalStorage } from '../utils/fileStorage';
+import { getLocalStorage, safeLocalStorageSet, isQuotaExceededError } from '../utils/fileStorage';
 
 export const ProjectEditor: React.FC = () => {
     const { id } = useParams();
@@ -233,29 +233,25 @@ export const ProjectEditor: React.FC = () => {
             updateProject(project.id, project);
             useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
 
-            // Direct synchronous localStorage write safety net
+            // Direct synchronous localStorage write safety net with auto-eviction
             const storage = getLocalStorage();
             if (storage) {
-                try {
-                    const currentRaw = storage.getItem('agent-qa-projects');
-                    const currentState = currentRaw ? JSON.parse(currentRaw) : { state: { projects: [] }, version: 0 };
-                    const currentProjects = Array.isArray(currentState?.state?.projects) ? currentState.state.projects : [];
-                    const exists = currentProjects.some((p: Project) => p.id === project.id);
-                    const updatedProjects = exists
-                        ? currentProjects.map((p: Project) => p.id === project.id ? project : p)
-                        : [...currentProjects, project];
-                    storage.setItem('agent-qa-projects', JSON.stringify({
-                        ...currentState,
-                        state: {
-                            ...currentState.state,
-                            projects: updatedProjects,
-                            isHydrated: true,
-                        },
-                        version: 0
-                    }));
-                } catch (storageErr) {
-                    console.warn('[ProjectEditor] Direct storage sync warning:', storageErr);
-                }
+                const currentRaw = storage.getItem('agent-qa-projects');
+                const currentState = currentRaw ? JSON.parse(currentRaw) : { state: { projects: [] }, version: 0 };
+                const currentProjects = Array.isArray(currentState?.state?.projects) ? currentState.state.projects : [];
+                const exists = currentProjects.some((p: Project) => p.id === project.id);
+                const updatedProjects = exists
+                    ? currentProjects.map((p: Project) => p.id === project.id ? project : p)
+                    : [...currentProjects, project];
+                safeLocalStorageSet('agent-qa-projects', JSON.stringify({
+                    ...currentState,
+                    state: {
+                        ...currentState.state,
+                        projects: updatedProjects,
+                        isHydrated: true,
+                    },
+                    version: 0
+                }));
             }
 
             savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
@@ -266,8 +262,11 @@ export const ProjectEditor: React.FC = () => {
         } catch (e) {
             console.error('[ProjectEditor] Save error:', e);
             setSaveStatus('error');
-            addToast('Error saving project.', 'error');
-            setTimeout(() => setSaveStatus('idle'), 3000);
+            const errorMsg = isQuotaExceededError(e)
+                ? 'Storage quota exceeded. Please clear old test history.'
+                : 'Error saving project.';
+            addToast(errorMsg, 'error');
+            setTimeout(() => setSaveStatus('idle'), 3500);
         }
     }, [project, updateProject, addToast]);
 
