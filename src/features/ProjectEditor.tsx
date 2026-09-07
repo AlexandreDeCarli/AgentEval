@@ -25,11 +25,13 @@ const ProjectDashboardTab = React.lazy(() =>
 type Tab = 'dashboard' | 'missions' | 'settings';
 type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments';
 
+import { getLocalStorage } from '../utils/fileStorage';
+
 export const ProjectEditor: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { projects, updateProject } = useProjectStore();
+    const { projects, updateProject, isHydrated } = useProjectStore();
     const { missions, deleteMission } = useMissionStore();
     const { geminiApiKey } = useSettingsStore();
     const { startExecution } = useTestExecutionStore();
@@ -61,6 +63,8 @@ export const ProjectEditor: React.FC = () => {
     }, [selectedRun]);
 
     useEffect(() => {
+        if (!id) return;
+
         const found = projects.find((p) => p.id === id);
         if (found) {
             const normalized = normalizeProjectTargetConfig({
@@ -76,10 +80,39 @@ export const ProjectEditor: React.FC = () => {
                 savedDataRef.current = serialized;
                 setIsDirty(false);
             }
-        } else {
+        } else if (isHydrated) {
+            // Direct storage check as safety net before declaring not found
+            const storage = getLocalStorage();
+            if (storage) {
+                try {
+                    const raw = storage.getItem('agent-qa-projects');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        const fallbackFound = parsed?.state?.projects?.find((p: Project) => p.id === id);
+                        if (fallbackFound) {
+                            const normalized = normalizeProjectTargetConfig({
+                                ...fallbackFound,
+                                documentation: fallbackFound.documentation || '',
+                                description: fallbackFound.description || '',
+                                system_prompts: fallbackFound.system_prompts || [],
+                                environments: fallbackFound.environments || [],
+                            });
+                            setProject(normalized);
+                            savedDataRef.current = JSON.stringify(normalized);
+                            setIsDirty(false);
+                            updateProject(fallbackFound.id, fallbackFound);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[ProjectEditor] Storage fallback lookup error:', e);
+                }
+            }
+
+            // Genuinely not found after full hydration and fallback check
             navigate('/projects');
         }
-    }, [id, projects, navigate, isDirty]);
+    }, [id, projects, navigate, isDirty, isHydrated, updateProject]);
 
     // Track dirty state when project state mutates
     useEffect(() => {
@@ -241,29 +274,42 @@ export const ProjectEditor: React.FC = () => {
         return () => clearTimeout(timer);
     }, [isDirty, project, updateProject]);
 
-    // Warn on browser reload/close if unsaved changes exist
+    // Persist immediately on reload, tab close, navigation, or visibility change if dirty
     useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isDirty]);
-
-    // Save on unmount if dirty
-    useEffect(() => {
-        return () => {
+        const persistCurrentDirty = () => {
             if (isDirtyRef.current && projectRef.current && projectRef.current.name?.trim()) {
                 try {
                     useProjectStore.getState().updateProject(projectRef.current.id, projectRef.current);
                     useMissionStore.getState().syncProjectSystemPrompts(projectRef.current.id, projectRef.current.system_prompts);
                 } catch (e) {
-                    console.warn('[ProjectEditor] Unmount save error:', e);
+                    console.warn('[ProjectEditor] Persist on unload error:', e);
                 }
             }
+        };
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            persistCurrentDirty();
+            if (isDirtyRef.current) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                persistCurrentDirty();
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', persistCurrentDirty);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', persistCurrentDirty);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            persistCurrentDirty();
         };
     }, []);
 
@@ -287,7 +333,14 @@ export const ProjectEditor: React.FC = () => {
         { key: 'settings' as const, label: 'Workspace Settings' },
     ];
 
-    if (!project) return null;
+    if (!project) {
+        return (
+            <div className="p-12 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[400px] gap-3">
+                <div className="w-8 h-8 border-2 border-[#4A72FF] border-t-transparent rounded-full animate-spin" />
+                <p className="text-body text-muted-foreground animate-pulse">Loading project...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">

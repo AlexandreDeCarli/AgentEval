@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Mission } from '../types';
-import { fileStorage } from '../utils/fileStorage';
+import { fileStorage, getLocalStorage } from '../utils/fileStorage';
 import { seedMissions } from './seedData';
 import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 interface MissionState {
     missions: Mission[];
+    isHydrated: boolean;
+    setIsHydrated: (val: boolean) => void;
     addMission: (mission: Mission) => void;
     updateMission: (id: string, mission: Mission) => void;
     deleteMission: (id: string) => void;
@@ -68,10 +70,30 @@ export const genericMission: Mission = {
     ]
 };
 
+const getInitialMissions = (): Mission[] => {
+    try {
+        const storage = getLocalStorage();
+        if (storage) {
+            const raw = storage.getItem('agent-qa-missions');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed?.state?.missions) && parsed.state.missions.length > 0) {
+                    return parsed.state.missions;
+                }
+            }
+        }
+    } catch {
+        // Fallback
+    }
+    return [defaultMockMission, genericMission, ...seedMissions];
+};
+
 export const useMissionStore = create<MissionState>()(
     persist(
         (set) => ({
-            missions: [defaultMockMission, genericMission, ...seedMissions],
+            missions: getInitialMissions(),
+            isHydrated: false,
+            setIsHydrated: (val) => set({ isHydrated: val }),
             addMission: (mission) => set((state) => ({ missions: [...state.missions, mission] })),
             updateMission: (id, updatedMission) =>
                 set((state) => ({
@@ -123,6 +145,9 @@ export const useMissionStore = create<MissionState>()(
                     ...typedState,
                     missions: Array.from(mergedMap.values()),
                 };
+            },
+            onRehydrateStorage: () => (state) => {
+                state?.setIsHydrated(true);
             },
         }
     )

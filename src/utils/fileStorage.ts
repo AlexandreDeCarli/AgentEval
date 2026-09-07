@@ -15,7 +15,7 @@ const isDevServer = (): boolean => {
 
 import { StateStorage } from 'zustand/middleware';
 
-const getLocalStorage = (): Storage | null => {
+export const getLocalStorage = (): Storage | null => {
     try {
         if (typeof window !== 'undefined' && window.localStorage) {
             return window.localStorage;

@@ -47,7 +47,7 @@ export const MissionEditor: React.FC = () => {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { missions, addMission, updateMission } = useMissionStore();
+    const { missions, addMission, updateMission, isHydrated } = useMissionStore();
     const { projects } = useProjectStore();
 
     const isNew = id === 'new';
@@ -75,6 +75,7 @@ export const MissionEditor: React.FC = () => {
         tester_persona: '',
         mission_goal: '',
         variables: {},
+        evaluation_criteria: [],
         max_turns: 8,
         api_config: {
             post_url: '',
@@ -165,7 +166,27 @@ export const MissionEditor: React.FC = () => {
                 setFormData(normalizedMission);
                 setVariablesJson(JSON.stringify(normalizedMission.variables, null, 2));
                 savedDataRef.current = JSON.stringify(normalizedMission);
-            } else {
+            } else if (isHydrated) {
+                // Storage fallback before redirecting
+                try {
+                    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+                    if (storage) {
+                        const raw = storage.getItem('agent-qa-missions');
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            const fallback = parsed?.state?.missions?.find((m: Mission) => m.id === id);
+                            if (fallback) {
+                                const normalizedMission = normalizeMission(fallback);
+                                setFormData(normalizedMission);
+                                setVariablesJson(JSON.stringify(normalizedMission.variables, null, 2));
+                                savedDataRef.current = JSON.stringify(normalizedMission);
+                                updateMission(fallback.id, fallback);
+                                return;
+                            }
+                        }
+                    }
+                } catch {}
+
                 navigate('/');
             }
         } else if (isNew) {

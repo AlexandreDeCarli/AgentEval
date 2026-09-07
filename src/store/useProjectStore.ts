@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Project, SystemPrompt, Environment } from '../types';
-import { fileStorage } from '../utils/fileStorage';
+import { fileStorage, getLocalStorage } from '../utils/fileStorage';
 import { seedProject } from './seedData';
 import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
 
 interface ProjectState {
     projects: Project[];
+    isHydrated: boolean;
+    setIsHydrated: (val: boolean) => void;
     addProject: (project: Project) => void;
     updateProject: (id: string, project: Project) => void;
     deleteProject: (id: string) => void;
@@ -18,10 +20,30 @@ interface ProjectState {
     deleteEnvironment: (projectId: string, envId: string) => void;
 }
 
+const getInitialProjects = (): Project[] => {
+    try {
+        const storage = getLocalStorage();
+        if (storage) {
+            const raw = storage.getItem('agent-qa-projects');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed?.state?.projects) && parsed.state.projects.length > 0) {
+                    return parsed.state.projects;
+                }
+            }
+        }
+    } catch {
+        // Fallback to seed
+    }
+    return [seedProject];
+};
+
 export const useProjectStore = create<ProjectState>()(
     persist(
         (set) => ({
-            projects: [seedProject],
+            projects: getInitialProjects(),
+            isHydrated: false,
+            setIsHydrated: (val) => set({ isHydrated: val }),
             addProject: (project) =>
                 set((state) => {
                     const exists = state.projects.some((p) => p.id === project.id);
@@ -145,6 +167,9 @@ export const useProjectStore = create<ProjectState>()(
                     ...typedState,
                     projects: mergedProjects,
                 };
+            },
+            onRehydrateStorage: () => (state) => {
+                state?.setIsHydrated(true);
             },
         }
     )
