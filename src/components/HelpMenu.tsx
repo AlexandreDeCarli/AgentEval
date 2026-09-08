@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, HelpCircle, BookOpen, Compass, Lightbulb, Play, ChevronRight, Server, FolderOpen, Target, RotateCcw, FileText } from 'lucide-react';
+import { X, HelpCircle, BookOpen, Compass, Lightbulb, Play, ChevronRight, Server, FolderOpen, Target, RotateCcw, FileText, ExternalLink, Sparkles } from 'lucide-react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { useMissionStore } from '../store/useMissionStore';
 import { fileStorage } from '../utils/fileStorage';
+import { APP_VERSION, GITHUB_CURRENT_RELEASE_URL } from '../utils/buildInfo';
 
 export const HelpMenu: React.FC = () => {
     const navigate = useNavigate();
@@ -224,6 +225,17 @@ export const HelpMenu: React.FC = () => {
 
                         {/* Reset & Close Buttons in Sidebar bottom */}
                         <div className="space-y-2">
+                            <a
+                                href={GITHUB_CURRENT_RELEASE_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 hover:bg-primary/20 text-primary hover:text-white text-label transition-all duration-200 cursor-pointer"
+                                title="Ver o que mudou na versão v2.6.0 no GitHub (Abre em nova aba)"
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Release Notes (v{APP_VERSION})</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
                             <button
                                 onClick={handleResetOnboarding}
                                 className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-dashed border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive text-label transition-all duration-200 cursor-pointer active:scale-95"

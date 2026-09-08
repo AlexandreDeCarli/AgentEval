@@ -1,6 +1,10 @@
 // Inject build constants defined by Vite during compilation
 export const APP_VERSION =
-    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.5.0';
+    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.6.0';
+
+export const GITHUB_REPO_URL = 'https://github.com/AlexandreDeCarli/AgentEval';
+export const GITHUB_RELEASES_URL = `${GITHUB_REPO_URL}/releases`;
+export const GITHUB_CURRENT_RELEASE_URL = `${GITHUB_REPO_URL}/releases/tag/v${APP_VERSION}`;
 
 export const APP_BUILD_TIME =
     typeof __APP_BUILD_TIME__ !== 'undefined'

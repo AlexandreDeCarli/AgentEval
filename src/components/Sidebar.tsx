@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Ellipsis, FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info } from 'lucide-react';
+import { Ellipsis, FolderOpen, LayoutDashboard, ListRestart, Settings, HelpCircle, Info, ExternalLink, Sparkles } from 'lucide-react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
-import { APP_VERSION, APP_BUILD_TIME, formatBuildDate, formatBuildDateShort } from '../utils/buildInfo';
+import { APP_VERSION, APP_BUILD_TIME, formatBuildDate, formatBuildDateShort, GITHUB_CURRENT_RELEASE_URL } from '../utils/buildInfo';
 
 export const Sidebar: React.FC = () => {
     const { setShowHelpMenu, setShowWelcomeModal } = useOnboardingStore();
@@ -103,16 +103,24 @@ export const Sidebar: React.FC = () => {
                 </button>
             </div>
             <div
-                className="p-3 border-t border-border text-center bg-[#13161B]/50 select-none group cursor-default"
+                className="p-3 border-t border-border bg-[#13161B]/60 select-none flex flex-col items-center gap-1.5"
                 title={`Build: ${formatBuildDate(APP_BUILD_TIME)} (${APP_BUILD_TIME})`}
             >
-                <div className="text-label text-slate-300 font-bold flex items-center justify-center gap-1.5">
+                <a
+                    href={GITHUB_CURRENT_RELEASE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary/50 text-primary hover:bg-primary/20 hover:text-white transition-all text-xs font-bold group cursor-pointer w-full shadow-sm"
+                    title="Ver o que mudou nas Release Notes do GitHub (Abre em nova aba)"
+                >
+                    <Sparkles className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
                     <span>v{APP_VERSION}</span>
-                    <span className="w-1 h-1 rounded-full bg-primary/60"></span>
-                    <span className="text-muted-foreground font-mono text-[10px]" title={`Build timestamp: ${APP_BUILD_TIME}`}>
-                        {formatBuildDateShort(APP_BUILD_TIME)}
-                    </span>
-                </div>
+                    <span className="text-[10px] text-muted-foreground group-hover:text-white transition-colors">· Release Notes</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+                </a>
+                <span className="text-muted-foreground font-mono text-[10px]" title={`Build timestamp: ${APP_BUILD_TIME}`}>
+                    Build {formatBuildDateShort(APP_BUILD_TIME)}
+                </span>
             </div>
         </aside>
         {showMobileMore && (
@@ -146,16 +154,20 @@ export const Sidebar: React.FC = () => {
                     </button>
                 </div>
                 <div
-                    className="px-4 py-2 border-t border-border/40 text-center bg-[#13161B]/30 select-none"
+                    className="px-4 py-2 border-t border-border/40 text-center bg-[#13161B]/30 select-none flex items-center justify-center"
                     title={`Build: ${formatBuildDate(APP_BUILD_TIME)} (${APP_BUILD_TIME})`}
                 >
-                    <div className="text-[11px] text-slate-300 font-bold flex items-center justify-center gap-1.5">
-                        <span>v{APP_VERSION}</span>
-                        <span className="w-1 h-1 rounded-full bg-primary/60"></span>
-                        <span className="text-muted-foreground font-mono text-[10px]">
-                            {formatBuildDateShort(APP_BUILD_TIME)}
-                        </span>
-                    </div>
+                    <a
+                        href={GITHUB_CURRENT_RELEASE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/10 border border-primary/25 text-primary hover:text-white text-[11px] font-bold"
+                        title="Ver Release Notes no GitHub"
+                    >
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        <span>v{APP_VERSION} · Release Notes</span>
+                        <ExternalLink className="w-3 h-3" />
+                    </a>
                 </div>
             </div>
         )}

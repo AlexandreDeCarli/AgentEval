@@ -1,8 +1,8 @@
 import React, { KeyboardEvent, Suspense, useRef, useState } from 'react';
-import { BarChart3, KeyRound, Move } from 'lucide-react';
+import { BarChart3, KeyRound, Move, ExternalLink, Sparkles } from 'lucide-react';
 import { AiConfigurationSettings } from './settings/AiConfigurationSettings';
 import { WorkspaceMigrationSettings } from './settings/WorkspaceMigrationSettings';
-import { APP_VERSION, APP_BUILD_TIME, formatBuildDate } from '../utils/buildInfo';
+import { APP_VERSION, APP_BUILD_TIME, formatBuildDate, GITHUB_CURRENT_RELEASE_URL } from '../utils/buildInfo';
 
 const AiUsageDashboard = React.lazy(() =>
     import('./settings/AiUsageDashboard').then((module) => ({ default: module.AiUsageDashboard }))
@@ -83,8 +83,21 @@ export const Settings: React.FC = () => {
                 {activeSection === 'workspace' && <WorkspaceMigrationSettings />}
             </div>
 
-            <footer className="pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground font-mono">
-                <div>AgentEval v{APP_VERSION}</div>
+            <footer className="pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground font-mono">
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-300">AgentEval</span>
+                    <a
+                        href={GITHUB_CURRENT_RELEASE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 hover:text-white transition-colors"
+                        title="Ver o que mudou no GitHub (Release Notes)"
+                    >
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        <span>v{APP_VERSION} (Release Notes)</span>
+                        <ExternalLink className="w-3 h-3" />
+                    </a>
+                </div>
                 <div>Último build: <span className="text-slate-300">{formatBuildDate(APP_BUILD_TIME)}</span></div>
             </footer>
         </div>
