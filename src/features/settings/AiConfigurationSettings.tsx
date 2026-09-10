@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle, Sparkles, Globe } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getCombinedEvaluatorModels, getGeminiModelDisplayName } from '../../config/geminiModels';
+import { EVALUATION_LANGUAGES, DEFAULT_EVALUATION_LANGUAGE } from '../../config/evaluationLanguages';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 export const AiConfigurationSettings: React.FC = () => {
@@ -13,6 +14,8 @@ export const AiConfigurationSettings: React.FC = () => {
         setEvaluatorModel,
         missionGeneratorModel,
         setMissionGeneratorModel,
+        evaluationLanguage,
+        setEvaluationLanguage,
         discoveredModels,
         refreshDiscoveredModels,
     } = useSettingsStore();
@@ -33,6 +36,18 @@ export const AiConfigurationSettings: React.FC = () => {
         availableEvaluatorModels.some((model) => model.id === missionGeneratorModel)
             ? missionGeneratorModel
             : 'gemini-3.7-flash'
+    );
+
+    const isStandardLang = useMemo(
+        () => EVALUATION_LANGUAGES.some((l) => l.id === evaluationLanguage),
+        [evaluationLanguage]
+    );
+
+    const [selectedLang, setSelectedLang] = useState<string>(() =>
+        isStandardLang ? evaluationLanguage : 'custom'
+    );
+    const [customLang, setCustomLang] = useState<string>(() =>
+        isStandardLang ? '' : evaluationLanguage
     );
 
     const [inspectingRole, setInspectingRole] = useState<'evaluator' | 'mission'>('evaluator');
@@ -72,13 +87,41 @@ export const AiConfigurationSettings: React.FC = () => {
         });
     }, [availableEvaluatorModels, missionGeneratorModel]);
 
+    useEffect(() => {
+        if (EVALUATION_LANGUAGES.some((l) => l.id === evaluationLanguage)) {
+            setSelectedLang(evaluationLanguage);
+            setCustomLang('');
+        } else if (evaluationLanguage) {
+            setSelectedLang('custom');
+            setCustomLang(evaluationLanguage);
+        } else {
+            setSelectedLang(DEFAULT_EVALUATION_LANGUAGE);
+            setCustomLang('');
+        }
+    }, [evaluationLanguage]);
+
     const handleSave = useCallback(() => {
         setGeminiApiKey(inputKey);
         setEvaluatorModel(selectedModel);
         setMissionGeneratorModel(selectedMissionModel);
+        const resolvedLanguage =
+            selectedLang === 'custom'
+                ? customLang.trim() || DEFAULT_EVALUATION_LANGUAGE
+                : selectedLang;
+        setEvaluationLanguage(resolvedLanguage);
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2000);
-    }, [inputKey, selectedModel, selectedMissionModel, setEvaluatorModel, setMissionGeneratorModel, setGeminiApiKey]);
+    }, [
+        inputKey,
+        selectedModel,
+        selectedMissionModel,
+        selectedLang,
+        customLang,
+        setEvaluatorModel,
+        setMissionGeneratorModel,
+        setEvaluationLanguage,
+        setGeminiApiKey,
+    ]);
 
     const handleRefreshModels = async () => {
         const keyToUse = inputKey.trim() || geminiApiKey.trim();
@@ -272,6 +315,47 @@ export const AiConfigurationSettings: React.FC = () => {
                             Used by AI to analyze project documentation and create comprehensive test scenarios.
                         </p>
                     </div>
+                </div>
+
+                <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                    <div className="flex items-center justify-between">
+                        <label htmlFor="evaluation-language" className="text-label font-bold text-white flex items-center gap-1.5">
+                            <Globe className="w-4 h-4 text-emerald-400" /> Evaluation Report Language
+                        </label>
+                        <span className="text-xs text-muted-foreground font-mono">
+                            {selectedLang === 'custom'
+                                ? customLang.trim() || 'Custom'
+                                : EVALUATION_LANGUAGES.find((l) => l.id === selectedLang)?.nativeName || selectedLang}
+                        </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <select
+                            id="evaluation-language"
+                            value={selectedLang}
+                            onChange={(event) => setSelectedLang(event.target.value)}
+                            className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
+                        >
+                            {EVALUATION_LANGUAGES.map((lang) => (
+                                <option key={lang.id} value={lang.id}>
+                                    {lang.nativeName} ({lang.name})
+                                </option>
+                            ))}
+                            <option value="custom">Outro idioma (Personalizado)...</option>
+                        </select>
+                        {selectedLang === 'custom' && (
+                            <Input
+                                id="custom-evaluation-language"
+                                type="text"
+                                value={customLang}
+                                onChange={(event) => setCustomLang(event.target.value)}
+                                placeholder="Ex: Italiano, Japonês, pt-PT..."
+                                className="sm:max-w-xs bg-background"
+                            />
+                        )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Define a linguagem obrigatória injetada no prompt do Avaliador para resumos, notas de critérios e sugestões de melhoria (mesmo em conversas com prompts em inglês).
+                    </p>
                 </div>
 
                 <div className="border border-border/60 bg-background/45 p-5 rounded-lg space-y-3">

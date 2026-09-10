@@ -19,9 +19,11 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         geminiApiKey,
         evaluatorModel,
         missionGeneratorModel,
+        evaluationLanguage,
         setGeminiApiKey,
         setEvaluatorModel,
         setMissionGeneratorModel,
+        setEvaluationLanguage,
     } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +38,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                 geminiApiKey: includeApiKey ? geminiApiKey : '',
                 evaluatorModel,
                 missionGeneratorModel,
+                evaluationLanguage,
             },
         });
         const url = URL.createObjectURL(
@@ -88,13 +91,16 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         if (pendingImport.settings.missionGeneratorModel) {
             setMissionGeneratorModel(pendingImport.settings.missionGeneratorModel);
         }
+        if (pendingImport.settings.evaluationLanguage) {
+            setEvaluationLanguage(pendingImport.settings.evaluationLanguage);
+        }
         addToast(
             `Imported ${pendingImport.projects.length} projects and ${pendingImport.missions.length} missions. Histories and usage were unchanged.`,
             'success',
             6000
         );
         setPendingImport(null);
-    }, [addToast, pendingImport, setEvaluatorModel, setMissionGeneratorModel, setGeminiApiKey]);
+    }, [addToast, pendingImport, setEvaluatorModel, setMissionGeneratorModel, setEvaluationLanguage, setGeminiApiKey]);
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">

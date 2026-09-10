@@ -13,6 +13,8 @@ interface SettingsState {
     setEvaluatorModel: (model: string) => void;
     missionGeneratorModel: string;
     setMissionGeneratorModel: (model: string) => void;
+    evaluationLanguage: string;
+    setEvaluationLanguage: (lang: string) => void;
     discoveredModels: GeminiModelInfo[];
     setDiscoveredModels: (models: GeminiModelInfo[]) => void;
     refreshDiscoveredModels: (
@@ -34,6 +36,8 @@ export const useSettingsStore = create<SettingsState>()(
             setEvaluatorModel: (model) => set({ evaluatorModel: model }),
             missionGeneratorModel: 'gemini-3.7-flash',
             setMissionGeneratorModel: (model) => set({ missionGeneratorModel: model }),
+            evaluationLanguage: 'pt-BR',
+            setEvaluationLanguage: (lang) => set({ evaluationLanguage: lang }),
             discoveredModels: [],
             setDiscoveredModels: (models) => set({ discoveredModels: models }),
             refreshDiscoveredModels: async (
@@ -111,6 +115,7 @@ export const useSettingsStore = create<SettingsState>()(
                     geminiApiKey: typedState?.geminiApiKey || currentState.geminiApiKey,
                     evaluatorModel: typedState?.evaluatorModel || currentState.evaluatorModel,
                     missionGeneratorModel: typedState?.missionGeneratorModel || currentState.missionGeneratorModel,
+                    evaluationLanguage: typedState?.evaluationLanguage || currentState.evaluationLanguage,
                     discoveredModels: typedState?.discoveredModels?.length
                         ? typedState.discoveredModels
                         : currentState.discoveredModels,

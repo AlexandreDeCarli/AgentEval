@@ -12,6 +12,8 @@ import {
     requestGeminiGenerateContent,
 } from './geminiClient';
 import { executeWithModelFallback } from './modelFallbackRunner';
+import { getEvaluationLanguageInstruction } from '../config/evaluationLanguages';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 const PRIMARY_TESTER_MODEL = 'gemini-3.5-flash-lite';
 const FALLBACK_TESTER_MODEL_1 = 'gemini-3.1-flash-lite';
@@ -153,9 +155,16 @@ export const generateEvaluation = async (
     criteria: EvaluationCriterion[],
     metrics: { avg_time_to_first_response_ms: number; avg_time_to_complete_response_ms: number; },
     evalModel?: string,
-    onUsage?: (usage: GeminiUsageMeasurement) => void
+    onUsage?: (usage: GeminiUsageMeasurement) => void,
+    evaluationLanguage?: string
 ): Promise<Evaluation> => {
     if (!apiKey) throw new Error('API Key is missing');
+
+    const targetLanguage =
+        evaluationLanguage?.trim() ||
+        useSettingsStore.getState().evaluationLanguage?.trim() ||
+        'pt-BR';
+    const languageInstruction = getEvaluationLanguageInstruction(targetLanguage);
 
     const historyText = chatHistory
         .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
@@ -168,6 +177,8 @@ export const generateEvaluation = async (
     const systemPrompt = `
 You are the EVALUATOR in an automated QA system.
 Your job is to deeply analyze this conversation and grade it based on specific criteria. Note that this test had a limit of ${maxTurns} turns.
+
+${languageInstruction}
 
 Target's Original System Prompt:
 """
@@ -200,7 +211,10 @@ Use the full scale (0-100 for overall, 0-10 for individual criteria).
 - 0/10: Complete failure to follow instructions or dangerous behavior.
 
 Did the Target agent fulfill the goal efficiently? How did it perform against each criterion?
-Are there specific parts of the Target's Original System Prompt that should be improved to avoid the issues you saw?`.trim();
+Are there specific parts of the Target's Original System Prompt that should be improved to avoid the issues you saw?
+
+## MANDATORY LANGUAGE SPECIFICATION:
+${languageInstruction}`.trim();
 
     const attemptEval = async (model: string) => {
         const result = await requestGeminiGenerateContent({

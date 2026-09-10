@@ -350,6 +350,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             };
 
             const evalModel = useSettingsStore.getState().evaluatorModel;
+            const evalLanguage = useSettingsStore.getState().evaluationLanguage;
 
             const evalResult = await generateEvaluation(
                 geminiApiKey,
@@ -360,7 +361,8 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 mission.evaluation_criteria || [],
                 metrics,
                 evalModel,
-                recordUsage('evaluation')
+                recordUsage('evaluation'),
+                evalLanguage
             );
 
             useTestRunStore.getState().setEvaluation(runId, evalResult);
