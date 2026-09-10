@@ -11,6 +11,7 @@ import { Mission } from '../types';
 import { generateMissionsFromAI } from '../services/missionGenerator';
 import { UnsavedChangesModal } from '../components/ui/UnsavedChangesModal';
 import { ArrowLeft, Save, Compass, Sparkles, Server, Target, FileText, Eye } from 'lucide-react';
+import { getGeminiModelDisplayName } from '../config/geminiModels';
 import {
     DEFAULT_GEMINI_TARGET_MODEL,
     getMissionGeminiModel,
@@ -52,7 +53,8 @@ export const MissionEditor: React.FC = () => {
 
     const isNew = id === 'new';
     const projectIdFromQuery = searchParams.get('project') || '';
-    const { geminiApiKey } = useSettingsStore();
+    const { geminiApiKey, missionGeneratorModel, discoveredModels } = useSettingsStore();
+    const missionGeneratorModelName = getGeminiModelDisplayName(missionGeneratorModel, discoveredModels);
 
     const [creationMethod, setCreationMethod] = useState<'select' | 'manual' | 'ai'>(isNew ? 'select' : 'manual');
     const [activeTab, setActiveTab] = useState<MissionTab>('goal');
@@ -100,7 +102,7 @@ export const MissionEditor: React.FC = () => {
         : null;
 
     // Resolve project context
-    const currentProject = projects.find((p) => p.id === formData.project_id);
+    const currentProject = projects.find((p) => p.id === formData.project_id) || projects[0];
     const availablePrompts = currentProject?.system_prompts || [];
     const canGenerateWithAI = availablePrompts.length > 0;
     const availableEnvs = currentProject?.environments || [];
@@ -191,7 +193,7 @@ export const MissionEditor: React.FC = () => {
             }
         } else if (isNew) {
             // Set defaults from project if available
-            const project = projects.find((p) => p.id === projectIdFromQuery);
+            const project = projects.find((p) => p.id === projectIdFromQuery) || projects[0];
             const defaultEnvId = project?.environments[0]?.id || '';
             const defaultPromptId = project?.system_prompts[0]?.id || '';
             const defaultEnv = project?.environments.find((e) => e.id === defaultEnvId);
@@ -199,6 +201,7 @@ export const MissionEditor: React.FC = () => {
 
             setFormData((prev) => ({
                 ...prev,
+                project_id: prev.project_id || project?.id || '',
                 environment_id: defaultEnvId,
                 system_prompt_id: defaultPromptId,
                 target_system_prompt: defaultPrompt?.content || '',
@@ -411,9 +414,14 @@ export const MissionEditor: React.FC = () => {
                             <Sparkles className="w-8 h-8 text-slate-400 group-hover:text-[#8B5CF6] transition-all duration-300" />
                         </div>
                         <div>
-                            <h3 className="text-title text-white group-hover:text-[#8B5CF6] transition-colors">Generate with AI</h3>
+                            <div className="flex items-center justify-center gap-2 flex-wrap">
+                                <h3 className="text-title text-white group-hover:text-[#8B5CF6] transition-colors">Generate with AI</h3>
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
+                                    {missionGeneratorModelName}
+                                </span>
+                            </div>
                             <p className="text-body text-slate-400 mt-2">
-                                Let Gemini 2.5 Pro analyze your project documentation to automatically generate multiple comprehensive test scenarios.
+                                Let {missionGeneratorModelName} analyze your project documentation to automatically generate multiple comprehensive test scenarios.
                             </p>
                         </div>
                     </div>

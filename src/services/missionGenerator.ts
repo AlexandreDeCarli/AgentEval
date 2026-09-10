@@ -1,9 +1,10 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
 import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
 import { executeWithModelFallback } from './modelFallbackRunner';
+import { useSettingsStore } from '../store/useSettingsStore';
 
-const PRIMARY_GENERATOR_MODEL = 'gemini-3.7-flash';
-const FALLBACK_GENERATOR_MODEL = 'gemini-3.6-flash';
+export const DEFAULT_GENERATOR_MODEL = 'gemini-3.7-flash';
+export const FALLBACK_GENERATOR_MODEL = 'gemini-3.6-flash';
 
 interface GeneratedCriterionPayload {
     name: string;
@@ -27,7 +28,8 @@ export const generateMissionsFromAI = async (
     userPrompt?: string,
     count?: number,
     selectedSystemPromptIds?: string[],
-    onUsage?: (usage: GeminiUsageMeasurement) => void
+    onUsage?: (usage: GeminiUsageMeasurement) => void,
+    generatorModel?: string
 ): Promise<Mission[]> => {
     const selectedPromptIdSet = new Set(selectedSystemPromptIds || []);
     const promptsForGeneration = selectedSystemPromptIds !== undefined
@@ -179,10 +181,18 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
         return result.body;
     };
 
-    const modelsToTry = [
-        PRIMARY_GENERATOR_MODEL,
-        FALLBACK_GENERATOR_MODEL,
-    ];
+    const configuredModel =
+        generatorModel?.trim() ||
+        useSettingsStore.getState().missionGeneratorModel?.trim() ||
+        DEFAULT_GENERATOR_MODEL;
+
+    const modelsToTry: string[] = [configuredModel];
+    if (!modelsToTry.includes(FALLBACK_GENERATOR_MODEL)) {
+        modelsToTry.push(FALLBACK_GENERATOR_MODEL);
+    }
+    if (!modelsToTry.includes('gemini-3.5-flash')) {
+        modelsToTry.push('gemini-3.5-flash');
+    }
 
     const { result: responseBody } = await executeWithModelFallback(
         modelsToTry,

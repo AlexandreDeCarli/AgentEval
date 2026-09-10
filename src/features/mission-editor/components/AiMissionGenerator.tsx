@@ -3,6 +3,8 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Spinner } from '../../../components/ui/Spinner';
 import { SystemPrompt } from '../../../types';
+import { useSettingsStore } from '../../../store/useSettingsStore';
+import { getGeminiModelDisplayName } from '../../../config/geminiModels';
 
 interface AiMissionGeneratorProps {
     onBack: () => void;
@@ -31,6 +33,9 @@ export const AiMissionGenerator: React.FC<AiMissionGeneratorProps> = ({
     selectedSystemPromptIds,
     setSelectedSystemPromptIds,
 }) => {
+    const { missionGeneratorModel, discoveredModels } = useSettingsStore();
+    const modelDisplayName = getGeminiModelDisplayName(missionGeneratorModel, discoveredModels);
+
     const selectedPromptIdSet = new Set(selectedSystemPromptIds);
     const selectedPromptCount = systemPrompts.filter((prompt) =>
         selectedPromptIdSet.has(prompt.id)
@@ -64,9 +69,14 @@ export const AiMissionGenerator: React.FC<AiMissionGeneratorProps> = ({
                         <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white">Generate Missions with AI</h2>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h2 className="text-xl font-bold text-white">Generate Missions with AI</h2>
+                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-medium">
+                                {modelDisplayName}
+                            </span>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            Gemini 2.5 Pro will read your project documentation and design multiple rich testing missions with objectives, approval criteria, and variables automatically.
+                            {modelDisplayName} will read your project documentation and design multiple rich testing missions with objectives, approval criteria, and variables automatically.
                         </p>
                     </div>
                 </div>

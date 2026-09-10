@@ -11,6 +11,8 @@ interface SettingsState {
     setGeminiApiKey: (key: string) => void;
     evaluatorModel: string;
     setEvaluatorModel: (model: string) => void;
+    missionGeneratorModel: string;
+    setMissionGeneratorModel: (model: string) => void;
     discoveredModels: GeminiModelInfo[];
     setDiscoveredModels: (models: GeminiModelInfo[]) => void;
     refreshDiscoveredModels: (
@@ -30,6 +32,8 @@ export const useSettingsStore = create<SettingsState>()(
             setGeminiApiKey: (key) => set({ geminiApiKey: key }),
             evaluatorModel: 'gemini-3.5-flash-lite',
             setEvaluatorModel: (model) => set({ evaluatorModel: model }),
+            missionGeneratorModel: 'gemini-3.7-flash',
+            setMissionGeneratorModel: (model) => set({ missionGeneratorModel: model }),
             discoveredModels: [],
             setDiscoveredModels: (models) => set({ discoveredModels: models }),
             refreshDiscoveredModels: async (
@@ -106,6 +110,7 @@ export const useSettingsStore = create<SettingsState>()(
                     // Preserve API key and discovered models from persisted state
                     geminiApiKey: typedState?.geminiApiKey || currentState.geminiApiKey,
                     evaluatorModel: typedState?.evaluatorModel || currentState.evaluatorModel,
+                    missionGeneratorModel: typedState?.missionGeneratorModel || currentState.missionGeneratorModel,
                     discoveredModels: typedState?.discoveredModels?.length
                         ? typedState.discoveredModels
                         : currentState.discoveredModels,

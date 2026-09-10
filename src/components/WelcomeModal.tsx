@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { getGeminiModelDisplayName } from '../config/geminiModels';
 import { 
     X, 
     Linkedin, 
@@ -33,7 +34,8 @@ export const WelcomeModal: React.FC = () => {
         triggerTour
     } = useOnboardingStore();
 
-    const { geminiApiKey, setGeminiApiKey } = useSettingsStore();
+    const { geminiApiKey, setGeminiApiKey, evaluatorModel, discoveredModels } = useSettingsStore();
+    const evaluatorModelName = getGeminiModelDisplayName(evaluatorModel, discoveredModels);
 
     // Wizard step control
     const [step, setStep] = useState<ModalStep>('welcome');
@@ -427,7 +429,7 @@ export const WelcomeModal: React.FC = () => {
                         {/* Local Privacy Warning */}
                         <div className="border border-amber-500/20 bg-muted p-4 rounded-xl text-left text-body text-muted-foreground space-y-2 max-w-[75ch] mx-auto">
                             <p>
-                                AgentEval uses **Gemini 2.5 Pro** to intelligently simulate user interactions, chatting with your agent and scoring conversational success metrics.
+                                AgentEval uses <strong>{evaluatorModelName}</strong> to intelligently simulate user interactions, chatting with your agent and scoring conversational success metrics.
                             </p>
                             <p className="text-body text-amber-400/90 font-medium">
                                 🔒 <strong>Guaranteed Local Security:</strong> Thanks to our local Web Crypto AES-GCM encryption layer, your API key is encrypted and stored locally in your browser's IndexedDB. It is **never** sent to any external servers.

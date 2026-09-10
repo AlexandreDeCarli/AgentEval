@@ -342,4 +342,24 @@ export const getCombinedSuggestedTargetModels = (discovered?: GeminiModelInfo[])
         (m) => m.id
     );
 
+export const getGeminiModelDisplayName = (
+    modelId: string,
+    discovered?: GeminiModelInfo[]
+): string => {
+    if (!modelId) return '';
+    const allModels = getCombinedEvaluatorModels(discovered);
+    const found = allModels.find((m) => m.id === modelId);
+    if (found) {
+        return found.name.replace(/\s*\((Default|Alias[^\)]*)\)$/, '');
+    }
+    return modelId
+        .split('-')
+        .map((part) => {
+            if (/^\d+(\.\d+)?$/.test(part)) return part;
+            return part.charAt(0).toUpperCase() + part.slice(1);
+        })
+        .join(' ');
+};
+
+
 

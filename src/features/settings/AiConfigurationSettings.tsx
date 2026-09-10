@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { getCombinedEvaluatorModels } from '../../config/geminiModels';
+import { getCombinedEvaluatorModels, getGeminiModelDisplayName } from '../../config/geminiModels';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 export const AiConfigurationSettings: React.FC = () => {
@@ -11,6 +11,8 @@ export const AiConfigurationSettings: React.FC = () => {
         setGeminiApiKey,
         evaluatorModel,
         setEvaluatorModel,
+        missionGeneratorModel,
+        setMissionGeneratorModel,
         discoveredModels,
         refreshDiscoveredModels,
     } = useSettingsStore();
@@ -26,6 +28,14 @@ export const AiConfigurationSettings: React.FC = () => {
             ? evaluatorModel
             : availableEvaluatorModels[0]?.id || 'gemini-3.5-flash-lite'
     );
+
+    const [selectedMissionModel, setSelectedMissionModel] = useState(() =>
+        availableEvaluatorModels.some((model) => model.id === missionGeneratorModel)
+            ? missionGeneratorModel
+            : 'gemini-3.7-flash'
+    );
+
+    const [inspectingRole, setInspectingRole] = useState<'evaluator' | 'mission'>('evaluator');
     const [showKey, setShowKey] = useState(false);
     const [saved, setSaved] = useState(false);
     const [isRefreshingModels, setIsRefreshingModels] = useState(false);
@@ -50,12 +60,25 @@ export const AiConfigurationSettings: React.FC = () => {
         });
     }, [availableEvaluatorModels, evaluatorModel]);
 
+    useEffect(() => {
+        setSelectedMissionModel((current) => {
+            if (availableEvaluatorModels.some((m) => m.id === current)) {
+                return current;
+            }
+            if (availableEvaluatorModels.some((m) => m.id === missionGeneratorModel)) {
+                return missionGeneratorModel;
+            }
+            return availableEvaluatorModels.find((m) => m.id === 'gemini-3.7-flash')?.id || 'gemini-3.7-flash';
+        });
+    }, [availableEvaluatorModels, missionGeneratorModel]);
+
     const handleSave = useCallback(() => {
         setGeminiApiKey(inputKey);
         setEvaluatorModel(selectedModel);
+        setMissionGeneratorModel(selectedMissionModel);
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2000);
-    }, [inputKey, selectedModel, setEvaluatorModel, setGeminiApiKey]);
+    }, [inputKey, selectedModel, selectedMissionModel, setEvaluatorModel, setMissionGeneratorModel, setGeminiApiKey]);
 
     const handleRefreshModels = async () => {
         const keyToUse = inputKey.trim() || geminiApiKey.trim();
@@ -109,11 +132,12 @@ export const AiConfigurationSettings: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleSave]);
 
+    const activeModelId = inspectingRole === 'evaluator' ? selectedModel : selectedMissionModel;
     const activeModelInfo =
-        availableEvaluatorModels.find((model) => model.id === selectedModel) ||
+        availableEvaluatorModels.find((model) => model.id === activeModelId) ||
         availableEvaluatorModels[0] || {
-            id: selectedModel,
-            name: selectedModel,
+            id: activeModelId,
+            name: activeModelId,
             isFreeTier: true,
             inputCostPaid: 'Custom',
             outputCostPaid: 'Custom',
@@ -200,27 +224,88 @@ export const AiConfigurationSettings: React.FC = () => {
                     </div>
                 )}
 
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <label htmlFor="evaluation-model" className="text-label">Evaluation Model</label>
-                        <span className="text-xs text-muted-foreground font-mono">
-                            {availableEvaluatorModels.length} modelos na lista
-                        </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="evaluation-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                <Cpu className="w-4 h-4 text-primary" /> Evaluation Model
+                            </label>
+                            <span className="text-xs text-muted-foreground font-mono">
+                                {availableEvaluatorModels.length} na lista
+                            </span>
+                        </div>
+                        <select
+                            id="evaluation-model"
+                            value={selectedModel}
+                            onChange={(event) => setSelectedModel(event.target.value)}
+                            className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
+                        >
+                            {availableEvaluatorModels.map((model) => (
+                                <option key={model.id} value={model.id}>{model.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                            Used by Evaluator agent to grade transcripts, score criteria, and suggest prompt improvements.
+                        </p>
                     </div>
-                    <select
-                        id="evaluation-model"
-                        value={selectedModel}
-                        onChange={(event) => setSelectedModel(event.target.value)}
-                        className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
-                    >
-                        {availableEvaluatorModels.map((model) => (
-                            <option key={model.id} value={model.id}>{model.name}</option>
-                        ))}
-                    </select>
+
+                    <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="mission-generator-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                <Sparkles className="w-4 h-4 text-[#8B5CF6]" /> Mission Generation Model
+                            </label>
+                            <span className="text-xs text-muted-foreground font-mono">
+                                {availableEvaluatorModels.length} na lista
+                            </span>
+                        </div>
+                        <select
+                            id="mission-generator-model"
+                            value={selectedMissionModel}
+                            onChange={(event) => setSelectedMissionModel(event.target.value)}
+                            className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
+                        >
+                            {availableEvaluatorModels.map((model) => (
+                                <option key={model.id} value={model.id}>{model.name}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                            Used by AI to analyze project documentation and create comprehensive test scenarios.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="border border-border/60 bg-background/45 p-5 rounded-lg space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Inspect Model Specs:
+                        </span>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setInspectingRole('evaluator')}
+                                className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                    inspectingRole === 'evaluator'
+                                        ? 'bg-primary text-white font-bold shadow-sm'
+                                        : 'bg-background border border-border text-muted-foreground hover:text-white'
+                                }`}
+                            >
+                                Evaluator ({getGeminiModelDisplayName(selectedModel, discoveredModels)})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInspectingRole('mission')}
+                                className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                    inspectingRole === 'mission'
+                                        ? 'bg-[#8B5CF6] text-white font-bold shadow-sm'
+                                        : 'bg-background border border-border text-muted-foreground hover:text-white'
+                                }`}
+                            >
+                                Mission Gen ({getGeminiModelDisplayName(selectedMissionModel, discoveredModels)})
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-start justify-between gap-2 pt-1">
                         <h3 className="text-body text-white font-bold">{activeModelInfo.name}</h3>
                         {!activeModelInfo.isFreeTier && (
                             <span className="text-label px-2 py-1 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">

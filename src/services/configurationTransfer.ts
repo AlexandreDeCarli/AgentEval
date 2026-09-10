@@ -3,6 +3,7 @@ import { ApiConfig, Environment, Mission, Project } from '../types';
 export const CONFIGURATION_EXPORT_SCHEMA = 'agenteval.configuration-export';
 export const CONFIGURATION_EXPORT_VERSION = 1;
 export const DEFAULT_EVALUATOR_MODEL = 'gemini-3.5-flash';
+export const DEFAULT_MISSION_GENERATOR_MODEL = 'gemini-3.7-flash';
 
 const DEFAULT_API_CONFIG: ApiConfig = {
     post_url: '',
@@ -17,6 +18,7 @@ const DEFAULT_API_CONFIG: ApiConfig = {
 export interface ExportedSettings {
     geminiApiKey: string;
     evaluatorModel: string;
+    missionGeneratorModel?: string;
 }
 
 export interface ConfigurationTransferData {
@@ -154,6 +156,10 @@ const assertSettings = (value: unknown): ExportedSettings => {
             typeof value.evaluatorModel === 'string' && value.evaluatorModel.trim()
                 ? value.evaluatorModel
                 : DEFAULT_EVALUATOR_MODEL,
+        missionGeneratorModel:
+            typeof value.missionGeneratorModel === 'string' && value.missionGeneratorModel.trim()
+                ? value.missionGeneratorModel
+                : DEFAULT_MISSION_GENERATOR_MODEL,
     };
 };
 

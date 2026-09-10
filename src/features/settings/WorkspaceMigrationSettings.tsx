@@ -15,7 +15,14 @@ import { useToastStore } from '../../store/useToastStore';
 export const WorkspaceMigrationSettings: React.FC = () => {
     const projects = useProjectStore((state) => state.projects);
     const missions = useMissionStore((state) => state.missions);
-    const { geminiApiKey, evaluatorModel, setGeminiApiKey, setEvaluatorModel } = useSettingsStore();
+    const {
+        geminiApiKey,
+        evaluatorModel,
+        missionGeneratorModel,
+        setGeminiApiKey,
+        setEvaluatorModel,
+        setMissionGeneratorModel,
+    } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [includeApiKey, setIncludeApiKey] = useState(false);
@@ -25,7 +32,11 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         const exported = createConfigurationExport({
             projects,
             missions,
-            settings: { geminiApiKey: includeApiKey ? geminiApiKey : '', evaluatorModel },
+            settings: {
+                geminiApiKey: includeApiKey ? geminiApiKey : '',
+                evaluatorModel,
+                missionGeneratorModel,
+            },
         });
         const url = URL.createObjectURL(
             new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' })
@@ -74,13 +85,16 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             setGeminiApiKey(pendingImport.settings.geminiApiKey);
         }
         setEvaluatorModel(pendingImport.settings.evaluatorModel);
+        if (pendingImport.settings.missionGeneratorModel) {
+            setMissionGeneratorModel(pendingImport.settings.missionGeneratorModel);
+        }
         addToast(
             `Imported ${pendingImport.projects.length} projects and ${pendingImport.missions.length} missions. Histories and usage were unchanged.`,
             'success',
             6000
         );
         setPendingImport(null);
-    }, [addToast, pendingImport, setEvaluatorModel, setGeminiApiKey]);
+    }, [addToast, pendingImport, setEvaluatorModel, setMissionGeneratorModel, setGeminiApiKey]);
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">
