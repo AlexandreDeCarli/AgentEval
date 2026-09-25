@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
 # Claude Code
 .claude/
 .playwright-cli/
