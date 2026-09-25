@@ -4,9 +4,10 @@ import { useMissionStore } from '../store/useMissionStore';
 import { Button } from '../components/ui/Button';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, FileText, Server, Target, Cloud, CloudDownload } from 'lucide-react';
 import { DEFAULT_GEMINI_TARGET_MODEL, DEFAULT_LITELLM_TARGET_MODEL } from '../utils/missionTarget';
 import { Project, TargetProvider } from '../types';
+import { ImportCloudProjectModal } from './project-list/ImportCloudProjectModal';
 
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
@@ -19,6 +20,7 @@ export const ProjectList: React.FC = () => {
 
     // Create Project Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isImportCloudModalOpen, setIsImportCloudModalOpen] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
     const [newTargetProvider, setNewTargetProvider] = useState<TargetProvider>('http');
@@ -61,13 +63,23 @@ export const ProjectList: React.FC = () => {
                     <h1 className="text-display text-white">Projects</h1>
                     <p className="text-body text-muted-foreground mt-1">Organize missions by project and environment.</p>
                 </div>
-                <Button 
-                    id="new-project-button" 
-                    onClick={handleOpenNew} 
-                    className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-white font-bold text-xs shadow-lg shadow-[#4A72FF]/10 cursor-pointer"
-                >
-                    <Plus className="w-4 h-4" /> New Project
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button 
+                        id="import-cloud-project-button"
+                        variant="secondary"
+                        onClick={() => setIsImportCloudModalOpen(true)}
+                        className="gap-2 border-border/60 hover:bg-[#272D35] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-slate-200 font-bold text-xs cursor-pointer h-10 px-4"
+                    >
+                        <CloudDownload className="w-4 h-4 text-[#4A72FF]" /> Importar da Nuvem
+                    </Button>
+                    <Button 
+                        id="new-project-button" 
+                        onClick={handleOpenNew} 
+                        className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-white font-bold text-xs shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5"
+                    >
+                        <Plus className="w-4 h-4" /> New Project
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -109,6 +121,17 @@ export const ProjectList: React.FC = () => {
                                         <Target className="w-3.5 h-3.5 text-zinc-500" />
                                         {projectMissions.length} Missions
                                     </span>
+                                    {project.cloud_sync?.syncId && (
+                                        <span
+                                            className="flex items-center gap-1.5 bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#7090FF] text-label px-2.5 py-1 rounded-lg"
+                                            title={`Canal Cloud Sync: ${project.cloud_sync.syncId}`}
+                                        >
+                                            <Cloud className="w-3.5 h-3.5 text-[#4A72FF]" />
+                                            {project.cloud_sync.lastSyncedAt
+                                                ? `Nuvem (${new Date(project.cloud_sync.lastSyncedAt).toLocaleDateString()})`
+                                                : 'Nuvem'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             
@@ -223,6 +246,12 @@ export const ProjectList: React.FC = () => {
                     onCancel={() => setProjectToDelete(null)}
                 />
             )}
+
+            {/* Import Cloud Project Modal */}
+            <ImportCloudProjectModal
+                isOpen={isImportCloudModalOpen}
+                onClose={() => setIsImportCloudModalOpen(false)}
+            />
         </div>
     );
 };
