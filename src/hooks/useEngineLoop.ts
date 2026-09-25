@@ -5,7 +5,7 @@ import { Mission } from '../types';
 import { useToastStore } from '../store/useToastStore';
 
 export const useEngineLoop = (mission: Mission | undefined) => {
-    const { geminiApiKey } = useSettingsStore();
+    const { aiProvider, getActiveApiKey } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const { executions, startExecution, stopExecution, clearDebugLogs } = useTestExecutionStore();
 
@@ -23,13 +23,15 @@ export const useEngineLoop = (mission: Mission | undefined) => {
     };
 
     const startRun = useCallback(async () => {
-        if (!geminiApiKey) {
-            addToast("Please configure your Gemini API Key in Settings first.", "error");
+        const activeKey = getActiveApiKey();
+        if (!activeKey) {
+            const providerName = aiProvider === 'litellm' ? 'LiteLLM' : 'Gemini';
+            addToast(`Please configure your ${providerName} API Key in Settings first.`, "error");
             return;
         }
         if (!mission) return;
-        await startExecution(mission, geminiApiKey);
-    }, [mission, geminiApiKey, startExecution]);
+        await startExecution(mission, activeKey);
+    }, [mission, aiProvider, getActiveApiKey, startExecution, addToast]);
 
     const stopRun = useCallback(() => {
         if (!mission) return;

@@ -11,6 +11,12 @@ import {
     getGeminiErrorBody,
     requestGeminiGenerateContent,
 } from './geminiClient';
+import {
+    extractLiteLlmText,
+    getLiteLlmErrorMessage,
+    LiteLlmChatMessage,
+    requestLiteLlmChatCompletion,
+} from './litellmClient';
 import { executeWithModelFallback } from './modelFallbackRunner';
 import { getEvaluationLanguageInstruction } from '../config/evaluationLanguages';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -46,6 +52,15 @@ const buildGeminiConversation = (chatHistory: ChatMessage[]) => {
         }));
 };
 
+const cleanJsonMarkdown = (raw: string): string => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('```')) {
+        const withoutOpening = trimmed.replace(/^```(?:json)?\s*/i, '');
+        return withoutOpening.replace(/\s*```$/, '').trim();
+    }
+    return trimmed;
+};
+
 export const generateTesterMessage = async (
     apiKey: string,
     persona: string,
@@ -53,7 +68,8 @@ export const generateTesterMessage = async (
     chatHistory: ChatMessage[],
     onUsage?: (usage: GeminiUsageMeasurement) => void
 ): Promise<{ message: string; missionCompleted: boolean }> => {
-    if (!apiKey) throw new Error('API Key is missing');
+    const settings = useSettingsStore.getState();
+    const provider = settings.aiProvider || 'gemini';
 
     const historyText = chatHistory
         .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
@@ -88,6 +104,52 @@ Output JSON with:
 - "message": Your next message to the TARGET.
 - "missionCompleted": boolean (strictly following the rules above).
 `.trim();
+
+    if (provider === 'litellm') {
+        const key = settings.litellmApiKey?.trim() || apiKey?.trim();
+        if (!key) throw new Error('LiteLLM API Key is missing. Configure it in Settings > AI Configuration.');
+
+        const model =
+            settings.litellmTesterModel?.trim() ||
+            settings.litellmEvaluatorModel?.trim() ||
+            'gpt-4o-mini';
+
+        const result = await requestLiteLlmChatCompletion({
+            baseUrl: settings.litellmBaseUrl,
+            apiKey: key,
+            model,
+            messages: [
+                {
+                    role: 'system',
+                    content: `${systemPrompt}\n\nIMPORTANT: Respond with a single valid JSON object containing "reasoning", "message", and "missionCompleted".`,
+                },
+            ],
+            responseFormat: { type: 'json_object' },
+            onUsage,
+        });
+
+        if (!result.ok) {
+            throw new Error(
+                `LiteLLM API Error (${model}): ${result.status} - ${getLiteLlmErrorMessage(result.body)}`
+            );
+        }
+
+        const rawText = result.text || extractLiteLlmText(result.body);
+        if (!rawText) throw new Error('Empty response from LiteLLM');
+
+        try {
+            const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as TesterResponsePayload;
+            return {
+                message: parsed.message || '...',
+                missionCompleted: !!parsed.missionCompleted,
+            };
+        } catch {
+            throw new Error('Failed to parse LiteLLM JSON output');
+        }
+    }
+
+    // Google Gemini Provider
+    if (!apiKey) throw new Error('API Key is missing');
 
     const attemptGeneration = async (model: string) => {
         const result = await requestGeminiGenerateContent({
@@ -136,7 +198,7 @@ Output JSON with:
     if (!rawText) throw new Error('Empty response from Gemini');
 
     try {
-        const parsed = JSON.parse(rawText) as TesterResponsePayload;
+        const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as TesterResponsePayload;
         return {
             message: parsed.message || '...',
             missionCompleted: !!parsed.missionCompleted,
@@ -158,11 +220,12 @@ export const generateEvaluation = async (
     onUsage?: (usage: GeminiUsageMeasurement) => void,
     evaluationLanguage?: string
 ): Promise<Evaluation> => {
-    if (!apiKey) throw new Error('API Key is missing');
+    const settings = useSettingsStore.getState();
+    const provider = settings.aiProvider || 'gemini';
 
     const targetLanguage =
         evaluationLanguage?.trim() ||
-        useSettingsStore.getState().evaluationLanguage?.trim() ||
+        settings.evaluationLanguage?.trim() ||
         'pt-BR';
     const languageInstruction = getEvaluationLanguageInstruction(targetLanguage);
 
@@ -215,6 +278,69 @@ Are there specific parts of the Target's Original System Prompt that should be i
 
 ## MANDATORY LANGUAGE SPECIFICATION:
 ${languageInstruction}`.trim();
+
+    if (provider === 'litellm') {
+        const key = settings.litellmApiKey?.trim() || apiKey?.trim();
+        if (!key) throw new Error('LiteLLM API Key is missing. Configure it in Settings > AI Configuration.');
+
+        const model = evalModel?.trim() || settings.litellmEvaluatorModel?.trim() || 'gpt-4o-mini';
+
+        const jsonInstruction = `
+IMPORTANT: You MUST reply with a JSON object matching this structure:
+{
+  "overall_score": number (0-100),
+  "summary": string,
+  "criteria_scores": [
+    { "criterion_id": string, "score": number (0-10), "justification": string }
+  ],
+  "prompt_improvements": [
+    { "target_text": string, "suggested_text": string, "justification": string, "severity": "critico" | "importante" | "sugestão" }
+  ],
+  "metrics": {
+    "avg_time_to_first_response_ms": ${metrics.avg_time_to_first_response_ms},
+    "avg_time_to_complete_response_ms": ${metrics.avg_time_to_complete_response_ms}
+  }
+}`;
+
+        const result = await requestLiteLlmChatCompletion({
+            baseUrl: settings.litellmBaseUrl,
+            apiKey: key,
+            model,
+            messages: [
+                {
+                    role: 'system',
+                    content: `${systemPrompt}\n\n${jsonInstruction}`,
+                },
+            ],
+            responseFormat: { type: 'json_object' },
+            onUsage,
+        });
+
+        if (!result.ok) {
+            throw new Error(
+                `LiteLLM Eval API Error (${model}): ${result.status} - ${getLiteLlmErrorMessage(result.body)}`
+            );
+        }
+
+        const rawText = result.text || extractLiteLlmText(result.body);
+        if (!rawText) throw new Error('Empty response from LiteLLM evaluator');
+
+        try {
+            const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as EvaluationResponsePayload;
+            return {
+                overall_score: typeof parsed.overall_score === 'number' ? parsed.overall_score : 0,
+                summary: parsed.summary || 'No summary',
+                criteria_scores: Array.isArray(parsed.criteria_scores) ? parsed.criteria_scores : [],
+                prompt_improvements: Array.isArray(parsed.prompt_improvements) ? parsed.prompt_improvements : [],
+                metrics: parsed.metrics || metrics,
+            };
+        } catch {
+            throw new Error('Failed to parse LiteLLM evaluation JSON output');
+        }
+    }
+
+    // Google Gemini Provider
+    if (!apiKey) throw new Error('API Key is missing');
 
     const attemptEval = async (model: string) => {
         const result = await requestGeminiGenerateContent({
@@ -315,7 +441,7 @@ ${languageInstruction}`.trim();
     if (!rawText) throw new Error('Empty response from Gemini');
 
     try {
-        const parsed = JSON.parse(rawText) as EvaluationResponsePayload;
+        const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as EvaluationResponsePayload;
         return {
             overall_score: parsed.overall_score || 0,
             summary: parsed.summary || 'No summary',
@@ -382,6 +508,73 @@ export const generateGeminiTargetResponse = async (
 
     if (!text || !String(text).trim()) {
         throw new Error(`Empty response from Gemini target model (${targetModel})`);
+    }
+
+    return String(text).trim();
+};
+
+export const generateLiteLlmTargetResponse = async (
+    apiKey: string,
+    model: string,
+    targetSystemPrompt: string,
+    chatHistory: ChatMessage[],
+    signal?: AbortSignal,
+    onDebugLog?: (entry: DebugLogEntry) => void,
+    onUsage?: (usage: GeminiUsageMeasurement) => void,
+    baseUrl?: string
+): Promise<string> => {
+    const settings = useSettingsStore.getState();
+    const key = apiKey.trim() || settings.litellmApiKey.trim();
+    if (!key) throw new Error('LiteLLM API Key is missing for Target agent');
+
+    const targetModel = model.trim() || settings.litellmEvaluatorModel.trim() || 'gpt-4o-mini';
+    const targetBaseUrl = baseUrl || settings.litellmBaseUrl;
+
+    const messages: LiteLlmChatMessage[] = [];
+    if (targetSystemPrompt.trim()) {
+        messages.push({
+            role: 'system',
+            content: targetSystemPrompt.trim(),
+        });
+    }
+
+    for (const msg of chatHistory) {
+        if (msg.role === 'tester') {
+            messages.push({ role: 'user', content: msg.content });
+        } else if (msg.role === 'target') {
+            messages.push({ role: 'assistant', content: msg.content });
+        }
+    }
+
+    const result = await requestLiteLlmChatCompletion({
+        baseUrl: targetBaseUrl,
+        apiKey: key,
+        model: targetModel,
+        messages,
+        signal,
+        onUsage,
+    });
+
+    onDebugLog?.({
+        id: crypto.randomUUID(),
+        timestamp: Date.now() - result.duration,
+        type: 'POST',
+        url: result.url,
+        status: result.status,
+        duration: result.duration,
+        requestBody: { model: targetModel, messages },
+        response: result.body,
+    });
+
+    if (!result.ok) {
+        throw new Error(
+            `LiteLLM Target API Error (${targetModel}): ${result.status} - ${getLiteLlmErrorMessage(result.body)}`
+        );
+    }
+
+    const text = result.text || extractLiteLlmText(result.body);
+    if (!text || !String(text).trim()) {
+        throw new Error(`Empty response from LiteLLM target model (${targetModel})`);
     }
 
     return String(text).trim();

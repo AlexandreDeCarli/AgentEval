@@ -1,5 +1,6 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
 import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
+import { extractLiteLlmText, getLiteLlmErrorMessage, requestLiteLlmChatCompletion } from './litellmClient';
 import { executeWithModelFallback } from './modelFallbackRunner';
 import { useSettingsStore } from '../store/useSettingsStore';
 
@@ -21,6 +22,15 @@ interface GeneratedMissionPayload {
     max_turns?: number;
     evaluation_criteria?: GeneratedCriterionPayload[];
 }
+
+const cleanJsonMarkdown = (raw: string): string => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('```')) {
+        const withoutOpening = trimmed.replace(/^```(?:json)?\s*/i, '');
+        return withoutOpening.replace(/\s*```$/, '').trim();
+    }
+    return trimmed;
+};
 
 export const generateMissionsFromAI = async (
     apiKey: string,
@@ -115,21 +125,140 @@ Example of good variable design:
   "request_type": ["check balance", "make a payment", "ask about fees"],
   "amount": ["R$ 10,00", "R$ 999.999,99", "zero", "negative value"]
 }
+`.trim();
 
+    const defaultEnvId = project.environments[0]?.id || '';
+    const defaultApiConfig = project.environments[0]?.api_config || {
+        post_url: '',
+        get_url: '',
+        auth_header: '',
+        payload_template: '{\n  "message": "{{message}}"\n}',
+        response_path: '',
+        polling_interval: 2000,
+        max_timeout: 30,
+    };
+
+    const mapParsedMissions = (parsed: GeneratedMissionPayload[]): Mission[] => {
+        return parsed.map((raw) => {
+            const rawSystemPromptId = raw.system_prompt_id || promptsForGeneration[0]?.id || '';
+            const systemPromptId = allowedSystemPromptIds.has(rawSystemPromptId)
+                ? rawSystemPromptId
+                : promptsForGeneration[0]?.id || '';
+            const envId = raw.environment_id || defaultEnvId;
+            const env = project.environments.find((e) => e.id === envId);
+            const sp = promptsForGeneration.find((s) => s.id === systemPromptId);
+
+            return {
+                id: crypto.randomUUID(),
+                project_id: project.id,
+                environment_id: envId,
+                system_prompt_id: systemPromptId,
+                titulo: raw.titulo,
+                target_system_prompt: sp?.content || '',
+                tester_persona: raw.tester_persona,
+                mission_goal: raw.mission_goal,
+                variables: typeof raw.variables === 'string' ? JSON.parse(raw.variables || '{}') : (raw.variables || {}),
+                max_turns: raw.max_turns || 8,
+                api_config: env?.api_config || defaultApiConfig,
+                evaluation_criteria: (raw.evaluation_criteria || []).map((criterion) => ({
+                    id: `crit-${crypto.randomUUID().slice(0, 8)}`,
+                    name: criterion.name,
+                    description: criterion.description,
+                })),
+            } satisfies Mission;
+        });
+    };
+
+    const settings = useSettingsStore.getState();
+    const provider = settings.aiProvider || 'gemini';
+
+    if (provider === 'litellm') {
+        const key = settings.litellmApiKey?.trim() || apiKey?.trim();
+        if (!key) throw new Error('LiteLLM API Key is missing. Configure it in Settings > AI Configuration.');
+
+        const configuredModel =
+            generatorModel?.trim() ||
+            settings.litellmMissionGeneratorModel?.trim() ||
+            settings.litellmEvaluatorModel?.trim() ||
+            'gpt-4o-mini';
+
+        const jsonInstruction = `
+### MANDATORY OUTPUT FORMAT:
+Return a JSON object containing a "missions" key with exactly ${count ?? 'between 8 and 12'} mission items:
+{
+  "missions": [
+    {
+      "titulo": "(Gerado por IA) Exemplo",
+      "system_prompt_id": "${promptsForGeneration[0]?.id || ''}",
+      "environment_id": "${defaultEnvId}",
+      "tester_persona": "Persona em pt-BR",
+      "mission_goal": "Objetivo em pt-BR",
+      "variables": { "var1": ["opção1", "opção2"] },
+      "max_turns": 8,
+      "evaluation_criteria": [
+        { "name": "Critério 1", "description": "Descrição detalhada" }
+      ]
+    }
+  ]
+}
+${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
+`;
+
+        const result = await requestLiteLlmChatCompletion({
+            baseUrl: settings.litellmBaseUrl,
+            apiKey: key,
+            model: configuredModel,
+            messages: [
+                {
+                    role: 'system',
+                    content: `${systemPrompt}\n\n${jsonInstruction}`,
+                },
+            ],
+            responseFormat: { type: 'json_object' },
+            onUsage,
+        });
+
+        if (!result.ok) {
+            throw new Error(`LiteLLM API Error (${configuredModel}): ${result.status} - ${getLiteLlmErrorMessage(result.body)}`);
+        }
+
+        const rawText = result.text || extractLiteLlmText(result.body);
+        if (!rawText) throw new Error('Empty response from LiteLLM');
+
+        let parsedData: unknown;
+        try {
+            parsedData = JSON.parse(cleanJsonMarkdown(rawText));
+        } catch {
+            throw new Error('Failed to parse LiteLLM JSON output');
+        }
+
+        let parsedList: GeneratedMissionPayload[] = [];
+        if (Array.isArray(parsedData)) {
+            parsedList = parsedData;
+        } else if (parsedData && typeof parsedData === 'object' && Array.isArray((parsedData as { missions?: GeneratedMissionPayload[] }).missions)) {
+            parsedList = (parsedData as { missions: GeneratedMissionPayload[] }).missions;
+        } else {
+            throw new Error('LiteLLM did not return a valid missions list in the expected JSON format');
+        }
+
+        return mapParsedMissions(parsedList);
+    }
+
+    // Gemini Provider
+    const geminiInstruction = `
 ### OUTPUT FORMAT:
-
 Generate exactly **${count ?? 'between 8 and 12'}** missions. Each mission must have this exact structure. Do NOT include api_config in missions — the engine resolves it from the environment.
 
 Return a JSON array of mission objects.
 ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
-`.trim();
+`;
 
     const attemptGeneration = async (model: string) => {
         const result = await requestGeminiGenerateContent({
             apiKey,
             model,
             requestBody: {
-                contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+                contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${geminiInstruction}` }] }],
                 generationConfig: {
                     responseMimeType: 'application/json',
                     responseSchema: {
@@ -183,7 +312,7 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 
     const configuredModel =
         generatorModel?.trim() ||
-        useSettingsStore.getState().missionGeneratorModel?.trim() ||
+        settings.missionGeneratorModel?.trim() ||
         DEFAULT_GENERATOR_MODEL;
 
     const modelsToTry: string[] = [configuredModel];
@@ -204,47 +333,7 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
-    const parsed = JSON.parse(rawText) as GeneratedMissionPayload[];
+    const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as GeneratedMissionPayload[];
 
-    // Find the first environment to use as default
-    const defaultEnvId = project.environments[0]?.id || '';
-    const defaultApiConfig = project.environments[0]?.api_config || {
-        post_url: '',
-        get_url: '',
-        auth_header: '',
-        payload_template: '{\n  "message": "{{message}}"\n}',
-        response_path: '',
-        polling_interval: 2000,
-        max_timeout: 30,
-    };
-
-    // Transform raw AI output into proper Mission objects
-    return parsed.map((raw) => {
-        const rawSystemPromptId = raw.system_prompt_id || promptsForGeneration[0]?.id || '';
-        const systemPromptId = allowedSystemPromptIds.has(rawSystemPromptId)
-            ? rawSystemPromptId
-            : promptsForGeneration[0]?.id || '';
-        const envId = raw.environment_id || defaultEnvId;
-        const env = project.environments.find((e) => e.id === envId);
-        const sp = promptsForGeneration.find((s) => s.id === systemPromptId);
-
-        return {
-            id: crypto.randomUUID(),
-            project_id: project.id,
-            environment_id: envId,
-            system_prompt_id: systemPromptId,
-            titulo: raw.titulo,
-            target_system_prompt: sp?.content || '',
-            tester_persona: raw.tester_persona,
-            mission_goal: raw.mission_goal,
-            variables: typeof raw.variables === 'string' ? JSON.parse(raw.variables || '{}') : (raw.variables || {}),
-            max_turns: raw.max_turns || 8,
-            api_config: env?.api_config || defaultApiConfig,
-            evaluation_criteria: (raw.evaluation_criteria || []).map((criterion) => ({
-                id: `crit-${crypto.randomUUID().slice(0, 8)}`,
-                name: criterion.name,
-                description: criterion.description,
-            })),
-        } satisfies Mission;
-    });
+    return mapParsedMissions(parsed);
 };

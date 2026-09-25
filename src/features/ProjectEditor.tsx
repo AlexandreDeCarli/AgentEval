@@ -33,7 +33,7 @@ export const ProjectEditor: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { projects, updateProject, isHydrated } = useProjectStore();
     const { missions, deleteMission } = useMissionStore();
-    const { geminiApiKey } = useSettingsStore();
+    const { aiProvider, getActiveApiKey } = useSettingsStore();
     const { startExecution } = useTestExecutionStore();
     const { runs } = useTestRunStore();
 
@@ -301,8 +301,10 @@ export const ProjectEditor: React.FC = () => {
     }, []);
 
     const handleRunAllMissions = (missionsToRun: Mission[]) => {
-        if (!geminiApiKey) {
-            addToast('Configure your Gemini API Key in Settings first.', 'error');
+        const activeKey = getActiveApiKey();
+        if (!activeKey) {
+            const providerName = aiProvider === 'litellm' ? 'LiteLLM' : 'Gemini';
+            addToast(`Configure sua ${providerName} API Key nas Configurações primeiro.`, 'error');
             return;
         }
         if (missionsToRun.length === 0) {
@@ -310,7 +312,7 @@ export const ProjectEditor: React.FC = () => {
             return;
         }
         missionsToRun.forEach((mission) => {
-            startExecution(mission, geminiApiKey);
+            startExecution(mission, activeKey);
         });
     };
 

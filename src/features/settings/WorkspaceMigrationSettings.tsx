@@ -16,14 +16,26 @@ export const WorkspaceMigrationSettings: React.FC = () => {
     const projects = useProjectStore((state) => state.projects);
     const missions = useMissionStore((state) => state.missions);
     const {
+        aiProvider,
         geminiApiKey,
         evaluatorModel,
         missionGeneratorModel,
         evaluationLanguage,
+        litellmBaseUrl,
+        litellmApiKey,
+        litellmEvaluatorModel,
+        litellmTesterModel,
+        litellmMissionGeneratorModel,
+        setAiProvider,
         setGeminiApiKey,
         setEvaluatorModel,
         setMissionGeneratorModel,
         setEvaluationLanguage,
+        setLitellmBaseUrl,
+        setLitellmApiKey,
+        setLitellmEvaluatorModel,
+        setLitellmTesterModel,
+        setLitellmMissionGeneratorModel,
     } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
@@ -35,9 +47,15 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             projects,
             missions,
             settings: {
+                aiProvider,
                 geminiApiKey: includeApiKey ? geminiApiKey : '',
                 evaluatorModel,
                 missionGeneratorModel,
+                litellmBaseUrl,
+                litellmApiKey: includeApiKey ? litellmApiKey : '',
+                litellmEvaluatorModel,
+                litellmTesterModel,
+                litellmMissionGeneratorModel,
                 evaluationLanguage,
             },
         });
@@ -53,10 +71,25 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         document.body.removeChild(link);
         window.setTimeout(() => URL.revokeObjectURL(url), 100);
         addToast(
-            `Configuration export generated. Histories, usage${includeApiKey ? '' : ', and the API key'} were not included.`,
+            `Configuration export generated. Histories, usage${includeApiKey ? '' : ', and the API keys'} were not included.`,
             'success'
         );
-    }, [addToast, evaluatorModel, geminiApiKey, includeApiKey, missions, projects]);
+    }, [
+        addToast,
+        aiProvider,
+        evaluatorModel,
+        geminiApiKey,
+        includeApiKey,
+        litellmApiKey,
+        litellmBaseUrl,
+        litellmEvaluatorModel,
+        litellmMissionGeneratorModel,
+        litellmTesterModel,
+        missionGeneratorModel,
+        evaluationLanguage,
+        missions,
+        projects,
+    ]);
 
     const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -84,12 +117,30 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         if (!pendingImport) return;
         useProjectStore.setState({ projects: pendingImport.projects });
         useMissionStore.setState({ missions: pendingImport.missions });
+        if (pendingImport.settings.aiProvider) {
+            setAiProvider(pendingImport.settings.aiProvider);
+        }
         if (pendingImport.settings.geminiApiKey) {
             setGeminiApiKey(pendingImport.settings.geminiApiKey);
         }
         setEvaluatorModel(pendingImport.settings.evaluatorModel);
         if (pendingImport.settings.missionGeneratorModel) {
             setMissionGeneratorModel(pendingImport.settings.missionGeneratorModel);
+        }
+        if (pendingImport.settings.litellmBaseUrl) {
+            setLitellmBaseUrl(pendingImport.settings.litellmBaseUrl);
+        }
+        if (pendingImport.settings.litellmApiKey) {
+            setLitellmApiKey(pendingImport.settings.litellmApiKey);
+        }
+        if (pendingImport.settings.litellmEvaluatorModel) {
+            setLitellmEvaluatorModel(pendingImport.settings.litellmEvaluatorModel);
+        }
+        if (pendingImport.settings.litellmTesterModel) {
+            setLitellmTesterModel(pendingImport.settings.litellmTesterModel);
+        }
+        if (pendingImport.settings.litellmMissionGeneratorModel) {
+            setLitellmMissionGeneratorModel(pendingImport.settings.litellmMissionGeneratorModel);
         }
         if (pendingImport.settings.evaluationLanguage) {
             setEvaluationLanguage(pendingImport.settings.evaluationLanguage);
@@ -100,7 +151,20 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             6000
         );
         setPendingImport(null);
-    }, [addToast, pendingImport, setEvaluatorModel, setMissionGeneratorModel, setEvaluationLanguage, setGeminiApiKey]);
+    }, [
+        addToast,
+        pendingImport,
+        setAiProvider,
+        setEvaluatorModel,
+        setMissionGeneratorModel,
+        setEvaluationLanguage,
+        setGeminiApiKey,
+        setLitellmBaseUrl,
+        setLitellmApiKey,
+        setLitellmEvaluatorModel,
+        setLitellmTesterModel,
+        setLitellmMissionGeneratorModel,
+    ]);
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">

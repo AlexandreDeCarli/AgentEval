@@ -5,12 +5,15 @@ import {
     generateTesterMessage,
     generateEvaluation,
     generateGeminiTargetResponse,
+    generateLiteLlmTargetResponse,
 } from '../services/llm';
 import { sendTargetMessage, pollTargetResponse, fetchPreStateIds, DebugLogEntry } from '../services/targetApi';
 import {
     getMissionGeminiModel,
+    getMissionLiteLlmModel,
     getMissionTargetProvider,
     getProjectGeminiModel,
+    getProjectLiteLlmModel,
     getProjectTargetProvider,
 } from '../utils/missionTarget';
 import { useTestRunStore } from './useTestRunStore';
@@ -33,7 +36,7 @@ export interface ExecutionState {
 
 interface TestExecutionStore {
     executions: { [missionId: string]: ExecutionState };
-    startExecution: (mission: Mission, geminiApiKey: string) => Promise<void>;
+    startExecution: (mission: Mission, apiKey?: string) => Promise<void>;
     stopExecution: (missionId: string) => void;
     clearDebugLogs: (missionId: string) => void;
 }
@@ -84,6 +87,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             return;
         }
 
+        const activeApiKey = (geminiApiKey || '').trim() || useSettingsStore.getState().getActiveApiKey();
         const runId = crypto.randomUUID();
         const abortController = new AbortController();
         const signal = abortController.signal;
@@ -134,6 +138,9 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
         const targetGeminiModel = project
             ? getProjectGeminiModel(project, mission)
             : getMissionGeminiModel(mission);
+        const targetLiteLlmModel = project
+            ? getProjectLiteLlmModel(project, mission)
+            : getMissionLiteLlmModel(mission);
         const recordUsage = (routine: AiRoutine) => (usage: GeminiUsageMeasurement) => {
             useAiUsageStore.getState().recordMeasurement(
                 {
@@ -205,7 +212,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
 
                 // ==== TURN: TESTER ====
                 const testerResult = await generateTesterMessage(
-                    geminiApiKey,
+                    activeApiKey,
                     testerPersona,
                     missionGoal,
                     chatHistory,
@@ -262,13 +269,36 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
 
                 if (targetProvider === 'gemini') {
                     const targetResponse = await generateGeminiTargetResponse(
-                        geminiApiKey,
+                        activeApiKey,
                         targetGeminiModel,
                         activeTargetSystemPrompt,
                         chatHistory,
                         signal,
                         appendDebugLog,
                         recordUsage('gemini_target')
+                    );
+
+                    const targetMsg: ChatMessage = {
+                        id: crypto.randomUUID(),
+                        role: 'target',
+                        content: targetResponse,
+                        timestamp: Date.now(),
+                        isProcessing: false,
+                    };
+
+                    chatHistory.push(targetMsg);
+                    useTestRunStore.getState().addMessage(runId, targetMsg);
+                } else if (targetProvider === 'litellm') {
+                    const litellmKey = useSettingsStore.getState().litellmApiKey || activeApiKey;
+                    const targetResponse = await generateLiteLlmTargetResponse(
+                        litellmKey,
+                        targetLiteLlmModel,
+                        activeTargetSystemPrompt,
+                        chatHistory,
+                        signal,
+                        appendDebugLog,
+                        recordUsage('litellm_target'),
+                        useSettingsStore.getState().litellmBaseUrl
                     );
 
                     const targetMsg: ChatMessage = {
@@ -353,7 +383,7 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
             const evalLanguage = useSettingsStore.getState().evaluationLanguage;
 
             const evalResult = await generateEvaluation(
-                geminiApiKey,
+                activeApiKey,
                 chatHistory,
                 activeTargetSystemPrompt,
                 missionGoal,

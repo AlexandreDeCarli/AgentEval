@@ -44,6 +44,7 @@ const ROUTINE_COLORS: Record<AiRoutine, string> = {
     mission_generation: '#4A72FF',
     tester_conversation: '#10B981',
     gemini_target: '#F59E0B',
+    litellm_target: '#8B5CF6',
     evaluation: '#F43F5E',
 };
 
@@ -137,6 +138,7 @@ export const AiUsageDashboard: React.FC = () => {
             mission_generation: 0,
             tester_conversation: 0,
             gemini_target: 0,
+            litellm_target: 0,
             evaluation: 0,
         }),
         [filteredEvents]

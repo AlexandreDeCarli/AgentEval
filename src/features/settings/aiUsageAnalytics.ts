@@ -6,6 +6,7 @@ export const AI_ROUTINES: AiRoutine[] = [
     'mission_generation',
     'tester_conversation',
     'gemini_target',
+    'litellm_target',
     'evaluation',
 ];
 
@@ -13,6 +14,7 @@ export const AI_ROUTINE_LABELS: Record<AiRoutine, string> = {
     mission_generation: 'Mission Generation',
     tester_conversation: 'Tester Conversation',
     gemini_target: 'Gemini Target',
+    litellm_target: 'LiteLLM Target',
     evaluation: 'Evaluation',
 };
 
@@ -117,6 +119,7 @@ const emptyCosts = (): Record<AiRoutine, number> => ({
     mission_generation: 0,
     tester_conversation: 0,
     gemini_target: 0,
+    litellm_target: 0,
     evaluation: 0,
 });
 

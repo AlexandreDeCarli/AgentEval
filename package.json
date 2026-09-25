@@ -11,6 +11,7 @@
     "test:configuration-transfer": "node scratch/test-configuration-transfer.cjs",
     "test:ai-usage": "node tests/ai-usage/test-ai-usage.cjs",
     "test:models": "node tests/models-fallback/test-models-fallback.cjs",
+    "test:litellm": "node scratch/test-litellm-integration.cjs",
     "test:e2e:ai-usage": "node tests/e2e/ai-usage-dashboard.cjs"
   },
   "dependencies": {
