@@ -14,6 +14,7 @@ interface MissionIntegrationTabProps {
     availableEnvs: Environment[];
     targetProvider: TargetProvider;
     targetGeminiModel: string;
+    targetLiteLlmModel?: string;
     selectedPrompt?: SystemPrompt;
     selectedEnv?: Environment;
     requestNavigate: (path: string) => void;
@@ -27,11 +28,12 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
     availableEnvs,
     targetProvider,
     targetGeminiModel,
+    targetLiteLlmModel,
     selectedPrompt,
     selectedEnv,
     requestNavigate,
 }) => {
-    const { discoveredModels } = useSettingsStore();
+    const { discoveredModels, discoveredLiteLlmModels } = useSettingsStore();
     const suggestedModels = getSuggestedGeminiTargetModels(discoveredModels);
     const [showPromptPreview, setShowPromptPreview] = useState(false);
     const [showApiPreview, setShowApiPreview] = useState(false);
@@ -298,6 +300,7 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                             >
                                 <option value="http">HTTP API</option>
                                 <option value="gemini">Gemini Model</option>
+                                <option value="litellm">LiteLLM Model</option>
                             </select>
                         </div>
 
@@ -322,6 +325,37 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+                        ) : targetProvider === 'litellm' ? (
+                            <div>
+                                <label className="text-label text-slate-300 mb-1 block">
+                                    LiteLLM Model
+                                </label>
+                                {discoveredLiteLlmModels.length > 0 ? (
+                                    <select
+                                        value={formData.target_litellm_model || targetLiteLlmModel || 'gpt-4o-mini'}
+                                        onChange={(e) => onChange({ ...formData, target_litellm_model: e.target.value })}
+                                        className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer font-mono"
+                                    >
+                                        {!(formData.target_litellm_model || targetLiteLlmModel) || !discoveredLiteLlmModels.some(m => m.id === (formData.target_litellm_model || targetLiteLlmModel)) ? (
+                                            <option value={formData.target_litellm_model || targetLiteLlmModel || 'gpt-4o-mini'} className="bg-card font-mono">
+                                                {formData.target_litellm_model || targetLiteLlmModel || 'gpt-4o-mini'} (Custom)
+                                            </option>
+                                        ) : null}
+                                        {discoveredLiteLlmModels.map((model) => (
+                                            <option key={model.id} value={model.id} className="bg-card font-mono">
+                                                {model.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <Input
+                                        placeholder="gpt-4o-mini"
+                                        value={formData.target_litellm_model || targetLiteLlmModel || ''}
+                                        onChange={(e) => onChange({ ...formData, target_litellm_model: e.target.value })}
+                                        className="font-mono bg-[#1C2026]"
+                                    />
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-4">

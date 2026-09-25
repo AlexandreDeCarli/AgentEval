@@ -15,8 +15,10 @@ import { getGeminiModelDisplayName } from '../config/geminiModels';
 import {
     DEFAULT_GEMINI_TARGET_MODEL,
     getMissionGeminiModel,
+    getMissionLiteLlmModel,
     getMissionTargetProvider,
     getProjectGeminiModel,
+    getProjectLiteLlmModel,
     getProjectTargetProvider,
 } from '../utils/missionTarget';
 
@@ -53,7 +55,7 @@ export const MissionEditor: React.FC = () => {
 
     const isNew = id === 'new';
     const projectIdFromQuery = searchParams.get('project') || '';
-    const { geminiApiKey, missionGeneratorModel, discoveredModels } = useSettingsStore();
+    const { aiProvider, getActiveApiKey, missionGeneratorModel, discoveredModels } = useSettingsStore();
     const missionGeneratorModelName = getGeminiModelDisplayName(missionGeneratorModel, discoveredModels);
 
     const [creationMethod, setCreationMethod] = useState<'select' | 'manual' | 'ai'>(isNew ? 'select' : 'manual');
@@ -112,8 +114,10 @@ export const MissionEditor: React.FC = () => {
     const selectedEnv = availableEnvs.find((e) => e.id === formData.environment_id);
 
     const handleAiGenerate = async () => {
-        if (!geminiApiKey) {
-            addToast('Configure your Gemini API Key in Settings first.', 'error');
+        const activeKey = getActiveApiKey();
+        if (!activeKey) {
+            const providerName = aiProvider === 'litellm' ? 'LiteLLM' : 'Gemini';
+            addToast(`Configure sua ${providerName} API Key nas Configurações primeiro.`, 'error');
             return;
         }
         if (!currentProject) {
@@ -137,7 +141,7 @@ export const MissionEditor: React.FC = () => {
 
         try {
             const generated = await generateMissionsFromAI(
-                geminiApiKey,
+                activeKey,
                 currentProject,
                 aiPrompt.trim() || undefined,
                 aiCount,
@@ -354,6 +358,9 @@ export const MissionEditor: React.FC = () => {
     const targetGeminiModel = currentProject
         ? getProjectGeminiModel(currentProject, formData)
         : getMissionGeminiModel(formData);
+    const targetLiteLlmModel = currentProject
+        ? getProjectLiteLlmModel(currentProject, formData)
+        : getMissionLiteLlmModel(formData);
 
 
     if (isNew && creationMethod === 'select') {
@@ -523,6 +530,7 @@ export const MissionEditor: React.FC = () => {
                         availableEnvs={availableEnvs}
                         targetProvider={targetProvider}
                         targetGeminiModel={targetGeminiModel}
+                        targetLiteLlmModel={targetLiteLlmModel}
                         selectedPrompt={selectedPrompt}
                         selectedEnv={selectedEnv}
                         requestNavigate={(path) => requestNavigate(path)}

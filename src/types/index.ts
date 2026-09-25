@@ -8,7 +8,15 @@ export interface ApiConfig {
     max_timeout: number;
 }
 
-export type TargetProvider = 'http' | 'gemini';
+export type TargetProvider = 'http' | 'gemini' | 'litellm';
+
+export type AiProvider = 'gemini' | 'litellm';
+
+export interface LiteLlmModelInfo {
+    id: string;
+    name: string;
+    ownedBy?: string;
+}
 
 export interface EvaluationCriterion {
     id: string;
@@ -35,6 +43,7 @@ export interface Project {
     documentation: string;
     target_provider?: TargetProvider;
     target_gemini_model?: string;
+    target_litellm_model?: string;
     system_prompts: SystemPrompt[];
     environments: Environment[];
 }
@@ -46,6 +55,7 @@ export interface Mission {
     system_prompt_id?: string;
     target_provider?: TargetProvider;
     target_gemini_model?: string;
+    target_litellm_model?: string;
     titulo: string;
     target_system_prompt: string;
     tester_persona: string;
@@ -118,6 +128,7 @@ export type AiRoutine =
     | 'mission_generation'
     | 'tester_conversation'
     | 'gemini_target'
+    | 'litellm_target'
     | 'evaluation';
 
 export type AiPricingStatus = 'priced' | 'unpriced' | 'unpriced_cache';

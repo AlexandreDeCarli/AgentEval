@@ -1,4 +1,4 @@
-import { ApiConfig, Environment, Mission, Project } from '../types';
+import { AiProvider, ApiConfig, Environment, Mission, Project } from '../types';
 
 export const CONFIGURATION_EXPORT_SCHEMA = 'agenteval.configuration-export';
 export const CONFIGURATION_EXPORT_VERSION = 1;
@@ -17,9 +17,15 @@ const DEFAULT_API_CONFIG: ApiConfig = {
 };
 
 export interface ExportedSettings {
+    aiProvider?: AiProvider;
     geminiApiKey: string;
     evaluatorModel: string;
     missionGeneratorModel?: string;
+    litellmBaseUrl?: string;
+    litellmApiKey?: string;
+    litellmEvaluatorModel?: string;
+    litellmTesterModel?: string;
+    litellmMissionGeneratorModel?: string;
     evaluationLanguage?: string;
 }
 
@@ -152,21 +158,40 @@ const assertSettings = (value: unknown): ExportedSettings => {
         throw new Error('Invalid AgentEval configuration export: data.settings must be an object.');
     }
 
-    return {
+    const settings: ExportedSettings = {
         geminiApiKey: typeof value.geminiApiKey === 'string' ? value.geminiApiKey : '',
         evaluatorModel:
             typeof value.evaluatorModel === 'string' && value.evaluatorModel.trim()
                 ? value.evaluatorModel
                 : DEFAULT_EVALUATOR_MODEL,
-        missionGeneratorModel:
-            typeof value.missionGeneratorModel === 'string' && value.missionGeneratorModel.trim()
-                ? value.missionGeneratorModel
-                : DEFAULT_MISSION_GENERATOR_MODEL,
-        evaluationLanguage:
-            typeof value.evaluationLanguage === 'string' && value.evaluationLanguage.trim()
-                ? value.evaluationLanguage
-                : DEFAULT_EVALUATION_LANGUAGE,
     };
+
+    if (value.aiProvider === 'litellm' || value.aiProvider === 'gemini') {
+        settings.aiProvider = value.aiProvider;
+    }
+    if (typeof value.missionGeneratorModel === 'string' && value.missionGeneratorModel.trim()) {
+        settings.missionGeneratorModel = value.missionGeneratorModel.trim();
+    }
+    if (typeof value.litellmBaseUrl === 'string' && value.litellmBaseUrl.trim()) {
+        settings.litellmBaseUrl = value.litellmBaseUrl.trim();
+    }
+    if (typeof value.litellmApiKey === 'string' && value.litellmApiKey.trim()) {
+        settings.litellmApiKey = value.litellmApiKey;
+    }
+    if (typeof value.litellmEvaluatorModel === 'string' && value.litellmEvaluatorModel.trim()) {
+        settings.litellmEvaluatorModel = value.litellmEvaluatorModel.trim();
+    }
+    if (typeof value.litellmTesterModel === 'string' && value.litellmTesterModel.trim()) {
+        settings.litellmTesterModel = value.litellmTesterModel.trim();
+    }
+    if (typeof value.litellmMissionGeneratorModel === 'string' && value.litellmMissionGeneratorModel.trim()) {
+        settings.litellmMissionGeneratorModel = value.litellmMissionGeneratorModel.trim();
+    }
+    if (typeof value.evaluationLanguage === 'string' && value.evaluationLanguage.trim()) {
+        settings.evaluationLanguage = value.evaluationLanguage.trim();
+    }
+
+    return settings;
 };
 
 export const createConfigurationExport = (

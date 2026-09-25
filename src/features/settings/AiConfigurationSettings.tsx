@@ -1,25 +1,59 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cpu, Eye, EyeOff, Info, Key, RefreshCw, CheckCircle2, AlertCircle, Sparkles, Globe } from 'lucide-react';
+import {
+    Cpu,
+    Eye,
+    EyeOff,
+    Info,
+    Key,
+    RefreshCw,
+    CheckCircle2,
+    AlertCircle,
+    Sparkles,
+    Globe,
+    Server,
+    RotateCcw,
+    Bot,
+} from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { getCombinedEvaluatorModels, getGeminiModelDisplayName } from '../../config/geminiModels';
 import { EVALUATION_LANGUAGES, DEFAULT_EVALUATION_LANGUAGE } from '../../config/evaluationLanguages';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { AiProvider } from '../../types';
+import { DEFAULT_LITELLM_BASE_URL } from '../../services/litellmClient';
 
 export const AiConfigurationSettings: React.FC = () => {
     const {
+        aiProvider,
+        setAiProvider,
         geminiApiKey,
         setGeminiApiKey,
         evaluatorModel,
         setEvaluatorModel,
         missionGeneratorModel,
         setMissionGeneratorModel,
-        evaluationLanguage,
-        setEvaluationLanguage,
         discoveredModels,
         refreshDiscoveredModels,
+        litellmBaseUrl,
+        setLitellmBaseUrl,
+        litellmApiKey,
+        setLitellmApiKey,
+        litellmEvaluatorModel,
+        setLitellmEvaluatorModel,
+        litellmTesterModel,
+        setLitellmTesterModel,
+        litellmMissionGeneratorModel,
+        setLitellmMissionGeneratorModel,
+        discoveredLiteLlmModels,
+        refreshLiteLlmModels,
+        evaluationLanguage,
+        setEvaluationLanguage,
     } = useSettingsStore();
 
+    // Provider state
+    const [selectedProvider, setSelectedProvider] = useState<AiProvider>(aiProvider || 'gemini');
+
+    // Gemini local state
     const [inputKey, setInputKey] = useState(geminiApiKey);
     const availableEvaluatorModels = useMemo(
         () => getCombinedEvaluatorModels(discoveredModels),
@@ -38,6 +72,28 @@ export const AiConfigurationSettings: React.FC = () => {
             : 'gemini-3.7-flash'
     );
 
+    const [inspectingRole, setInspectingRole] = useState<'evaluator' | 'mission'>('evaluator');
+    const [showKey, setShowKey] = useState(false);
+    const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+    const [refreshStatus, setRefreshStatus] = useState<{
+        type: 'success' | 'error';
+        message: string;
+    } | null>(null);
+
+    // LiteLLM local state
+    const [inputLitellmBaseUrl, setInputLitellmBaseUrl] = useState(litellmBaseUrl || DEFAULT_LITELLM_BASE_URL);
+    const [inputLitellmKey, setInputLitellmKey] = useState(litellmApiKey || '');
+    const [showLitellmKey, setShowLitellmKey] = useState(false);
+    const [selectedLitellmEvalModel, setSelectedLitellmEvalModel] = useState(litellmEvaluatorModel || 'gpt-4o-mini');
+    const [selectedLitellmMissionModel, setSelectedLitellmMissionModel] = useState(litellmMissionGeneratorModel || 'gpt-4o-mini');
+    const [selectedLitellmTesterModel, setSelectedLitellmTesterModel] = useState(litellmTesterModel || 'gpt-4o-mini');
+    const [isRefreshingLiteLlm, setIsRefreshingLiteLlm] = useState(false);
+    const [refreshLiteLlmStatus, setRefreshLiteLlmStatus] = useState<{
+        type: 'success' | 'error';
+        message: string;
+    } | null>(null);
+
+    // Evaluation Language local state
     const isStandardLang = useMemo(
         () => EVALUATION_LANGUAGES.some((l) => l.id === evaluationLanguage),
         [evaluationLanguage]
@@ -50,18 +106,30 @@ export const AiConfigurationSettings: React.FC = () => {
         isStandardLang ? '' : evaluationLanguage
     );
 
-    const [inspectingRole, setInspectingRole] = useState<'evaluator' | 'mission'>('evaluator');
-    const [showKey, setShowKey] = useState(false);
     const [saved, setSaved] = useState(false);
-    const [isRefreshingModels, setIsRefreshingModels] = useState(false);
-    const [refreshStatus, setRefreshStatus] = useState<{
-        type: 'success' | 'error';
-        message: string;
-    } | null>(null);
+
+    // Sync from store
+    useEffect(() => {
+        setSelectedProvider(aiProvider || 'gemini');
+    }, [aiProvider]);
 
     useEffect(() => {
         setInputKey(geminiApiKey);
     }, [geminiApiKey]);
+
+    useEffect(() => {
+        setInputLitellmBaseUrl(litellmBaseUrl || DEFAULT_LITELLM_BASE_URL);
+    }, [litellmBaseUrl]);
+
+    useEffect(() => {
+        setInputLitellmKey(litellmApiKey);
+    }, [litellmApiKey]);
+
+    useEffect(() => {
+        setSelectedLitellmEvalModel(litellmEvaluatorModel || 'gpt-4o-mini');
+        setSelectedLitellmMissionModel(litellmMissionGeneratorModel || 'gpt-4o-mini');
+        setSelectedLitellmTesterModel(litellmTesterModel || 'gpt-4o-mini');
+    }, [litellmEvaluatorModel, litellmMissionGeneratorModel, litellmTesterModel]);
 
     useEffect(() => {
         setSelectedModel((current) => {
@@ -101,29 +169,54 @@ export const AiConfigurationSettings: React.FC = () => {
     }, [evaluationLanguage]);
 
     const handleSave = useCallback(() => {
+        setAiProvider(selectedProvider);
+
+        // Save Gemini settings
         setGeminiApiKey(inputKey);
         setEvaluatorModel(selectedModel);
         setMissionGeneratorModel(selectedMissionModel);
+
+        // Save LiteLLM settings
+        setLitellmBaseUrl(inputLitellmBaseUrl.trim() || DEFAULT_LITELLM_BASE_URL);
+        setLitellmApiKey(inputLitellmKey.trim());
+        setLitellmEvaluatorModel(selectedLitellmEvalModel.trim() || 'gpt-4o-mini');
+        setLitellmMissionGeneratorModel(selectedLitellmMissionModel.trim() || 'gpt-4o-mini');
+        setLitellmTesterModel(selectedLitellmTesterModel.trim() || 'gpt-4o-mini');
+
+        // Save language
         const resolvedLanguage =
             selectedLang === 'custom'
                 ? customLang.trim() || DEFAULT_EVALUATION_LANGUAGE
                 : selectedLang;
         setEvaluationLanguage(resolvedLanguage);
+
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2000);
     }, [
+        selectedProvider,
         inputKey,
         selectedModel,
         selectedMissionModel,
+        inputLitellmBaseUrl,
+        inputLitellmKey,
+        selectedLitellmEvalModel,
+        selectedLitellmMissionModel,
+        selectedLitellmTesterModel,
         selectedLang,
         customLang,
+        setAiProvider,
+        setGeminiApiKey,
         setEvaluatorModel,
         setMissionGeneratorModel,
+        setLitellmBaseUrl,
+        setLitellmApiKey,
+        setLitellmEvaluatorModel,
+        setLitellmMissionGeneratorModel,
+        setLitellmTesterModel,
         setEvaluationLanguage,
-        setGeminiApiKey,
     ]);
 
-    const handleRefreshModels = async () => {
+    const handleRefreshGeminiModels = async () => {
         const keyToUse = inputKey.trim() || geminiApiKey.trim();
         if (!keyToUse) {
             setRefreshStatus({
@@ -164,6 +257,50 @@ export const AiConfigurationSettings: React.FC = () => {
         }
     };
 
+    const handleRefreshLiteLlmModels = async () => {
+        const urlToUse = inputLitellmBaseUrl.trim() || litellmBaseUrl || DEFAULT_LITELLM_BASE_URL;
+        const keyToUse = inputLitellmKey.trim() || litellmApiKey.trim();
+
+        if (!keyToUse) {
+            setRefreshLiteLlmStatus({
+                type: 'error',
+                message: 'Informe e salve a API Key do LiteLLM antes de verificar os modelos.',
+            });
+            window.setTimeout(() => setRefreshLiteLlmStatus(null), 4000);
+            return;
+        }
+
+        setIsRefreshingLiteLlm(true);
+        setRefreshLiteLlmStatus(null);
+
+        try {
+            const result = await refreshLiteLlmModels(urlToUse, keyToUse);
+            setRefreshLiteLlmStatus({
+                type: 'success',
+                message: `Conexão bem-sucedida! ${result.totalCount} modelo(s) encontrado(s) no proxy LiteLLM.`,
+            });
+            if (result.models.length > 0) {
+                const first = result.models[0].id;
+                if (!selectedLitellmEvalModel || selectedLitellmEvalModel === 'gpt-4o-mini') {
+                    setSelectedLitellmEvalModel(first);
+                    setSelectedLitellmMissionModel(first);
+                    setSelectedLitellmTesterModel(first);
+                }
+            }
+        } catch (error) {
+            setRefreshLiteLlmStatus({
+                type: 'error',
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : 'Falha ao conectar ao LiteLLM.',
+            });
+        } finally {
+            setIsRefreshingLiteLlm(false);
+            window.setTimeout(() => setRefreshLiteLlmStatus(null), 6000);
+        }
+    };
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if ((event.metaKey || event.ctrlKey) && event.key === 's') {
@@ -191,132 +328,479 @@ export const AiConfigurationSettings: React.FC = () => {
 
     return (
         <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-8">
+            {/* Header and Provider Switcher */}
             <div className="space-y-4">
-                <h2 className="text-title flex items-center gap-2">
-                    <Key className="w-5 h-5 text-primary" /> API Keys
-                </h2>
-                <p className="text-body text-muted-foreground max-w-[75ch]">
-                    Tester and Evaluator agents use Gemini. Direct Gemini targets reuse this same
-                    Google AI Studio API key.
-                </p>
-                <div className="space-y-2">
-                    <label htmlFor="gemini-api-key" className="text-label">Gemini API Key</label>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <Input
-                            id="gemini-api-key"
-                            type={showKey ? 'text' : 'password'}
-                            value={inputKey}
-                            onChange={(event) => setInputKey(event.target.value)}
-                            placeholder="AIzaSy..."
-                            className="font-mono bg-background"
-                        />
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowKey((current) => !current)}
-                            className="gap-2 sm:w-28"
-                            aria-label={showKey ? 'Hide Gemini API key' : 'Show Gemini API key'}
-                        >
-                            {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            {showKey ? 'Hide' : 'Show'}
-                        </Button>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
+                    <div>
+                        <h2 className="text-title text-white flex items-center gap-2">
+                            <Bot className="w-5 h-5 text-primary" /> Provedor de IA (AI Provider)
+                        </h2>
+                        <p className="text-body text-muted-foreground mt-1">
+                            Selecione qual provedor LLM gerenciará os agentes internos (Tester, Avaliador e Gerador de Cenários).
+                        </p>
                     </div>
-                    <p className="text-label text-muted-foreground">
-                        Stored encrypted in AgentEval settings on this machine.
-                    </p>
+
+                    <div className="flex items-center gap-1.5 p-1 bg-background rounded-lg border border-border/70 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedProvider('gemini')}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                                selectedProvider === 'gemini'
+                                    ? 'bg-primary text-white shadow-sm font-semibold'
+                                    : 'text-muted-foreground hover:text-white'
+                            }`}
+                        >
+                            <Sparkles className="w-4 h-4 text-emerald-400" />
+                            Google Gemini
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedProvider('litellm')}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
+                                selectedProvider === 'litellm'
+                                    ? 'bg-primary text-white shadow-sm font-semibold'
+                                    : 'text-muted-foreground hover:text-white'
+                            }`}
+                        >
+                            <Server className="w-4 h-4 text-purple-400" />
+                            LiteLLM (Proxy)
+                        </button>
+                    </div>
+                </div>
+
+                {/* Banner indicating active provider */}
+                <div className="p-3 rounded-lg border bg-muted/20 border-border/60 flex items-center justify-between text-xs text-slate-300">
+                    <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        Provedor ativo no momento:{' '}
+                        <strong className="text-white">
+                            {selectedProvider === 'litellm' ? 'LiteLLM Proxy (OpenAI-compatible)' : 'Google AI Studio (Gemini)'}
+                        </strong>
+                    </span>
+                    <span className="text-muted-foreground font-mono">
+                        {selectedProvider === 'litellm' ? 'https://llm.potencial.tec.br' : 'generativelanguage.googleapis.com'}
+                    </span>
                 </div>
             </div>
 
-            <div className="pt-6 border-t border-border space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                        <h2 className="text-title flex items-center gap-2">
-                            <Cpu className="w-5 h-5 text-primary" /> Evaluator Agent & Model Catalog
+            {/* LITELLM CONFIGURATION SECTION */}
+            {selectedProvider === 'litellm' && (
+                <div className="space-y-6 pt-2">
+                    <div className="space-y-4">
+                        <h2 className="text-title flex items-center gap-2 text-white">
+                            <Server className="w-5 h-5 text-purple-400" /> LiteLLM Proxy Configuration
                         </h2>
                         <p className="text-body text-muted-foreground max-w-[75ch]">
-                            Choose the model used to grade transcripts and generate prompt improvements.
+                            Consuma o endpoint LiteLLM compatível com a API OpenAI em{' '}
+                            <code className="text-primary font-mono text-xs bg-muted/40 px-1 py-0.5 rounded">
+                                https://llm.potencial.tec.br
+                            </code>.
                         </p>
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRefreshModels}
-                        disabled={isRefreshingModels}
-                        className="gap-2 shrink-0 border-primary/40 hover:border-primary text-slate-200"
-                        title="Consultar a API do Google Gemini para verificar novos modelos disponíveis"
-                    >
-                        <RefreshCw className={`w-4 h-4 text-primary ${isRefreshingModels ? 'animate-spin' : ''}`} />
-                        {isRefreshingModels ? 'Verificando...' : 'Verificar Novos Modelos'}
-                    </Button>
-                </div>
 
-                {refreshStatus && (
-                    <div
-                        className={`p-3 rounded-lg flex items-center gap-2.5 text-body border transition-all ${
-                            refreshStatus.type === 'success'
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                        }`}
-                        role="alert"
-                    >
-                        {refreshStatus.type === 'success' ? (
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                        ) : (
-                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="litellm-base-url" className="text-label text-slate-300">
+                                    LiteLLM Endpoint Base URL
+                                </label>
+                                {inputLitellmBaseUrl !== DEFAULT_LITELLM_BASE_URL && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setInputLitellmBaseUrl(DEFAULT_LITELLM_BASE_URL)}
+                                        className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <RotateCcw className="w-3 h-3" /> Restaurar padrão
+                                    </button>
+                                )}
+                            </div>
+                            <Input
+                                id="litellm-base-url"
+                                type="text"
+                                value={inputLitellmBaseUrl}
+                                onChange={(event) => setInputLitellmBaseUrl(event.target.value)}
+                                placeholder="https://llm.potencial.tec.br"
+                                className="font-mono bg-background"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="litellm-api-key" className="text-label text-slate-300">
+                                LiteLLM API Key (Bearer Token)
+                            </label>
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <Input
+                                    id="litellm-api-key"
+                                    type={showLitellmKey ? 'text' : 'password'}
+                                    value={inputLitellmKey}
+                                    onChange={(event) => setInputLitellmKey(event.target.value)}
+                                    placeholder="sk-..."
+                                    className="font-mono bg-background"
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowLitellmKey((current) => !current)}
+                                    className="gap-2 sm:w-28"
+                                    aria-label={showLitellmKey ? 'Hide LiteLLM API key' : 'Show LiteLLM API key'}
+                                >
+                                    {showLitellmKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    {showLitellmKey ? 'Hide' : 'Show'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Armazenada criptografada localmente nas configurações do AgentEval.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-border space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 className="text-body font-bold text-white flex items-center gap-2">
+                                    <Cpu className="w-4 h-4 text-purple-400" /> Modelos do LiteLLM
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                    Consulte os modelos disponíveis na instância ou defina os nomes diretamente.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefreshLiteLlmModels}
+                                disabled={isRefreshingLiteLlm}
+                                className="gap-2 shrink-0 border-purple-500/40 hover:border-purple-400 text-slate-200"
+                            >
+                                <RefreshCw className={`w-4 h-4 text-purple-400 ${isRefreshingLiteLlm ? 'animate-spin' : ''}`} />
+                                {isRefreshingLiteLlm ? 'Verificando...' : 'Verificar Conexão e Modelos'}
+                            </Button>
+                        </div>
+
+                        {refreshLiteLlmStatus && (
+                            <div
+                                className={`p-3 rounded-lg flex items-center gap-2.5 text-body border transition-all ${
+                                    refreshLiteLlmStatus.type === 'success'
+                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                        : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                                }`}
+                                role="alert"
+                            >
+                                {refreshLiteLlmStatus.type === 'success' ? (
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                                ) : (
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                                )}
+                                <span>{refreshLiteLlmStatus.message}</span>
+                            </div>
                         )}
-                        <span>{refreshStatus.message}</span>
-                    </div>
-                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="evaluation-model" className="text-label font-bold text-white flex items-center gap-1.5">
-                                <Cpu className="w-4 h-4 text-primary" /> Evaluation Model
-                            </label>
-                            <span className="text-xs text-muted-foreground font-mono">
-                                {availableEvaluatorModels.length} na lista
-                            </span>
-                        </div>
-                        <select
-                            id="evaluation-model"
-                            value={selectedModel}
-                            onChange={(event) => setSelectedModel(event.target.value)}
-                            className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
-                        >
-                            {availableEvaluatorModels.map((model) => (
-                                <option key={model.id} value={model.id}>{model.name}</option>
-                            ))}
-                        </select>
-                        <p className="text-xs text-muted-foreground">
-                            Used by Evaluator agent to grade transcripts, score criteria, and suggest prompt improvements.
-                        </p>
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Evaluator Model */}
+                            <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="litellm-eval-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                        <Cpu className="w-4 h-4 text-purple-400" /> Evaluator Model
+                                    </label>
+                                </div>
+                                {discoveredLiteLlmModels.length > 0 ? (
+                                    <select
+                                        id="litellm-eval-model"
+                                        value={selectedLitellmEvalModel}
+                                        onChange={(e) => setSelectedLitellmEvalModel(e.target.value)}
+                                        className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer font-mono"
+                                    >
+                                        {!discoveredLiteLlmModels.some(m => m.id === selectedLitellmEvalModel) && selectedLitellmEvalModel && (
+                                            <option value={selectedLitellmEvalModel}>{selectedLitellmEvalModel} (Custom)</option>
+                                        )}
+                                        {discoveredLiteLlmModels.map((m) => (
+                                            <option key={m.id} value={m.id}>{m.id}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <Input
+                                        id="litellm-eval-model"
+                                        value={selectedLitellmEvalModel}
+                                        onChange={(e) => setSelectedLitellmEvalModel(e.target.value)}
+                                        placeholder="gpt-4o-mini"
+                                        className="font-mono bg-background"
+                                    />
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Avalia o histórico do teste e gera o relatório com nota e melhorias.
+                                </p>
+                            </div>
 
-                    <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="mission-generator-model" className="text-label font-bold text-white flex items-center gap-1.5">
-                                <Sparkles className="w-4 h-4 text-[#8B5CF6]" /> Mission Generation Model
-                            </label>
-                            <span className="text-xs text-muted-foreground font-mono">
-                                {availableEvaluatorModels.length} na lista
-                            </span>
+                            {/* Tester Agent Model */}
+                            <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="litellm-tester-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                        <Bot className="w-4 h-4 text-primary" /> Tester Agent Model
+                                    </label>
+                                </div>
+                                {discoveredLiteLlmModels.length > 0 ? (
+                                    <select
+                                        id="litellm-tester-model"
+                                        value={selectedLitellmTesterModel}
+                                        onChange={(e) => setSelectedLitellmTesterModel(e.target.value)}
+                                        className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer font-mono"
+                                    >
+                                        {!discoveredLiteLlmModels.some(m => m.id === selectedLitellmTesterModel) && selectedLitellmTesterModel && (
+                                            <option value={selectedLitellmTesterModel}>{selectedLitellmTesterModel} (Custom)</option>
+                                        )}
+                                        {discoveredLiteLlmModels.map((m) => (
+                                            <option key={m.id} value={m.id}>{m.id}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <Input
+                                        id="litellm-tester-model"
+                                        value={selectedLitellmTesterModel}
+                                        onChange={(e) => setSelectedLitellmTesterModel(e.target.value)}
+                                        placeholder="gpt-4o-mini"
+                                        className="font-mono bg-background"
+                                    />
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Gera as mensagens da persona de teste simulando o usuário final.
+                                </p>
+                            </div>
+
+                            {/* Mission Generator Model */}
+                            <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="litellm-mission-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                        <Sparkles className="w-4 h-4 text-[#8B5CF6]" /> Mission Gen Model
+                                    </label>
+                                </div>
+                                {discoveredLiteLlmModels.length > 0 ? (
+                                    <select
+                                        id="litellm-mission-model"
+                                        value={selectedLitellmMissionModel}
+                                        onChange={(e) => setSelectedLitellmMissionModel(e.target.value)}
+                                        className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer font-mono"
+                                    >
+                                        {!discoveredLiteLlmModels.some(m => m.id === selectedLitellmMissionModel) && selectedLitellmMissionModel && (
+                                            <option value={selectedLitellmMissionModel}>{selectedLitellmMissionModel} (Custom)</option>
+                                        )}
+                                        {discoveredLiteLlmModels.map((m) => (
+                                            <option key={m.id} value={m.id}>{m.id}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <Input
+                                        id="litellm-mission-model"
+                                        value={selectedLitellmMissionModel}
+                                        onChange={(e) => setSelectedLitellmMissionModel(e.target.value)}
+                                        placeholder="gpt-4o-mini"
+                                        className="font-mono bg-background"
+                                    />
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Gera automaticamente os cenários de teste a partir da documentação.
+                                </p>
+                            </div>
                         </div>
-                        <select
-                            id="mission-generator-model"
-                            value={selectedMissionModel}
-                            onChange={(event) => setSelectedMissionModel(event.target.value)}
-                            className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
-                        >
-                            {availableEvaluatorModels.map((model) => (
-                                <option key={model.id} value={model.id}>{model.name}</option>
-                            ))}
-                        </select>
-                        <p className="text-xs text-muted-foreground">
-                            Used by AI to analyze project documentation and create comprehensive test scenarios.
-                        </p>
                     </div>
                 </div>
+            )}
 
+            {/* GOOGLE GEMINI CONFIGURATION SECTION */}
+            {selectedProvider === 'gemini' && (
+                <div className="space-y-8 pt-2">
+                    <div className="space-y-4">
+                        <h2 className="text-title flex items-center gap-2 text-white">
+                            <Key className="w-5 h-5 text-primary" /> Google AI Studio API Key
+                        </h2>
+                        <p className="text-body text-muted-foreground max-w-[75ch]">
+                            Chave direta da API do Google AI Studio para os agentes Tester, Evaluator e modelos Target Gemini.
+                        </p>
+                        <div className="space-y-2">
+                            <label htmlFor="gemini-api-key" className="text-label">Gemini API Key</label>
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <Input
+                                    id="gemini-api-key"
+                                    type={showKey ? 'text' : 'password'}
+                                    value={inputKey}
+                                    onChange={(event) => setInputKey(event.target.value)}
+                                    placeholder="AIzaSy..."
+                                    className="font-mono bg-background"
+                                />
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowKey((current) => !current)}
+                                    className="gap-2 sm:w-28"
+                                    aria-label={showKey ? 'Hide Gemini API key' : 'Show Gemini API key'}
+                                >
+                                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    {showKey ? 'Hide' : 'Show'}
+                                </Button>
+                            </div>
+                            <p className="text-label text-muted-foreground">
+                                Armazenada criptografada localmente nas configurações do AgentEval.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-border space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h2 className="text-title flex items-center gap-2">
+                                    <Cpu className="w-5 h-5 text-primary" /> Evaluator Agent & Model Catalog
+                                </h2>
+                                <p className="text-body text-muted-foreground max-w-[75ch]">
+                                    Escolha o modelo Gemini usado para avaliar transcrições e sugerir melhorias.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefreshGeminiModels}
+                                disabled={isRefreshingModels}
+                                className="gap-2 shrink-0 border-primary/40 hover:border-primary text-slate-200"
+                                title="Consultar a API do Google Gemini para verificar novos modelos disponíveis"
+                            >
+                                <RefreshCw className={`w-4 h-4 text-primary ${isRefreshingModels ? 'animate-spin' : ''}`} />
+                                {isRefreshingModels ? 'Verificando...' : 'Verificar Novos Modelos'}
+                            </Button>
+                        </div>
+
+                        {refreshStatus && (
+                            <div
+                                className={`p-3 rounded-lg flex items-center gap-2.5 text-body border transition-all ${
+                                    refreshStatus.type === 'success'
+                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                        : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                                }`}
+                                role="alert"
+                            >
+                                {refreshStatus.type === 'success' ? (
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                                ) : (
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                                )}
+                                <span>{refreshStatus.message}</span>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="evaluation-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                        <Cpu className="w-4 h-4 text-primary" /> Evaluation Model
+                                    </label>
+                                    <span className="text-xs text-muted-foreground font-mono">
+                                        {availableEvaluatorModels.length} na lista
+                                    </span>
+                                </div>
+                                <select
+                                    id="evaluation-model"
+                                    value={selectedModel}
+                                    onChange={(event) => setSelectedModel(event.target.value)}
+                                    className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
+                                >
+                                    {availableEvaluatorModels.map((model) => (
+                                        <option key={model.id} value={model.id}>{model.name}</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-muted-foreground">
+                                    Utilizado pelo agente avaliador para dar notas e calcular métricas.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="mission-generator-model" className="text-label font-bold text-white flex items-center gap-1.5">
+                                        <Sparkles className="w-4 h-4 text-[#8B5CF6]" /> Mission Generation Model
+                                    </label>
+                                    <span className="text-xs text-muted-foreground font-mono">
+                                        {availableEvaluatorModels.length} na lista
+                                    </span>
+                                </div>
+                                <select
+                                    id="mission-generator-model"
+                                    value={selectedMissionModel}
+                                    onChange={(event) => setSelectedMissionModel(event.target.value)}
+                                    className="w-full bg-background border border-border/80 rounded-lg p-2.5 text-body text-white cursor-pointer"
+                                >
+                                    {availableEvaluatorModels.map((model) => (
+                                        <option key={model.id} value={model.id}>{model.name}</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-muted-foreground">
+                                    Utilizado para analisar a documentação e propor missões de teste.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="border border-border/60 bg-background/45 p-5 rounded-lg space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Inspect Model Specs:
+                                </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setInspectingRole('evaluator')}
+                                        className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                            inspectingRole === 'evaluator'
+                                                ? 'bg-primary text-white font-bold shadow-sm'
+                                                : 'bg-background border border-border text-muted-foreground hover:text-white'
+                                        }`}
+                                    >
+                                        Evaluator ({getGeminiModelDisplayName(selectedModel, discoveredModels)})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInspectingRole('mission')}
+                                        className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                            inspectingRole === 'mission'
+                                                ? 'bg-[#8B5CF6] text-white font-bold shadow-sm'
+                                                : 'bg-background border border-border text-muted-foreground hover:text-white'
+                                        }`}
+                                    >
+                                        Mission Gen ({getGeminiModelDisplayName(selectedMissionModel, discoveredModels)})
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-start justify-between gap-2 pt-1">
+                                <h3 className="text-body text-white font-bold">{activeModelInfo.name}</h3>
+                                {!activeModelInfo.isFreeTier && (
+                                    <span className="text-label px-2 py-1 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                                        Paid tier only
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-body text-muted-foreground max-w-[70ch]">
+                                {activeModelInfo.description}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/40">
+                                <div className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground">Paid pricing per 1M tokens</span>
+                                    <div className="font-mono text-xs tabular-nums text-white space-y-1">
+                                        <div>Input: <strong>{activeModelInfo.inputCostPaid} USD</strong></div>
+                                        <div>Output: <strong>{activeModelInfo.outputCostPaid} USD</strong></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground">Free tier</span>
+                                    {activeModelInfo.isFreeTier ? (
+                                        <div className="font-mono text-xs tabular-nums text-emerald-300 space-y-1">
+                                            <div>RPM: <strong>{activeModelInfo.rpmLimitFree ?? 'Standard'}</strong></div>
+                                            <div>RPD: <strong>{activeModelInfo.rpdLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
+                                            <div>TPM: <strong>{activeModelInfo.tpmLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-rose-300 font-bold flex items-center gap-1.5">
+                                            <Info className="w-3.5 h-3.5" /> Not available
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SHARED SECTION: EVALUATION LANGUAGE */}
+            <div className="pt-6 border-t border-border space-y-4">
                 <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
                     <div className="flex items-center justify-between">
                         <label htmlFor="evaluation-language" className="text-label font-bold text-white flex items-center gap-1.5">
@@ -354,90 +838,16 @@ export const AiConfigurationSettings: React.FC = () => {
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Define a linguagem obrigatória injetada no prompt do Avaliador para resumos, notas de critérios e sugestões de melhoria (mesmo em conversas com prompts em inglês).
+                        Define o idioma obrigatório do relatório de avaliação (resumos, critérios e melhorias de prompt), independentemente do provedor utilizado.
                     </p>
-                </div>
-
-                <div className="border border-border/60 bg-background/45 p-5 rounded-lg space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Inspect Model Specs:
-                        </span>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setInspectingRole('evaluator')}
-                                className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                                    inspectingRole === 'evaluator'
-                                        ? 'bg-primary text-white font-bold shadow-sm'
-                                        : 'bg-background border border-border text-muted-foreground hover:text-white'
-                                }`}
-                            >
-                                Evaluator ({getGeminiModelDisplayName(selectedModel, discoveredModels)})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInspectingRole('mission')}
-                                className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                                    inspectingRole === 'mission'
-                                        ? 'bg-[#8B5CF6] text-white font-bold shadow-sm'
-                                        : 'bg-background border border-border text-muted-foreground hover:text-white'
-                                }`}
-                            >
-                                Mission Gen ({getGeminiModelDisplayName(selectedMissionModel, discoveredModels)})
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-start justify-between gap-2 pt-1">
-                        <h3 className="text-body text-white font-bold">{activeModelInfo.name}</h3>
-                        {!activeModelInfo.isFreeTier && (
-                            <span className="text-label px-2 py-1 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">
-                                Paid tier only
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-body text-muted-foreground max-w-[70ch]">
-                        {activeModelInfo.description}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/40">
-                        <div className="space-y-1.5">
-                            <span className="text-label text-muted-foreground">Paid pricing per 1M tokens</span>
-                            <div className="font-mono text-xs tabular-nums text-white space-y-1">
-                                <div>Input: <strong>{activeModelInfo.inputCostPaid} USD</strong></div>
-                                <div>Output: <strong>{activeModelInfo.outputCostPaid} USD</strong></div>
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <span className="text-label text-muted-foreground">Free tier</span>
-                            {activeModelInfo.isFreeTier ? (
-                                <div className="font-mono text-xs tabular-nums text-emerald-300 space-y-1">
-                                    <div>RPM: <strong>{activeModelInfo.rpmLimitFree ?? 'Standard'}</strong></div>
-                                    <div>RPD: <strong>{activeModelInfo.rpdLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
-                                    <div>TPM: <strong>{activeModelInfo.tpmLimitFree?.toLocaleString() ?? 'Standard'}</strong></div>
-                                </div>
-                            ) : (
-                                <div className="text-xs text-rose-300 font-bold flex items-center gap-1.5">
-                                    <Info className="w-3.5 h-3.5" /> Not available
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="pt-3 border-t border-border/40 text-xs text-muted-foreground font-mono space-y-1">
-                        <div>Context: <span className="text-slate-300">{activeModelInfo.contextLimit}</span></div>
-                        {activeModelInfo.releaseDate && (
-                            <div>Release: <span className="text-slate-300">{activeModelInfo.releaseDate}</span></div>
-                        )}
-                        <div>Pricing and limits follow Google AI Studio terms.</div>
-                    </div>
                 </div>
             </div>
 
+            {/* SAVE BUTTON */}
             <div className="pt-4 border-t border-border flex items-center gap-4">
-                <Button onClick={handleSave}>Save Settings</Button>
-                {saved && <span role="status" className="text-body text-emerald-400">Saved successfully</span>}
+                <Button onClick={handleSave}>Salvar Configurações</Button>
+                {saved && <span role="status" className="text-body text-emerald-400">Configurações salvas com sucesso!</span>}
             </div>
         </section>
     );
 };
-

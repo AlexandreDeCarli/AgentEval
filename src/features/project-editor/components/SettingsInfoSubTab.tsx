@@ -4,7 +4,9 @@ import { Input } from '../../../components/ui/Input';
 import { Project, TargetProvider } from '../../../types';
 import { 
     DEFAULT_GEMINI_TARGET_MODEL, 
+    DEFAULT_LITELLM_TARGET_MODEL,
     getProjectGeminiModel,
+    getProjectLiteLlmModel,
     getSuggestedGeminiTargetModels 
 } from '../../../utils/missionTarget';
 import { useSettingsStore } from '../../../store/useSettingsStore';
@@ -18,7 +20,7 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
     project,
     onChange,
 }) => {
-    const { discoveredModels } = useSettingsStore();
+    const { discoveredModels, discoveredLiteLlmModels, litellmBaseUrl } = useSettingsStore();
     const suggestedModels = getSuggestedGeminiTargetModels(discoveredModels);
 
     const handleTargetProviderChange = (value: TargetProvider) => {
@@ -32,11 +34,16 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                 value === 'gemini'
                     ? getProjectGeminiModel(updatedProject)
                     : project.target_gemini_model,
+            target_litellm_model:
+                value === 'litellm'
+                    ? getProjectLiteLlmModel(updatedProject)
+                    : project.target_litellm_model,
         });
     };
 
     const targetProvider = project.target_provider || 'http';
     const targetGeminiModel = project.target_gemini_model || DEFAULT_GEMINI_TARGET_MODEL;
+    const targetLiteLlmModel = project.target_litellm_model || DEFAULT_LITELLM_TARGET_MODEL;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
@@ -84,7 +91,7 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                     <div>
                         <label className="text-label text-slate-300 mb-1.5 flex items-center gap-1.5">
                             <span>Project Target Provider</span>
-                            <span title="Select whether your AI agent is accessed via an HTTP API Endpoint or directly instantiated using a standard Gemini LLM.">
+                            <span title="Select whether your AI agent is accessed via an HTTP API Endpoint or directly instantiated using Gemini or LiteLLM.">
                                 <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                             </span>
                         </label>
@@ -97,6 +104,7 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                         >
                             <option value="http">HTTP API</option>
                             <option value="gemini">Gemini</option>
+                            <option value="litellm">LiteLLM</option>
                         </select>
                         <p className="text-body text-muted-foreground mt-2">
                             This setting applies to all missions in the project. Missions only
@@ -144,13 +152,65 @@ export const SettingsInfoSubTab: React.FC<SettingsInfoSubTabProps> = ({
                                 </p>
                             </div>
                         </div>
+                    ) : targetProvider === 'litellm' ? (
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-label text-slate-300 mb-1 flex items-center gap-1.5">
+                                    <span>LiteLLM Target Model</span>
+                                    <span title="Specify which model from the LiteLLM proxy should be used as the target agent.">
+                                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                                    </span>
+                                </label>
+                                {discoveredLiteLlmModels.length > 0 ? (
+                                    <select
+                                        value={targetLiteLlmModel}
+                                        onChange={(e) =>
+                                            onChange({
+                                                ...project,
+                                                target_litellm_model: e.target.value,
+                                            })
+                                        }
+                                        className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer font-mono"
+                                    >
+                                        {!discoveredLiteLlmModels.some(m => m.id === targetLiteLlmModel) && targetLiteLlmModel && (
+                                            <option value={targetLiteLlmModel} className="bg-card font-mono">
+                                                {targetLiteLlmModel} (Custom)
+                                            </option>
+                                        )}
+                                        {discoveredLiteLlmModels.map((model) => (
+                                            <option key={model.id} value={model.id} className="bg-card font-mono">
+                                                {model.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <Input
+                                        value={targetLiteLlmModel}
+                                        onChange={(e) =>
+                                            onChange({
+                                                ...project,
+                                                target_litellm_model: e.target.value,
+                                            })
+                                        }
+                                        placeholder="gpt-4o-mini"
+                                        className="font-mono bg-[#1C2026]"
+                                    />
+                                )}
+                            </div>
+                            <div className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
+                                <p className="text-label text-white block mb-1">LiteLLM project mode</p>
+                                <p className="text-body text-muted-foreground">
+                                    AgentEval will call the target model via the LiteLLM proxy ({litellmBaseUrl}) using the API key configured in Settings.
+                                </p>
+                            </div>
+                        </div>
                     ) : (
                         <div className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
                             <p className="text-label text-white block mb-1">HTTP project mode</p>
                             <p className="text-body text-muted-foreground">
                                 Missions in this project will run against one of the
                                 environments configured in the Environments tab.
-                             </p>
+                            </p>
                         </div>
                     )}
                 </div>

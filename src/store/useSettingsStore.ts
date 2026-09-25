@@ -5,16 +5,24 @@ import { encryptApiKey, decryptApiKey } from '../utils/crypto';
 
 import { GeminiModelInfo, GEMINI_MODELS } from '../config/geminiModels';
 import { fetchAvailableGeminiModels } from '../services/geminiClient';
+import { AiProvider, LiteLlmModelInfo } from '../types';
+import {
+    DEFAULT_LITELLM_BASE_URL,
+    fetchAvailableLiteLlmModels,
+    normalizeLiteLlmBaseUrl,
+} from '../services/litellmClient';
 
 interface SettingsState {
+    aiProvider: AiProvider;
+    setAiProvider: (provider: AiProvider) => void;
+
+    // Gemini settings
     geminiApiKey: string;
     setGeminiApiKey: (key: string) => void;
     evaluatorModel: string;
     setEvaluatorModel: (model: string) => void;
     missionGeneratorModel: string;
     setMissionGeneratorModel: (model: string) => void;
-    evaluationLanguage: string;
-    setEvaluationLanguage: (lang: string) => void;
     discoveredModels: GeminiModelInfo[];
     setDiscoveredModels: (models: GeminiModelInfo[]) => void;
     refreshDiscoveredModels: (
@@ -25,19 +33,52 @@ interface SettingsState {
         totalCount: number;
         models: GeminiModelInfo[];
     }>;
+
+    // LiteLLM settings
+    litellmBaseUrl: string;
+    setLitellmBaseUrl: (url: string) => void;
+    litellmApiKey: string;
+    setLitellmApiKey: (key: string) => void;
+    litellmEvaluatorModel: string;
+    setLitellmEvaluatorModel: (model: string) => void;
+    litellmTesterModel: string;
+    setLitellmTesterModel: (model: string) => void;
+    litellmMissionGeneratorModel: string;
+    setLitellmMissionGeneratorModel: (model: string) => void;
+    discoveredLiteLlmModels: LiteLlmModelInfo[];
+    setDiscoveredLiteLlmModels: (models: LiteLlmModelInfo[]) => void;
+    refreshLiteLlmModels: (
+        baseUrlOverride?: string,
+        apiKeyOverride?: string,
+        signal?: AbortSignal
+    ) => Promise<{
+        newCount: number;
+        totalCount: number;
+        models: LiteLlmModelInfo[];
+    }>;
+
+    // General settings
+    evaluationLanguage: string;
+    setEvaluationLanguage: (lang: string) => void;
+
+    // Helper utilities
+    hasActiveApiKey: () => boolean;
+    getActiveApiKey: () => string;
 }
 
 export const useSettingsStore = create<SettingsState>()(
     persist(
         (set, get) => ({
+            aiProvider: 'gemini',
+            setAiProvider: (provider) => set({ aiProvider: provider }),
+
+            // Gemini defaults
             geminiApiKey: '',
             setGeminiApiKey: (key) => set({ geminiApiKey: key }),
             evaluatorModel: 'gemini-3.5-flash-lite',
             setEvaluatorModel: (model) => set({ evaluatorModel: model }),
             missionGeneratorModel: 'gemini-3.7-flash',
             setMissionGeneratorModel: (model) => set({ missionGeneratorModel: model }),
-            evaluationLanguage: 'pt-BR',
-            setEvaluationLanguage: (lang) => set({ evaluationLanguage: lang }),
             discoveredModels: [],
             setDiscoveredModels: (models) => set({ discoveredModels: models }),
             refreshDiscoveredModels: async (
@@ -46,7 +87,7 @@ export const useSettingsStore = create<SettingsState>()(
             ) => {
                 const key = apiKeyOverride?.trim() || get().geminiApiKey?.trim();
                 if (!key) {
-                    throw new Error('API Key is required to fetch available models.');
+                    throw new Error('API Key is required to fetch available Gemini models.');
                 }
                 const fetchedModels = await fetchAvailableGeminiModels(key, signal);
                 const currentDiscovered = get().discoveredModels || [];
@@ -63,7 +104,6 @@ export const useSettingsStore = create<SettingsState>()(
                     }
                 }
 
-                // Keep fetched models in store
                 set({ discoveredModels: fetchedModels });
 
                 return {
@@ -71,6 +111,82 @@ export const useSettingsStore = create<SettingsState>()(
                     totalCount: fetchedModels.length,
                     models: fetchedModels,
                 };
+            },
+
+            // LiteLLM defaults
+            litellmBaseUrl: DEFAULT_LITELLM_BASE_URL,
+            setLitellmBaseUrl: (url) => set({ litellmBaseUrl: normalizeLiteLlmBaseUrl(url) }),
+            litellmApiKey: '',
+            setLitellmApiKey: (key) => set({ litellmApiKey: key }),
+            litellmEvaluatorModel: 'gpt-4o-mini',
+            setLitellmEvaluatorModel: (model) => set({ litellmEvaluatorModel: model }),
+            litellmTesterModel: 'gpt-4o-mini',
+            setLitellmTesterModel: (model) => set({ litellmTesterModel: model }),
+            litellmMissionGeneratorModel: 'gpt-4o-mini',
+            setLitellmMissionGeneratorModel: (model) => set({ litellmMissionGeneratorModel: model }),
+            discoveredLiteLlmModels: [],
+            setDiscoveredLiteLlmModels: (models) => set({ discoveredLiteLlmModels: models }),
+            refreshLiteLlmModels: async (
+                baseUrlOverride?: string,
+                apiKeyOverride?: string,
+                signal?: AbortSignal
+            ) => {
+                const baseUrl = baseUrlOverride?.trim() || get().litellmBaseUrl?.trim() || DEFAULT_LITELLM_BASE_URL;
+                const apiKey = apiKeyOverride?.trim() || get().litellmApiKey?.trim();
+
+                if (!apiKey) {
+                    throw new Error('LiteLLM API Key is required to fetch available models.');
+                }
+
+                const fetchedModels = await fetchAvailableLiteLlmModels(baseUrl, apiKey, signal);
+                const currentDiscovered = get().discoveredLiteLlmModels || [];
+                const prevKnownIds = new Set(currentDiscovered.map((m) => m.id));
+
+                let newCount = 0;
+                for (const model of fetchedModels) {
+                    if (!prevKnownIds.has(model.id)) {
+                        newCount += 1;
+                    }
+                }
+
+                set({ discoveredLiteLlmModels: fetchedModels });
+
+                // If currently selected model is empty or default, pick the first discovered model
+                const currentEvalModel = get().litellmEvaluatorModel;
+                if ((!currentEvalModel || currentEvalModel === 'gpt-4o-mini') && fetchedModels.length > 0) {
+                    const preferred = fetchedModels.find(m => m.id.includes('gpt-4o') || m.id.includes('flash')) || fetchedModels[0];
+                    set({
+                        litellmEvaluatorModel: preferred.id,
+                        litellmTesterModel: preferred.id,
+                        litellmMissionGeneratorModel: preferred.id,
+                    });
+                }
+
+                return {
+                    newCount,
+                    totalCount: fetchedModels.length,
+                    models: fetchedModels,
+                };
+            },
+
+            // General
+            evaluationLanguage: 'pt-BR',
+            setEvaluationLanguage: (lang) => set({ evaluationLanguage: lang }),
+
+            hasActiveApiKey: () => {
+                const state = get();
+                if (state.aiProvider === 'litellm') {
+                    return Boolean(state.litellmApiKey && state.litellmApiKey.trim().length > 0);
+                }
+                return Boolean(state.geminiApiKey && state.geminiApiKey.trim().length > 0);
+            },
+
+            getActiveApiKey: () => {
+                const state = get();
+                if (state.aiProvider === 'litellm') {
+                    return state.litellmApiKey?.trim() || '';
+                }
+                return state.geminiApiKey?.trim() || '';
             },
         }),
         {
@@ -81,8 +197,13 @@ export const useSettingsStore = create<SettingsState>()(
                     if (!value) return null;
                     try {
                         const parsed = JSON.parse(value);
-                        if (parsed.state && parsed.state.geminiApiKey) {
-                            parsed.state.geminiApiKey = await decryptApiKey(parsed.state.geminiApiKey);
+                        if (parsed.state) {
+                            if (parsed.state.geminiApiKey) {
+                                parsed.state.geminiApiKey = await decryptApiKey(parsed.state.geminiApiKey);
+                            }
+                            if (parsed.state.litellmApiKey) {
+                                parsed.state.litellmApiKey = await decryptApiKey(parsed.state.litellmApiKey);
+                            }
                         }
                         return JSON.stringify(parsed);
                     } catch (e) {
@@ -93,8 +214,13 @@ export const useSettingsStore = create<SettingsState>()(
                 setItem: async (name, value) => {
                     try {
                         const parsed = JSON.parse(value);
-                        if (parsed.state && parsed.state.geminiApiKey) {
-                            parsed.state.geminiApiKey = await encryptApiKey(parsed.state.geminiApiKey);
+                        if (parsed.state) {
+                            if (parsed.state.geminiApiKey) {
+                                parsed.state.geminiApiKey = await encryptApiKey(parsed.state.geminiApiKey);
+                            }
+                            if (parsed.state.litellmApiKey) {
+                                parsed.state.litellmApiKey = await encryptApiKey(parsed.state.litellmApiKey);
+                            }
                         }
                         await fileStorage.setItem(name, JSON.stringify(parsed));
                     } catch (e) {
@@ -111,7 +237,7 @@ export const useSettingsStore = create<SettingsState>()(
                 return {
                     ...currentState,
                     ...typedState,
-                    // Preserve API key and discovered models from persisted state
+                    aiProvider: typedState?.aiProvider || currentState.aiProvider,
                     geminiApiKey: typedState?.geminiApiKey || currentState.geminiApiKey,
                     evaluatorModel: typedState?.evaluatorModel || currentState.evaluatorModel,
                     missionGeneratorModel: typedState?.missionGeneratorModel || currentState.missionGeneratorModel,
@@ -119,6 +245,14 @@ export const useSettingsStore = create<SettingsState>()(
                     discoveredModels: typedState?.discoveredModels?.length
                         ? typedState.discoveredModels
                         : currentState.discoveredModels,
+                    litellmBaseUrl: typedState?.litellmBaseUrl || currentState.litellmBaseUrl,
+                    litellmApiKey: typedState?.litellmApiKey || currentState.litellmApiKey,
+                    litellmEvaluatorModel: typedState?.litellmEvaluatorModel || currentState.litellmEvaluatorModel,
+                    litellmTesterModel: typedState?.litellmTesterModel || currentState.litellmTesterModel,
+                    litellmMissionGeneratorModel: typedState?.litellmMissionGeneratorModel || currentState.litellmMissionGeneratorModel,
+                    discoveredLiteLlmModels: typedState?.discoveredLiteLlmModels?.length
+                        ? typedState.discoveredLiteLlmModels
+                        : currentState.discoveredLiteLlmModels,
                 };
             },
         }
