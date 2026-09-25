@@ -268,8 +268,12 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 });
 
                 if (targetProvider === 'gemini') {
+                    const geminiKey = useSettingsStore.getState().geminiApiKey?.trim() || activeApiKey;
+                    if (!geminiKey) {
+                        throw new Error('Gemini API Key is missing for Target agent. Please configure it in Settings > AI Configuration.');
+                    }
                     const targetResponse = await generateGeminiTargetResponse(
-                        activeApiKey,
+                        geminiKey,
                         targetGeminiModel,
                         activeTargetSystemPrompt,
                         chatHistory,
@@ -289,7 +293,10 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     chatHistory.push(targetMsg);
                     useTestRunStore.getState().addMessage(runId, targetMsg);
                 } else if (targetProvider === 'litellm') {
-                    const litellmKey = useSettingsStore.getState().litellmApiKey || activeApiKey;
+                    const litellmKey = useSettingsStore.getState().litellmApiKey?.trim() || activeApiKey;
+                    if (!litellmKey) {
+                        throw new Error('LiteLLM API Key is missing for Target agent. Please configure it in Settings > AI Configuration.');
+                    }
                     const targetResponse = await generateLiteLlmTargetResponse(
                         litellmKey,
                         targetLiteLlmModel,
@@ -379,8 +386,11 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                 avg_time_to_complete_response_ms: Math.round(avgComplete),
             };
 
-            const evalModel = useSettingsStore.getState().evaluatorModel;
-            const evalLanguage = useSettingsStore.getState().evaluationLanguage;
+            const settings = useSettingsStore.getState();
+            const evalModel = settings.aiProvider === 'litellm'
+                ? (settings.litellmEvaluatorModel?.trim() || 'gpt-4o-mini')
+                : settings.evaluatorModel;
+            const evalLanguage = settings.evaluationLanguage;
 
             const evalResult = await generateEvaluation(
                 activeApiKey,

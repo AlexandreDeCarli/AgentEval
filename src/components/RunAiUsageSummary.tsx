@@ -16,7 +16,7 @@ export const RunAiUsageSummary: React.FC<{ runId: string }> = ({ runId }) => {
             <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
                     <h4 id={`run-ai-usage-${runId}`} className="text-title">AI Usage for This Run</h4>
-                    <p className="text-body text-muted-foreground mt-1">Estimated at paid Gemini Standard rates.</p>
+                    <p className="text-body text-muted-foreground mt-1">Estimated token consumption and standard rates.</p>
                 </div>
                 {summary.unpricedCalls > 0 && (
                     <span className="text-label text-amber-300">{summary.unpricedCalls} unpriced</span>

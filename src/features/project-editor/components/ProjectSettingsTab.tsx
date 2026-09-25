@@ -34,7 +34,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
         { key: 'info' as const, label: 'Basic Info' },
         { key: 'docs' as const, label: 'Documentation' },
         { key: 'prompts' as const, label: 'System Prompts' },
-        ...(targetProvider !== 'gemini' ? [{ key: 'environments' as const, label: 'Environments' }] : []),
+        ...(targetProvider === 'http' ? [{ key: 'environments' as const, label: 'Environments' }] : []),
     ];
 
     return (
@@ -98,7 +98,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
                 <SettingsPromptsSubTab project={project} onChange={onChange} />
             )}
 
-            {settingsTab === 'environments' && targetProvider !== 'gemini' && (
+            {settingsTab === 'environments' && targetProvider === 'http' && (
                 <SettingsEnvsSubTab project={project} onChange={onChange} />
             )}
         </div>

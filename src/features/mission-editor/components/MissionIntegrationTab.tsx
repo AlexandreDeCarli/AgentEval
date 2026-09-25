@@ -167,6 +167,23 @@ export const MissionIntegrationTab: React.FC<MissionIntegrationTabProps> = ({
                                 </p>
                             </div>
                         </div>
+                    ) : targetProvider === 'litellm' ? (
+                        <div className="space-y-3">
+                            <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                                <p className="text-body font-bold text-white">LiteLLM project target</p>
+                                <p className="text-body text-muted-foreground">
+                                    This mission will run directly against LiteLLM using the
+                                    project configuration.
+                                </p>
+                                <p className="text-body text-muted-foreground">
+                                    Model: <span className="font-mono">{targetLiteLlmModel || 'gpt-4o-mini'}</span>
+                                </p>
+                                <p className="text-body text-muted-foreground">
+                                    AgentEval reuses the LiteLLM API key and endpoint configured in Settings
+                                    for the target call.
+                                </p>
+                            </div>
+                        </div>
                     ) : (
                          <>
                             <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">

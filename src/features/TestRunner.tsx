@@ -14,8 +14,10 @@ import { enableMockService, resetMockService } from '../services/mockService';
 import { DebugLogEntry_ as DebugEntry } from '../components/DebugLogPanel';
 import {
     getMissionGeminiModel,
+    getMissionLiteLlmModel,
     getMissionTargetProvider,
     getProjectGeminiModel,
+    getProjectLiteLlmModel,
     getProjectTargetProvider,
 } from '../utils/missionTarget';
 
@@ -40,6 +42,12 @@ export const TestRunner: React.FC = () => {
             project
                 ? getProjectGeminiModel(project, mission)
                 : getMissionGeminiModel(mission)
+        }`
+        : mission && targetProvider === 'litellm'
+        ? `LiteLLM · ${
+            project
+                ? getProjectLiteLlmModel(project, mission)
+                : getMissionLiteLlmModel(mission)
         }`
         : 'HTTP API';
 
@@ -171,6 +179,8 @@ export const TestRunner: React.FC = () => {
                                 <div className="bg-muted text-muted-foreground text-body rounded-lg p-3 flex items-center gap-3">
                                     <Spinner className="w-4 h-4" /> {targetProvider === 'gemini'
                                         ? 'Gemini target is thinking...'
+                                        : targetProvider === 'litellm'
+                                        ? 'LiteLLM target is thinking...'
                                         : 'Target is typing (Polling...)'}
                                 </div>
                             </div>

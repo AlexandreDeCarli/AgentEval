@@ -283,7 +283,10 @@ ${languageInstruction}`.trim();
         const key = settings.litellmApiKey?.trim() || apiKey?.trim();
         if (!key) throw new Error('LiteLLM API Key is missing. Configure it in Settings > AI Configuration.');
 
-        const model = evalModel?.trim() || settings.litellmEvaluatorModel?.trim() || 'gpt-4o-mini';
+        const model =
+            (evalModel && evalModel !== settings.evaluatorModel)
+                ? evalModel.trim()
+                : (settings.litellmEvaluatorModel?.trim() || 'gpt-4o-mini');
 
         const jsonInstruction = `
 IMPORTANT: You MUST reply with a JSON object matching this structure:

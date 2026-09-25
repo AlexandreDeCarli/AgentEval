@@ -12,6 +12,7 @@ async function compileModules() {
             contents: `
                 export * from './src/services/litellmClient.ts';
                 export * from './src/utils/missionTarget.ts';
+                export * from './src/features/settings/aiUsageAnalytics.ts';
             `,
             resolveDir: path.resolve(__dirname, '..'),
             loader: 'ts',
@@ -119,7 +120,55 @@ async function runTests() {
     assert.equal(getMissionLiteLlmModel({ target_litellm_model: 'llama-3.3-70b' }), 'llama-3.3-70b');
     console.log('✓ Target provider resolution for LiteLLM passed');
 
-    // 5. Test Live Connection Check (CORS / HTTP response against https://llm.potencial.tec.br)
+    // 5. Test Run Usage Summary with litellm_target
+    const { summarizeRunUsage } = (await compileModules()).module;
+    const testEvents = [
+        {
+            id: 'e1',
+            runId: 'run-test-1',
+            routine: 'tester_conversation',
+            occurredAt: Date.now(),
+            inputTokens: 100,
+            outputTokens: 50,
+            totalTokens: 150,
+            estimatedCostUsd: 0.0001,
+            pricingStatus: 'priced',
+        },
+        {
+            id: 'e2',
+            runId: 'run-test-1',
+            routine: 'litellm_target',
+            occurredAt: Date.now(),
+            inputTokens: 200,
+            outputTokens: 100,
+            totalTokens: 300,
+            estimatedCostUsd: 0.0002,
+            pricingStatus: 'priced',
+        },
+        {
+            id: 'e3',
+            runId: 'run-test-1',
+            routine: 'evaluation',
+            occurredAt: Date.now(),
+            inputTokens: 500,
+            outputTokens: 200,
+            totalTokens: 700,
+            estimatedCostUsd: 0.0005,
+            pricingStatus: 'priced',
+        },
+    ];
+
+    const runSummary = summarizeRunUsage(testEvents, 'run-test-1');
+    assert.equal(runSummary.calls, 3);
+    assert.equal(runSummary.inputTokens, 800);
+    assert.equal(runSummary.outputTokens, 350);
+    // conversationCostUsd must sum both tester_conversation and litellm_target (0.0001 + 0.0002 = 0.0003)
+    assert.ok(Math.abs(runSummary.conversationCostUsd - 0.0003) < 0.000001);
+    assert.ok(Math.abs(runSummary.evaluationCostUsd - 0.0005) < 0.000001);
+    assert.ok(Math.abs(runSummary.totalCostUsd - 0.0008) < 0.000001);
+    console.log('✓ Run usage summary correctly aggregates litellm_target in conversation costs');
+
+    // 6. Test Live Connection Check (CORS / HTTP response against https://llm.potencial.tec.br)
     console.log('Testing live endpoint response from https://llm.potencial.tec.br...');
     const originalFetch = global.fetch;
     try {

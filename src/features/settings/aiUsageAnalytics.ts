@@ -77,7 +77,9 @@ export const summarizeRunUsage = (
     const summary = summarizeAiUsage(runEvents);
     const conversationCostUsd = runEvents.reduce(
         (total, event) =>
-            event.routine === 'tester_conversation' || event.routine === 'gemini_target'
+            event.routine === 'tester_conversation' ||
+            event.routine === 'gemini_target' ||
+            event.routine === 'litellm_target'
                 ? total + (event.estimatedCostUsd || 0)
                 : total,
         0

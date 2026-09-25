@@ -9,6 +9,10 @@ import { Badge } from './ui/Badge';
 import {
     getProjectTargetProvider,
     getProjectGeminiModel,
+    getProjectLiteLlmModel,
+    getMissionTargetProvider,
+    getMissionGeminiModel,
+    getMissionLiteLlmModel,
 } from '../utils/missionTarget';
 
 interface MissionCardProps {
@@ -41,9 +45,16 @@ export const MissionCard: React.FC<MissionCardProps> = ({
     const prompt = project?.system_prompts?.find((sp) => sp.id === mission.system_prompt_id);
     const env = project?.environments?.find((e) => e.id === mission.environment_id);
 
-    // Target configuration (supporting gemini project settings/mission overrides)
-    const targetProvider = mission.target_provider || getProjectTargetProvider(project || undefined);
-    const targetGeminiModel = mission.target_gemini_model || getProjectGeminiModel(project || undefined);
+    // Target configuration (supporting gemini/litellm project settings/mission overrides)
+    const targetProvider = project
+        ? getProjectTargetProvider(project, mission)
+        : getMissionTargetProvider(mission);
+    const targetGeminiModel = project
+        ? getProjectGeminiModel(project, mission)
+        : getMissionGeminiModel(mission);
+    const targetLiteLlmModel = project
+        ? getProjectLiteLlmModel(project, mission)
+        : getMissionLiteLlmModel(mission);
 
     // Get the last 3 completed runs for the stability pills
     const missionRuns = runs
@@ -132,6 +143,10 @@ export const MissionCard: React.FC<MissionCardProps> = ({
                     {targetProvider === 'gemini' ? (
                         <Badge variant="outline" className="border-slate-700 text-slate-400">
                             Gemini · {targetGeminiModel}
+                        </Badge>
+                    ) : targetProvider === 'litellm' ? (
+                        <Badge variant="outline" className="border-slate-700 text-slate-400">
+                            LiteLLM · {targetLiteLlmModel}
                         </Badge>
                     ) : env && (
                         <Badge variant="outline" className="border-slate-700 text-slate-400">
