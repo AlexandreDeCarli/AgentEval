@@ -63,6 +63,7 @@ async function runTests() {
             environments: [],
             cloud_sync: {
                 syncId: 'sac-bot',
+                passkey: 'local-machine-passkey-123',
                 syncKeyEncrypted: 'sensitive-machine-local-token',
                 lastSyncedAt: '2026-09-24T12:00:00.000Z',
                 workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
@@ -99,7 +100,8 @@ async function runTests() {
         assert.equal(bundle.project.id, 'proj-123');
         assert.equal(bundle.missions.length, 1);
         assert.equal(bundle.missions[0].id, 'm1');
-        // Machine-local encrypted token must be stripped
+        // Machine-local encrypted token and local passkey must be stripped from bundle
+        assert.equal(bundle.project.cloud_sync.passkey, undefined);
         assert.equal(bundle.project.cloud_sync.syncKeyEncrypted, undefined);
 
         // 2. Encryption and Decryption Round-Trip

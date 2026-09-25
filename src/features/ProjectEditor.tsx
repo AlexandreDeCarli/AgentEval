@@ -202,17 +202,22 @@ export const ProjectEditor: React.FC = () => {
         setSearchParams(nextSearchParams, { replace: true });
     };
 
-    const handleSave = useCallback(() => {
-        if (!project) return;
-        if (!project.name || project.name.trim() === '') {
+    const handleSave = useCallback((projectToSave?: Project) => {
+        const target = projectToSave || project;
+        if (!target) return;
+        if (!target.name || target.name.trim() === '') {
             addToast('Project Name is required', 'error');
             setActiveTab('settings');
             setSettingsTab('info');
             return;
         }
 
+        if (projectToSave && projectToSave !== project) {
+            setProject(projectToSave);
+        }
+
         // Informational checks for System Prompts (do not block draft save)
-        for (const prompt of project.system_prompts) {
+        for (const prompt of target.system_prompts) {
             if (!prompt.name || prompt.name.trim() === '') {
                 prompt.name = 'Untitled Prompt';
             }
@@ -222,18 +227,18 @@ export const ProjectEditor: React.FC = () => {
         }
 
         // Informational checks for Environments (do not block draft save)
-        for (const env of project.environments) {
+        for (const env of target.environments) {
             if (!env.name || env.name.trim() === '') {
                 env.name = 'Untitled Environment';
             }
-            if (project.target_provider === 'http' && (!env.api_config?.post_url || env.api_config.post_url.trim() === '')) {
+            if (target.target_provider === 'http' && (!env.api_config?.post_url || env.api_config.post_url.trim() === '')) {
                 addToast(`Notice: Environment "${env.name}" requires a POST URL before executing tests.`, 'info');
             }
         }
 
         try {
-            updateProject(project.id, project);
-            useMissionStore.getState().syncProjectSystemPrompts(project.id, project.system_prompts);
+            updateProject(target.id, target);
+            useMissionStore.getState().syncProjectSystemPrompts(target.id, target.system_prompts);
 
             // Direct synchronous localStorage write safety net with auto-eviction
             const storage = getLocalStorage();
@@ -241,10 +246,10 @@ export const ProjectEditor: React.FC = () => {
                 const currentRaw = storage.getItem('agent-qa-projects');
                 const currentState = currentRaw ? JSON.parse(currentRaw) : { state: { projects: [] }, version: 0 };
                 const currentProjects = Array.isArray(currentState?.state?.projects) ? currentState.state.projects : [];
-                const exists = currentProjects.some((p: Project) => p.id === project.id);
+                const exists = currentProjects.some((p: Project) => p.id === target.id);
                 const updatedProjects = exists
-                    ? currentProjects.map((p: Project) => p.id === project.id ? project : p)
-                    : [...currentProjects, project];
+                    ? currentProjects.map((p: Project) => p.id === target.id ? target : p)
+                    : [...currentProjects, target];
                 safeLocalStorageSet('agent-qa-projects', JSON.stringify({
                     ...currentState,
                     state: {
@@ -256,7 +261,7 @@ export const ProjectEditor: React.FC = () => {
                 }));
             }
 
-            savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(project));
+            savedDataRef.current = JSON.stringify(normalizeProjectTargetConfig(target));
             setIsDirty(false);
             setSaveStatus('saved');
             addToast('Project saved successfully!', 'success');
@@ -361,7 +366,7 @@ export const ProjectEditor: React.FC = () => {
                         )}
                         <button
                             id="save-project-btn"
-                            onClick={handleSave}
+                            onClick={() => handleSave()}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                                 isDirty
                                     ? 'bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] text-white shadow-md hover:scale-[1.02] active:scale-[0.98]'

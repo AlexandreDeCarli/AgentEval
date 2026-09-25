@@ -2,6 +2,7 @@ import { Project, Mission } from './index';
 
 export interface ProjectCloudSyncConfig {
     syncId: string;
+    passkey?: string;
     syncKeyEncrypted?: string;
     lastSyncedAt?: string;
     workerUrl?: string;

@@ -79,6 +79,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                 ...bundle.project,
                 cloud_sync: {
                     syncId: syncId.trim(),
+                    passkey: passkey.trim(),
                     workerUrl: workerUrl.trim() || defaultWorkerUrl,
                     lastSyncedAt: new Date().toISOString(),
                 },

@@ -30,7 +30,7 @@ import {
 interface SettingsSyncSubTabProps {
     project: Project;
     onChange: (project: Project) => void;
-    onSave: () => void;
+    onSave: (projectToSave?: Project) => void;
 }
 
 export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
@@ -44,11 +44,12 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
     const defaultWorkerUrl = syncWorkerUrl || 'https://agenteval-sync.alexandre-23b.workers.dev';
 
-    // Local form state
-    const [syncId, setSyncId] = useState(project.cloud_sync?.syncId || '');
-    const [passkey, setPasskey] = useState('');
+    // Synchronize form values directly with project.cloud_sync (single source of truth)
+    const syncId = project.cloud_sync?.syncId || '';
+    const passkey = project.cloud_sync?.passkey || '';
+    const workerUrl = project.cloud_sync?.workerUrl || defaultWorkerUrl;
+
     const [showPasskey, setShowPasskey] = useState(false);
-    const [workerUrl, setWorkerUrl] = useState(project.cloud_sync?.workerUrl || defaultWorkerUrl);
     const [showAdvancedUrl, setShowAdvancedUrl] = useState(false);
 
     // Operation states
@@ -64,6 +65,37 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
     const projectMissions = missions.filter((m) => m.project_id === project.id);
     const lastSyncedAt = project.cloud_sync?.lastSyncedAt;
 
+    const updateCloudSync = (patch: Partial<{ syncId: string; passkey: string; workerUrl: string; lastSyncedAt: string }>) => {
+        const nextSyncId = patch.syncId !== undefined ? patch.syncId : syncId;
+        const nextPasskey = patch.passkey !== undefined ? patch.passkey : passkey;
+        const nextWorkerUrl = patch.workerUrl !== undefined ? patch.workerUrl : workerUrl;
+        const nextLastSyncedAt = patch.lastSyncedAt !== undefined ? patch.lastSyncedAt : lastSyncedAt;
+
+        const hasConfig = Boolean(
+            nextSyncId.trim() ||
+            nextPasskey.trim() ||
+            (nextWorkerUrl && nextWorkerUrl !== defaultWorkerUrl) ||
+            nextLastSyncedAt
+        );
+
+        if (!hasConfig) {
+            const { cloud_sync: _, ...rest } = project;
+            onChange(rest as Project);
+            return;
+        }
+
+        onChange({
+            ...project,
+            cloud_sync: {
+                ...project.cloud_sync,
+                syncId: nextSyncId,
+                passkey: nextPasskey,
+                workerUrl: nextWorkerUrl || defaultWorkerUrl,
+                ...(nextLastSyncedAt ? { lastSyncedAt: nextLastSyncedAt } : {}),
+            },
+        });
+    };
+
     const generateRandomSyncId = () => {
         const randomPart = Math.random().toString(36).substring(2, 8);
         const nameSlug = (project.name || 'project')
@@ -74,7 +106,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
             .replace(/^-+|-+$/g, '')
             .slice(0, 16);
         const newId = `${nameSlug || 'project'}-${randomPart}`;
-        setSyncId(newId);
+        updateCloudSync({ syncId: newId });
         setStatusFeedback(null);
     };
 
@@ -134,7 +166,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
         try {
             const pushResult = await pushProjectToCloud({
-                workerUrl: workerUrl.trim() || defaultWorkerUrl,
+                workerUrl: (workerUrl || defaultWorkerUrl).trim(),
                 syncId: syncId.trim(),
                 passkey: passkey.trim(),
                 project,
@@ -144,14 +176,16 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
             const updatedProject: Project = {
                 ...project,
                 cloud_sync: {
+                    ...project.cloud_sync,
                     syncId: syncId.trim(),
-                    workerUrl: workerUrl.trim() || defaultWorkerUrl,
+                    passkey: passkey.trim(),
+                    workerUrl: (workerUrl || defaultWorkerUrl).trim(),
                     lastSyncedAt: pushResult.syncedAt,
                 },
             };
 
             onChange(updatedProject);
-            onSave();
+            onSave(updatedProject);
 
             setStatusFeedback({
                 type: 'success',
@@ -185,7 +219,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
         try {
             const bundle = await pullProjectFromCloud({
-                workerUrl: workerUrl.trim() || defaultWorkerUrl,
+                workerUrl: (workerUrl || defaultWorkerUrl).trim(),
                 syncId: syncId.trim(),
                 passkey: passkey.trim(),
             });
@@ -201,8 +235,10 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                 system_prompts: bundle.project.system_prompts || project.system_prompts,
                 environments: bundle.project.environments || project.environments,
                 cloud_sync: {
+                    ...project.cloud_sync,
                     syncId: syncId.trim(),
-                    workerUrl: workerUrl.trim() || defaultWorkerUrl,
+                    passkey: passkey.trim(),
+                    workerUrl: (workerUrl || defaultWorkerUrl).trim(),
                     lastSyncedAt: new Date().toISOString(),
                 },
             };
@@ -216,7 +252,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
             }
 
             onChange(updatedProject);
-            onSave();
+            onSave(updatedProject);
 
             setStatusFeedback({
                 type: 'success',
@@ -315,7 +351,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                         <Input
                             value={syncId}
                             onChange={(e) => {
-                                setSyncId(e.target.value);
+                                updateCloudSync({ syncId: e.target.value });
                                 setStatusFeedback(null);
                             }}
                             placeholder="e.g. customer-support-agent"
@@ -339,7 +375,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                 type={showPasskey ? 'text' : 'password'}
                                 value={passkey}
                                 onChange={(e) => {
-                                    setPasskey(e.target.value);
+                                    updateCloudSync({ passkey: e.target.value });
                                     setStatusFeedback(null);
                                 }}
                                 placeholder="Enter project secret passkey"
@@ -354,9 +390,14 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                 {showPasskey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            Required to encrypt/decrypt project data. Keep this password safe.
-                        </p>
+                        <div className="text-xs text-muted-foreground flex items-center justify-between">
+                            <span>Required to encrypt/decrypt project data. Keep this password safe.</span>
+                            {passkey ? (
+                                <span className="text-emerald-400 text-[11px] font-medium flex items-center gap-1 shrink-0 ml-2">
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Saved locally with project
+                                </span>
+                            ) : null}
+                        </div>
                     </div>
 
                     {/* Copy Share Instructions Button */}
@@ -403,7 +444,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                     {workerUrl !== defaultWorkerUrl && (
                                         <button
                                             type="button"
-                                            onClick={() => setWorkerUrl(defaultWorkerUrl)}
+                                            onClick={() => updateCloudSync({ workerUrl: defaultWorkerUrl })}
                                             className="text-xs text-primary hover:underline cursor-pointer"
                                         >
                                             Reset to Default
@@ -412,7 +453,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                 </div>
                                 <Input
                                     value={workerUrl}
-                                    onChange={(e) => setWorkerUrl(e.target.value)}
+                                    onChange={(e) => updateCloudSync({ workerUrl: e.target.value })}
                                     placeholder="https://agenteval-sync.alexandre-23b.workers.dev"
                                     className="font-mono text-xs bg-background"
                                 />
