@@ -506,7 +506,7 @@ export default {
 
 **Step 2: Add `syncWorkerUrl` to `src/store/useSettingsStore.ts`**
 
-Add default URL (fallback to `https://sync.potencial.tec.br` or empty string) with getter and setter.
+Add default URL (fallback to `https://agenteval-sync.alexandre-23b.workers.dev` or empty string) with getter and setter.
 
 **Step 3: Implement `src/services/cloudSyncClient.ts`**
 
@@ -618,7 +618,7 @@ git commit -m "feat(sync): add Import from Cloud modal and sync indicators to Pr
 
 **Step 1: Add default Sync Worker URL in App Settings**
 
-Add input field for `URL Padrão do Worker de Sincronização` in Settings > AI / Workspace, allowing the user to configure `https://sync.potencial.tec.br` once for the whole app.
+Add input field for `URL Padrão do Worker de Sincronização` in Settings > AI / Workspace, allowing the user to configure `https://agenteval-sync.alexandre-23b.workers.dev` once for the whole app.
 
 **Step 2: Write setup guide in `docs/CLOUDFLARE_R2_SYNC_SETUP.md`**
 
