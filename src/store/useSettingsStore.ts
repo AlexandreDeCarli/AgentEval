@@ -178,7 +178,7 @@ export const useSettingsStore = create<SettingsState>()(
             setEvaluationLanguage: (lang) => set({ evaluationLanguage: lang }),
 
             // Sync
-            syncWorkerUrl: 'https://sync.potencial.tec.br',
+            syncWorkerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
             setSyncWorkerUrl: (url) => set({ syncWorkerUrl: url }),
 
             hasActiveApiKey: () => {

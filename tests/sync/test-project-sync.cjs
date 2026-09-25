@@ -65,7 +65,7 @@ async function runTests() {
                 syncId: 'sac-bot',
                 syncKeyEncrypted: 'sensitive-machine-local-token',
                 lastSyncedAt: '2026-09-24T12:00:00.000Z',
-                workerUrl: 'https://sync.potencial.tec.br',
+                workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
             },
         };
         const dummyMissions = [
@@ -233,7 +233,7 @@ async function runTests() {
         try {
             // Push via client
             const pushRes = await clientModule.pushProjectToCloud({
-                workerUrl: 'https://sync.potencial.tec.br',
+                workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
                 syncId: 'sac-bot',
                 passkey: 'senha-123',
                 project: dummyProject,
@@ -250,7 +250,7 @@ async function runTests() {
 
             // Status check via client
             const statusRes = await clientModule.checkCloudProjectStatus({
-                workerUrl: 'https://sync.potencial.tec.br',
+                workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
                 syncId: 'sac-bot',
                 passkey: 'senha-123',
                 orgSecret: 'empresa-secret-token',
@@ -260,7 +260,7 @@ async function runTests() {
 
             // Pull via client
             const pulledBundle = await clientModule.pullProjectFromCloud({
-                workerUrl: 'https://sync.potencial.tec.br',
+                workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
                 syncId: 'sac-bot',
                 passkey: 'senha-123',
                 orgSecret: 'empresa-secret-token',
@@ -275,7 +275,7 @@ async function runTests() {
             await assert.rejects(
                 async () => {
                     await clientModule.pullProjectFromCloud({
-                        workerUrl: 'https://sync.potencial.tec.br',
+                        workerUrl: 'https://agenteval-sync.alexandre-23b.workers.dev',
                         syncId: 'sac-bot',
                         passkey: 'outra-senha',
                         orgSecret: 'empresa-secret-token',
