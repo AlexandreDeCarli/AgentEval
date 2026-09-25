@@ -36,6 +36,9 @@ export interface Environment {
     api_config: ApiConfig;
 }
 
+import { ProjectCloudSyncConfig } from './cloudSync';
+export * from './cloudSync';
+
 export interface Project {
     id: string;
     name: string;
@@ -46,6 +49,7 @@ export interface Project {
     target_litellm_model?: string;
     system_prompts: SystemPrompt[];
     environments: Environment[];
+    cloud_sync?: ProjectCloudSyncConfig;
 }
 
 export interface Mission {
