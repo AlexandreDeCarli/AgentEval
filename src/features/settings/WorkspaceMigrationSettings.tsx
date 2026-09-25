@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Download, ShieldAlert, Upload } from 'lucide-react';
+import { Download, ShieldAlert, Upload, Cloud, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ConfirmDeleteModal } from '../../components/ui/ConfirmDeleteModal';
 import {
     ConfigurationTransferData,
@@ -26,6 +27,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         litellmEvaluatorModel,
         litellmTesterModel,
         litellmMissionGeneratorModel,
+        syncWorkerUrl,
         setAiProvider,
         setGeminiApiKey,
         setEvaluatorModel,
@@ -36,11 +38,46 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         setLitellmEvaluatorModel,
         setLitellmTesterModel,
         setLitellmMissionGeneratorModel,
+        setSyncWorkerUrl,
     } = useSettingsStore();
     const addToast = useToastStore((state) => state.addToast);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [includeApiKey, setIncludeApiKey] = useState(false);
     const [pendingImport, setPendingImport] = useState<ConfigurationTransferData | null>(null);
+
+    // Sync Worker URL state
+    const [workerUrlInput, setWorkerUrlInput] = useState(
+        syncWorkerUrl || 'https://agenteval-sync.alexandre-23b.workers.dev'
+    );
+    const [isTestingUrl, setIsTestingUrl] = useState(false);
+    const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+    const handleTestWorkerUrl = async () => {
+        setIsTestingUrl(true);
+        setTestResult(null);
+        try {
+            let clean = workerUrlInput.trim();
+            if (!/^https?:\/\//i.test(clean)) clean = `https://${clean}`;
+            const res = await fetch(clean, { method: 'OPTIONS' });
+            if (res.ok) {
+                setTestResult({ ok: true, msg: 'Conexão com o Worker estabelecida com sucesso! (CORS OK)' });
+            } else {
+                setTestResult({ ok: false, msg: `Worker respondeu com status ${res.status}.` });
+            }
+        } catch (e: unknown) {
+            setTestResult({ ok: false, msg: e instanceof Error ? e.message : 'Falha na conexão.' });
+        } finally {
+            setIsTestingUrl(false);
+        }
+    };
+
+    const handleSaveWorkerUrl = () => {
+        let clean = workerUrlInput.trim();
+        if (!clean) clean = 'https://agenteval-sync.alexandre-23b.workers.dev';
+        setSyncWorkerUrl(clean);
+        setWorkerUrlInput(clean);
+        addToast('URL do Worker de sincronização salva com sucesso!', 'success');
+    };
 
     const handleExport = useCallback(() => {
         const exported = createConfigurationExport({
@@ -167,7 +204,8 @@ export const WorkspaceMigrationSettings: React.FC = () => {
     ]);
 
     return (
-        <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">
+        <div className="space-y-6">
+            <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-3">
                     <h2 className="text-title flex items-center gap-2">
@@ -238,5 +276,76 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                 />
             )}
         </section>
+
+        {/* Cloud Sync Gateway Section */}
+        <section className="max-w-3xl border border-border bg-card rounded-xl p-6 space-y-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1.5">
+                    <h2 className="text-title flex items-center gap-2">
+                        <Cloud className="w-5 h-5 text-primary" /> Gateway de Sincronização em Nuvem (Cloud Sync)
+                    </h2>
+                    <p className="text-body text-muted-foreground max-w-[75ch]">
+                        Configuração global do Cloudflare Worker para sincronizar projetos e missões entre dispositivos com criptografia zero-knowledge (AES-256-GCM).
+                    </p>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-label text-slate-300 block">
+                    URL Padrão do Worker de Sincronização
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <Input
+                        value={workerUrlInput}
+                        onChange={(e) => {
+                            setWorkerUrlInput(e.target.value);
+                            setTestResult(null);
+                        }}
+                        placeholder="https://agenteval-sync.alexandre-23b.workers.dev"
+                        className="font-mono text-sm bg-background/60 border-border/60 text-white flex-1"
+                    />
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleTestWorkerUrl}
+                            disabled={isTestingUrl}
+                            className="gap-2 text-xs h-10 px-3 cursor-pointer"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isTestingUrl ? 'animate-spin' : ''}`} />
+                            <span>{isTestingUrl ? 'Testando...' : 'Testar Conexão'}</span>
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleSaveWorkerUrl}
+                            className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white font-bold text-xs h-10 px-4 cursor-pointer shadow-sm"
+                        >
+                            Salvar
+                        </Button>
+                    </div>
+                </div>
+                <p className="text-caption text-muted-foreground">
+                    Padrão: <span className="text-slate-300 font-mono">https://agenteval-sync.alexandre-23b.workers.dev</span>
+                </p>
+            </div>
+
+            {testResult && (
+                <div
+                    className={`p-3.5 rounded-lg border flex items-center gap-2.5 animate-fade-in text-caption font-medium ${
+                        testResult.ok
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                    }`}
+                >
+                    {testResult.ok ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    )}
+                    <span>{testResult.msg}</span>
+                </div>
+            )}
+        </section>
+        </div>
     );
 };
