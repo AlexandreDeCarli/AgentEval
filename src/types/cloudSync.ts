@@ -22,12 +22,14 @@ export interface CloudSyncPushOptions {
     passkey: string;
     project: Project;
     missions: Mission[];
+    orgSecret?: string;
 }
 
 export interface CloudSyncPullOptions {
     workerUrl: string;
     syncId: string;
     passkey: string;
+    orgSecret?: string;
 }
 
 export interface CloudSyncStatusResult {
