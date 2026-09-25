@@ -54,16 +54,16 @@ const buildGeminiConversation = (chatHistory: ChatMessage[]) => {
 };
 
 const fallbackExtractTesterMessage = (cleaned: string): TesterResponsePayload | null => {
-    if (!cleaned) return null;
+    if (!cleaned || cleaned.trim() === '...') return null;
 
     const messageMatch = cleaned.match(
-        /(?:^|\n)\s*(?:message|mensagem)\s*[:=]\s*(?:["']?)([\s\S]*?)(?:["']?\s*(?:(?:\n\s*(?:reasoning|missionCompleted|mission_completed|status))|$))/i
+        /(?:^|\n)\s*(?:message|mensagem)\s*[:=]\s*(?:["']?)([\s\S]*?)(?:["']?\s*(?:(?:\n\s*(?:reasoning|raciocinio|missionCompleted|mission_completed|status))|$))/i
     );
     const completedMatch = cleaned.match(
-        /(?:missionCompleted|mission_completed)\s*[:=]\s*(true|false)/i
+        /(?:missionCompleted|mission_completed|missaoConcluida|missao_concluida)\s*[:=]\s*(true|false)/i
     );
 
-    if (messageMatch && messageMatch[1].trim()) {
+    if (messageMatch && messageMatch[1].trim() && messageMatch[1].trim() !== '...') {
         return {
             message: messageMatch[1].trim(),
             missionCompleted: completedMatch ? completedMatch[1].toLowerCase() === 'true' : false,
@@ -72,12 +72,128 @@ const fallbackExtractTesterMessage = (cleaned: string): TesterResponsePayload | 
 
     if (!cleaned.startsWith('{') && !cleaned.startsWith('[') && !cleaned.startsWith('```')) {
         return {
-            message: cleaned,
+            message: cleaned.trim(),
             missionCompleted: false,
         };
     }
 
     return null;
+};
+
+export const extractTesterMessageAndStatus = (
+    parsed: unknown,
+    _persona?: string,
+    goal?: string
+): { message: string; missionCompleted: boolean } => {
+    if (!parsed || typeof parsed !== 'object') {
+        return {
+            message: goal ? `Hello, I need assistance regarding: ${goal}` : '',
+            missionCompleted: false,
+        };
+    }
+
+    const obj = parsed as Record<string, unknown>;
+
+    // 1. Mission completed flag resolution across languages and schemas
+    const missionCompleted = Boolean(
+        obj.missionCompleted ??
+        obj.mission_completed ??
+        obj.completed ??
+        obj.isCompleted ??
+        obj.concluido ??
+        obj.missaoConcluida ??
+        obj.missao_concluida ??
+        obj.finalizado ??
+        false
+    );
+
+    // 2. Candidate message keys across schemas and languages
+    const candidateKeys = [
+        'message',
+        'mensagem',
+        'msg',
+        'response',
+        'resposta',
+        'reply',
+        'text',
+        'texto',
+        'content',
+        'conteudo',
+        'tester_message',
+        'testerMessage',
+        'next_message',
+        'nextMessage',
+        'prompt',
+        'user_message',
+        'userMessage',
+        'output',
+        'utterance'
+    ];
+
+    let messageText: string | undefined;
+
+    for (const key of candidateKeys) {
+        const val = obj[key];
+        if (typeof val === 'string' && val.trim() && val.trim() !== '...') {
+            messageText = val.trim();
+            break;
+        } else if (val && typeof val === 'object') {
+            const nested = val as Record<string, unknown>;
+            for (const subKey of ['text', 'content', 'message', 'mensagem', 'value']) {
+                if (typeof nested[subKey] === 'string' && (nested[subKey] as string).trim() && (nested[subKey] as string).trim() !== '...') {
+                    messageText = (nested[subKey] as string).trim();
+                    break;
+                }
+            }
+            if (messageText) break;
+        }
+    }
+
+    // 3. If message is still empty, look for any string property that isn't reasoning/thought
+    if (!messageText) {
+        for (const [key, val] of Object.entries(obj)) {
+            if (
+                typeof val === 'string' &&
+                val.trim() &&
+                val.trim() !== '...' &&
+                !['reasoning', 'raciocinio', 'thought', 'think', 'justification', 'status', 'explicacao'].includes(key.toLowerCase())
+            ) {
+                messageText = val.trim();
+                break;
+            }
+        }
+    }
+
+    // 4. If missionCompleted is true and no message was provided, return empty string (clean completion)
+    if (!messageText && missionCompleted) {
+        return {
+            message: '',
+            missionCompleted: true,
+        };
+    }
+
+    // 5. If mission is NOT completed, but message is still empty, try to salvage from reasoning or goal
+    if (!messageText) {
+        const reasoning = (typeof obj.reasoning === 'string' ? obj.reasoning : '') ||
+                          (typeof obj.raciocinio === 'string' ? obj.raciocinio : '');
+        if (reasoning.trim() && reasoning.trim() !== '...') {
+            const quotedMatch = reasoning.match(/["']([^"']{5,})["']/);
+            if (quotedMatch && quotedMatch[1].trim()) {
+                messageText = quotedMatch[1].trim();
+            } else {
+                messageText = reasoning.trim();
+            }
+        } else if (goal) {
+            messageText = `Hello, I need assistance regarding: ${goal}`;
+        } else {
+            messageText = '';
+        }
+    }
+
+    return {
+        message: messageText,
+        missionCompleted,
+    };
 };
 
 export const generateTesterMessage = async (
@@ -108,6 +224,7 @@ RULES FOR GENERATING YOUR NEXT MESSAGE AND DETERMINING "missionCompleted":
    - Stay in persona.
    - Advance the conversation towards fulfilling the MISSION GOAL.
    - If the TARGET asked a question or requested details (e.g., ID, order number, confirmation), provide the requested information if allowed by your persona.
+   - NEVER output "..." or empty placeholders when speaking to the TARGET.
 
 2. RULES FOR "missionCompleted" (CRITICAL ANALYSIS):
    - Set "missionCompleted" to TRUE ONLY IF the TARGET agent has FULLY satisfied and completed the MISSION GOAL in the chat history.
@@ -118,9 +235,9 @@ RULES FOR GENERATING YOUR NEXT MESSAGE AND DETERMINING "missionCompleted":
      d) The scenario requires multi-turn interaction and all steps have not been completed by the TARGET.
    - DO NOT set "missionCompleted" to true prematurely.
 
-Output JSON with:
+Output JSON with keys strictly in English:
 - "reasoning": A brief evaluation of whether the TARGET agent has fully satisfied the goal yet.
-- "message": Your next message to the TARGET.
+- "message": Your next message to the TARGET (or brief polite closing if goal is already satisfied).
 - "missionCompleted": boolean (strictly following the rules above).
 `.trim();
 
@@ -167,10 +284,7 @@ Output JSON with:
             errorContext: `TesterAgent (${model})`,
         });
 
-        return {
-            message: parsed.message || '...',
-            missionCompleted: !!parsed.missionCompleted,
-        };
+        return extractTesterMessageAndStatus(parsed, persona, goal);
     }
 
     // Google Gemini Provider
@@ -228,10 +342,7 @@ Output JSON with:
         provider: 'gemini',
     });
 
-    return {
-        message: parsed.message || '...',
-        missionCompleted: !!parsed.missionCompleted,
-    };
+    return extractTesterMessageAndStatus(parsed, persona, goal);
 };
 
 export const generateEvaluation = async (

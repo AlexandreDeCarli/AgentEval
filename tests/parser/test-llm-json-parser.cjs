@@ -111,6 +111,46 @@ Thanks!",
     assert.equal(test7.missionCompleted, false);
     console.log('✓ Fallback conversational tester extraction passed');
 
+    // 8. Portuguese keys extraction (mensagem, missaoConcluida)
+    const { extractTesterMessageAndStatus } = module;
+    const test8 = extractTesterMessageAndStatus({
+        raciocinio: 'Pedir informações sobre voo',
+        mensagem: 'Olá, qual o horário do voo para São Paulo?',
+        missaoConcluida: false,
+    }, 'Viajante', 'Consultar voos');
+    assert.equal(test8.message, 'Olá, qual o horário do voo para São Paulo?');
+    assert.equal(test8.missionCompleted, false);
+    console.log('✓ Portuguese keys extraction passed');
+
+    // 9. Model output literal "..." as placeholder -> sanitized to reasoning or inquiry
+    const test9 = extractTesterMessageAndStatus({
+        reasoning: 'I need to ask for the store hours',
+        message: '...',
+        missionCompleted: false,
+    }, 'Customer', 'Find store hours');
+    assert.notEqual(test9.message, '...');
+    assert.ok(test9.message.length > 5);
+    assert.equal(test9.missionCompleted, false);
+    console.log('✓ Literal "..." placeholder sanitized');
+
+    // 10. Mission completed without message -> clean empty string, no "..."
+    const test10 = extractTesterMessageAndStatus({
+        reasoning: 'Target gave full business hours and policy. Goal achieved.',
+        missionCompleted: true,
+    });
+    assert.equal(test10.message, '');
+    assert.equal(test10.missionCompleted, true);
+    console.log('✓ Clean mission completion without "..." dummy message passed');
+
+    // 11. Alternative response/reply key
+    const test11 = extractTesterMessageAndStatus({
+        response: 'Can I exchange an item without a receipt?',
+        missionCompleted: false,
+    });
+    assert.equal(test11.message, 'Can I exchange an item without a receipt?');
+    assert.equal(test11.missionCompleted, false);
+    console.log('✓ Alternative response/reply key extraction passed');
+
     console.log('\nALL LLM JSON PARSER TESTS PASSED! ✅');
 }
 

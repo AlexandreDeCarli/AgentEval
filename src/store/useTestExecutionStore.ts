@@ -219,12 +219,42 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
                     recordUsage('tester_conversation')
                 );
 
+                // If the tester determined the mission goal was already satisfied:
+                if (testerResult.missionCompleted) {
+                    if (testerResult.message && testerResult.message.trim() && testerResult.message.trim() !== '...') {
+                        const finalMsg: ChatMessage = {
+                            id: crypto.randomUUID(),
+                            role: 'tester',
+                            content: testerResult.message.trim(),
+                            timestamp: Date.now(),
+                            isCompletedFlag: true,
+                        };
+                        chatHistory.push(finalMsg);
+                        useTestRunStore.getState().addMessage(runId, finalMsg);
+                    }
+                    missionCompleted = true;
+                    set((state) => {
+                        const exec = state.executions[mission.id];
+                        if (!exec) return state;
+                        return {
+                            executions: {
+                                ...state.executions,
+                                [mission.id]: {
+                                    ...exec,
+                                    turnsCompleted: currentTurn + 1,
+                                },
+                            },
+                        };
+                    });
+                    break;
+                }
+
                 const testerMsg: ChatMessage = {
                     id: crypto.randomUUID(),
                     role: 'tester',
                     content: testerResult.message,
                     timestamp: Date.now(),
-                    isCompletedFlag: testerResult.missionCompleted,
+                    isCompletedFlag: false,
                 };
 
                 chatHistory.push(testerMsg);
