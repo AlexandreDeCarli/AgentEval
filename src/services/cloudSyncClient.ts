@@ -14,7 +14,7 @@ import {
 export function normalizeWorkerUrl(rawUrl: string): string {
     let url = rawUrl.trim();
     if (!url) {
-        throw new Error('A URL do Worker não foi informada.');
+        throw new Error('Worker Gateway URL is required.');
     }
 
     if (!/^https?:\/\//i.test(url)) {
@@ -43,10 +43,10 @@ export async function pushProjectToCloud(
     const { workerUrl, syncId, passkey, project, missions, orgSecret } = options;
 
     if (!syncId || !syncId.trim()) {
-        throw new Error('Sync ID é obrigatório para enviar o projeto.');
+        throw new Error('Sync ID is required to push project to cloud.');
     }
     if (!passkey || !passkey.trim()) {
-        throw new Error('A Senha do Projeto é obrigatória para criptografar e enviar.');
+        throw new Error('Project Passkey is required to encrypt and push.');
     }
 
     const baseUrl = normalizeWorkerUrl(workerUrl);
@@ -63,7 +63,7 @@ export async function pushProjectToCloud(
     });
 
     if (!response.ok) {
-        let errorMsg = `Erro ${response.status} ao sincronizar na nuvem.`;
+        let errorMsg = `Error ${response.status} while syncing project to cloud.`;
         try {
             const errJson = await response.json();
             if (errJson?.error) errorMsg = errJson.error;
@@ -87,10 +87,10 @@ export async function pullProjectFromCloud(
     const { workerUrl, syncId, passkey, orgSecret } = options;
 
     if (!syncId || !syncId.trim()) {
-        throw new Error('Sync ID é obrigatório para baixar o projeto.');
+        throw new Error('Sync ID is required to pull project from cloud.');
     }
     if (!passkey || !passkey.trim()) {
-        throw new Error('A Senha do Projeto é obrigatória para descriptografar.');
+        throw new Error('Project Passkey is required to decrypt project from cloud.');
     }
 
     const baseUrl = normalizeWorkerUrl(workerUrl);
@@ -102,11 +102,11 @@ export async function pullProjectFromCloud(
     });
 
     if (response.status === 404) {
-        throw new Error('Nenhum projeto encontrado para este Sync ID e Senha na nuvem.');
+        throw new Error('No project found in cloud for this Sync ID and Passkey.');
     }
 
     if (!response.ok) {
-        let errorMsg = `Erro ${response.status} ao baixar projeto da nuvem.`;
+        let errorMsg = `Error ${response.status} while pulling project from cloud.`;
         try {
             const errJson = await response.json();
             if (errJson?.error) errorMsg = errJson.error;

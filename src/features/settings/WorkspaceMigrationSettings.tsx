@@ -60,12 +60,12 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             if (!/^https?:\/\//i.test(clean)) clean = `https://${clean}`;
             const res = await fetch(clean, { method: 'OPTIONS' });
             if (res.ok) {
-                setTestResult({ ok: true, msg: 'Conexão com o Worker estabelecida com sucesso! (CORS OK)' });
+                setTestResult({ ok: true, msg: 'Worker connection established successfully! (CORS OK)' });
             } else {
-                setTestResult({ ok: false, msg: `Worker respondeu com status ${res.status}.` });
+                setTestResult({ ok: false, msg: `Worker responded with status ${res.status}.` });
             }
         } catch (e: unknown) {
-            setTestResult({ ok: false, msg: e instanceof Error ? e.message : 'Falha na conexão.' });
+            setTestResult({ ok: false, msg: e instanceof Error ? e.message : 'Connection failed.' });
         } finally {
             setIsTestingUrl(false);
         }
@@ -76,7 +76,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
         if (!clean) clean = 'https://agenteval-sync.alexandre-23b.workers.dev';
         setSyncWorkerUrl(clean);
         setWorkerUrlInput(clean);
-        addToast('URL do Worker de sincronização salva com sucesso!', 'success');
+        addToast('Sync Worker URL saved successfully!', 'success');
     };
 
     const handleExport = useCallback(() => {
@@ -282,17 +282,17 @@ export const WorkspaceMigrationSettings: React.FC = () => {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1.5">
                     <h2 className="text-title flex items-center gap-2">
-                        <Cloud className="w-5 h-5 text-primary" /> Gateway de Sincronização em Nuvem (Cloud Sync)
+                        <Cloud className="w-5 h-5 text-primary" /> Cloud Sync Gateway
                     </h2>
                     <p className="text-body text-muted-foreground max-w-[75ch]">
-                        Configuração global do Cloudflare Worker para sincronizar projetos e missões entre dispositivos com criptografia zero-knowledge (AES-256-GCM).
+                        Global Cloudflare Worker gateway configuration for zero-knowledge cross-device project sync (AES-256-GCM).
                     </p>
                 </div>
             </div>
 
             <div className="space-y-2">
                 <label className="text-label text-slate-300 block">
-                    URL Padrão do Worker de Sincronização
+                    Default Sync Worker Gateway URL
                 </label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <Input
@@ -313,19 +313,19 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                             className="gap-2 px-3.5"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${isTestingUrl ? 'animate-spin' : ''}`} />
-                            <span>{isTestingUrl ? 'Testando...' : 'Testar Conexão'}</span>
+                            <span>{isTestingUrl ? 'Testing...' : 'Test Connection'}</span>
                         </Button>
                         <Button
                             type="button"
                             onClick={handleSaveWorkerUrl}
                             className="bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-sm px-5"
                         >
-                            Salvar
+                            Save
                         </Button>
                     </div>
                 </div>
                 <p className="text-caption text-muted-foreground">
-                    Padrão: <span className="text-slate-300 font-mono">https://agenteval-sync.alexandre-23b.workers.dev</span>
+                    Default: <span className="text-slate-300 font-mono">https://agenteval-sync.alexandre-23b.workers.dev</span>
                 </p>
             </div>
 

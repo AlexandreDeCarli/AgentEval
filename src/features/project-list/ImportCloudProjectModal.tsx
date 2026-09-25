@@ -57,11 +57,11 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
         e.preventDefault();
 
         if (!syncId.trim()) {
-            setErrorMessage('Por favor, informe o Sync ID do projeto.');
+            setErrorMessage('Please enter the Project Sync ID.');
             return;
         }
         if (!passkey.trim()) {
-            setErrorMessage('Por favor, informe a Senha do Projeto para descriptografar os dados.');
+            setErrorMessage('Please enter the Project Passkey to decrypt data.');
             return;
         }
 
@@ -100,7 +100,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
             }
 
             addToast(
-                `Projeto "${importedProject.name}" e ${bundle.missions?.length || 0} missões importados com sucesso!`,
+                `Project "${importedProject.name}" and ${bundle.missions?.length || 0} missions imported successfully!`,
                 'success'
             );
 
@@ -110,7 +110,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
             const msg =
                 err instanceof Error
                     ? err.message
-                    : 'Falha ao conectar e importar o projeto da nuvem.';
+                    : 'Failed to connect and import project from cloud.';
             setErrorMessage(msg);
         } finally {
             setIsLoading(false);
@@ -121,7 +121,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
         <Modal
             isOpen={isOpen}
             onClose={handleClose}
-            title="Importar Projeto da Nuvem (Cloud Sync)"
+            title="Import Project from Cloud (Cloud Sync)"
             size="default"
         >
             <form onSubmit={handleImport} className="p-6 space-y-5">
@@ -129,9 +129,9 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                 <div className="flex items-start gap-3 bg-[#13161B] border border-border/40 p-3.5 rounded-xl">
                     <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                     <div className="text-caption text-slate-300">
-                        <span className="font-semibold text-white block">Download Seguro Zero-Knowledge</span>
+                        <span className="font-semibold text-white block">Secure Zero-Knowledge Download</span>
                         <p className="text-slate-400 mt-0.5 leading-relaxed">
-                            Insira o Sync ID e a Senha definidos na máquina de origem. O bundle será baixado da nuvem e descriptografado localmente no seu navegador.
+                            Enter the Sync ID and Passkey configured on the source machine. The bundle will be downloaded and decrypted locally in your browser (AES-256-GCM).
                         </p>
                     </div>
                 </div>
@@ -147,8 +147,8 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                 {/* Sync ID */}
                 <div className="space-y-1.5">
                     <label className="text-label text-slate-300 flex items-center gap-1.5">
-                        <span>Sync ID do Projeto</span>
-                        <span title="Identificador único configurado no projeto de origem.">
+                        <span>Project Sync ID</span>
+                        <span title="Unique identifier configured on the source project.">
                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help" />
                         </span>
                     </label>
@@ -158,7 +158,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                             setSyncId(e.target.value);
                             setErrorMessage(null);
                         }}
-                        placeholder="ex: atendimento-sac-2026"
+                        placeholder="e.g. customer-support-agent"
                         className="font-mono bg-[#13161B] border-border/50 text-white"
                         autoFocus
                     />
@@ -167,8 +167,8 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                 {/* Passkey */}
                 <div className="space-y-1.5">
                     <label className="text-label text-slate-300 flex items-center gap-1.5">
-                        <span>Senha do Projeto (Passkey)</span>
-                        <span title="Senha necessária para decodificar o arquivo cifrado AES-256-GCM.">
+                        <span>Project Passkey</span>
+                        <span title="Passkey required to decrypt the AES-256-GCM encrypted project bundle.">
                             <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help" />
                         </span>
                     </label>
@@ -180,14 +180,14 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                                 setPasskey(e.target.value);
                                 setErrorMessage(null);
                             }}
-                            placeholder="Digite a senha do projeto"
+                            placeholder="Enter project secret passkey"
                             className="font-mono bg-[#13161B] border-border/50 text-white pr-10"
                         />
                         <button
                             type="button"
                             onClick={() => setShowPasskey(!showPasskey)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-200 transition-colors cursor-pointer"
-                            title={showPasskey ? 'Ocultar senha' : 'Ver senha'}
+                            title={showPasskey ? 'Hide passkey' : 'Show passkey'}
                         >
                             {showPasskey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -201,7 +201,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                         onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
                         className="text-[12px] text-muted-foreground hover:text-slate-200 transition-colors cursor-pointer flex items-center gap-1"
                     >
-                        <span>{showAdvancedUrl ? '▼ Ocultar URL do Worker' : '▶ Opções Avançadas (URL do Worker)'}</span>
+                        <span>{showAdvancedUrl ? '▼ Hide Worker Gateway URL' : '▶ Advanced Options (Worker Gateway URL)'}</span>
                     </button>
                     {showAdvancedUrl && (
                         <div className="mt-2 space-y-1 animate-fade-in">
@@ -223,7 +223,7 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                         onClick={handleClose}
                         disabled={isLoading}
                     >
-                        Cancelar
+                        Cancel
                     </Button>
                     <Button
                         type="submit"
@@ -233,12 +233,12 @@ export const ImportCloudProjectModal: React.FC<ImportCloudProjectModalProps> = (
                         {isLoading ? (
                             <>
                                 <RefreshCw className="w-4 h-4 animate-spin" />
-                                <span>Conectando & Baixando...</span>
+                                <span>Connecting & Downloading...</span>
                             </>
                         ) : (
                             <>
                                 <CloudDownload className="w-4 h-4" />
-                                <span>Conectar e Importar Projeto</span>
+                                <span>Connect & Import Project</span>
                             </>
                         )}
                     </Button>

@@ -12,6 +12,8 @@ import {
     AlertCircle,
     HelpCircle,
     Sparkles,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -47,11 +49,13 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
     const [passkey, setPasskey] = useState('');
     const [showPasskey, setShowPasskey] = useState(false);
     const [workerUrl, setWorkerUrl] = useState(project.cloud_sync?.workerUrl || defaultWorkerUrl);
+    const [showAdvancedUrl, setShowAdvancedUrl] = useState(false);
 
     // Operation states
     const [isPushing, setIsPushing] = useState(false);
     const [isPulling, setIsPulling] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
     const [statusFeedback, setStatusFeedback] = useState<{
         type: 'success' | 'error' | 'info';
         message: string;
@@ -62,27 +66,65 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
     const generateRandomSyncId = () => {
         const randomPart = Math.random().toString(36).substring(2, 8);
-        const nameSlug = (project.name || 'projeto')
+        const nameSlug = (project.name || 'project')
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '')
             .slice(0, 16);
-        const newId = `${nameSlug || 'projeto'}-${randomPart}`;
+        const newId = `${nameSlug || 'project'}-${randomPart}`;
         setSyncId(newId);
         setStatusFeedback(null);
     };
 
+    const handleCopyShareInstructions = async () => {
+        if (!syncId.trim()) {
+            setStatusFeedback({
+                type: 'error',
+                message: 'Please provide or generate a Sync ID before copying sharing instructions.',
+            });
+            return;
+        }
+
+        const appUrl = window.location.origin;
+        const passkeySnippet = passkey.trim()
+            ? `• Passkey: ${passkey.trim()}`
+            : '• Passkey: [Ask the project owner for the passkey]';
+
+        const shareMessage = [
+            `AgentEval — Project Cloud Sync`,
+            `Project: "${project.name}"`,
+            ``,
+            `To import and sync this project in AgentEval:`,
+            `1. Open AgentEval: ${appUrl}`,
+            `2. On the Projects screen, click "Import from Cloud"`,
+            `3. Enter the following credentials:`,
+            `   • Sync ID: ${syncId.trim()}`,
+            `   ${passkeySnippet}`,
+            ``,
+            `All prompts, environments, and test missions will be securely decrypted on your device.`,
+        ].join('\n');
+
+        try {
+            await navigator.clipboard.writeText(shareMessage);
+            setIsCopied(true);
+            addToast('Share instructions copied to clipboard!', 'success');
+            setTimeout(() => setIsCopied(false), 2500);
+        } catch {
+            addToast('Failed to copy to clipboard.', 'error');
+        }
+    };
+
     const handlePush = async () => {
         if (!syncId.trim()) {
-            setStatusFeedback({ type: 'error', message: 'Informe ou gere um Sync ID antes de enviar.' });
+            setStatusFeedback({ type: 'error', message: 'Please enter or generate a Sync ID before pushing.' });
             return;
         }
         if (!passkey.trim()) {
             setStatusFeedback({
                 type: 'error',
-                message: 'Informe a Senha do Projeto para criptografar os dados com segurança.',
+                message: 'Please enter the Project Passkey to securely encrypt your project data.',
             });
             return;
         }
@@ -113,11 +155,11 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
             setStatusFeedback({
                 type: 'success',
-                message: `Projeto sincronizado com sucesso na nuvem! (${projectMissions.length} missões incluídas).`,
+                message: `Project synced to cloud successfully! (${projectMissions.length} missions encrypted & included).`,
             });
-            addToast('Projeto enviado para a nuvem com sucesso!', 'success');
+            addToast('Project pushed to cloud successfully!', 'success');
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Falha ao enviar projeto para a nuvem.';
+            const msg = err instanceof Error ? err.message : 'Failed to push project to cloud.';
             setStatusFeedback({ type: 'error', message: msg });
             addToast(msg, 'error');
         } finally {
@@ -127,13 +169,13 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
     const handlePull = async () => {
         if (!syncId.trim()) {
-            setStatusFeedback({ type: 'error', message: 'Informe o Sync ID do projeto que deseja baixar.' });
+            setStatusFeedback({ type: 'error', message: 'Please enter the Project Sync ID to pull.' });
             return;
         }
         if (!passkey.trim()) {
             setStatusFeedback({
                 type: 'error',
-                message: 'Informe a Senha do Projeto para descriptografar os dados baixados.',
+                message: 'Please enter the Project Passkey to decrypt downloaded project data.',
             });
             return;
         }
@@ -148,7 +190,6 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                 passkey: passkey.trim(),
             });
 
-            // Merge cloud project fields into current project
             const updatedProject: Project = {
                 ...project,
                 name: bundle.project.name || project.name,
@@ -166,9 +207,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                 },
             };
 
-            // Merge missions in store
             if (Array.isArray(bundle.missions) && bundle.missions.length > 0) {
-                // Ensure mission project_ids match current project id
                 const normalizedMissions = bundle.missions.map((m) => ({
                     ...m,
                     project_id: project.id,
@@ -181,11 +220,11 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
 
             setStatusFeedback({
                 type: 'success',
-                message: `Projeto e ${bundle.missions?.length || 0} missões atualizados da nuvem com sucesso!`,
+                message: `Project and ${bundle.missions?.length || 0} missions updated from cloud successfully!`,
             });
-            addToast('Projeto atualizado com a versão da nuvem!', 'success');
+            addToast('Project updated from cloud version!', 'success');
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Falha ao baixar projeto da nuvem.';
+            const msg = err instanceof Error ? err.message : 'Failed to pull project from cloud.';
             setStatusFeedback({ type: 'error', message: msg });
             addToast(msg, 'error');
         } finally {
@@ -197,7 +236,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
         if (!syncId.trim() || !passkey.trim()) {
             setStatusFeedback({
                 type: 'error',
-                message: 'Preencha o Sync ID e a Senha do Projeto para verificar a nuvem.',
+                message: 'Enter both Sync ID and Passkey to verify cloud status.',
             });
             return;
         }
@@ -213,19 +252,19 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
             });
 
             if (status.exists) {
-                const dateStr = status.lastModified ? new Date(status.lastModified).toLocaleString() : 'Recente';
+                const dateStr = status.lastModified ? new Date(status.lastModified).toLocaleString() : 'Recent';
                 setStatusFeedback({
                     type: 'info',
-                    message: `Projeto encontrado na nuvem! Última modificação: ${dateStr}. Pronto para Puxar (Pull).`,
+                    message: `Project found in cloud! Last modified: ${dateStr}. Ready to pull.`,
                 });
             } else {
                 setStatusFeedback({
                     type: 'info',
-                    message: 'Nenhum projeto encontrado na nuvem com este Sync ID e Senha. Você pode enviar a primeira versão com "Enviar para Nuvem (Push)".',
+                    message: 'No project found in cloud with this Sync ID and Passkey. You can send the first version using "Push to Cloud".',
                 });
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Erro ao verificar status na nuvem.';
+            const msg = err instanceof Error ? err.message : 'Error checking cloud status.';
             setStatusFeedback({ type: 'error', message: msg });
         } finally {
             setIsChecking(false);
@@ -233,81 +272,44 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* Top Status & Security Card */}
-            <div className="border border-border/50 bg-[#1C2026] p-6 rounded-2xl shadow-sm relative overflow-hidden">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/40">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-[#4A72FF]/20 to-[#8B5CF6]/20 border border-[#4A72FF]/30 text-[#4A72FF]">
-                            <Cloud className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2.5">
-                                <h2 className="text-title text-white">Sincronização em Nuvem (Cloud Sync)</h2>
-                                {lastSyncedAt ? (
-                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                                        <CheckCircle2 className="w-3 h-3" /> Sincronizado
-                                    </span>
-                                ) : project.cloud_sync?.syncId ? (
-                                    <span className="text-[11px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-full">
-                                        Configurado
-                                    </span>
-                                ) : (
-                                    <span className="text-[11px] font-semibold text-muted-foreground bg-slate-800/60 border border-border/40 px-2.5 py-0.5 rounded-full">
-                                        Não Configurado
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-caption text-muted-foreground mt-0.5">
-                                Sincronize este projeto, seus prompts, ambientes e todas as suas missões entre computadores com isolamento total.
-                            </p>
-                        </div>
-                    </div>
-
-                    {lastSyncedAt && (
-                        <div className="text-right">
-                            <span className="text-caption text-muted-foreground block">Última sincronização</span>
-                            <span className="text-label text-slate-200 font-mono">
-                                {new Date(lastSyncedAt).toLocaleString()}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch animate-fade-in">
+            {/* Left Card: Credentials & Sharing */}
+            <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card flex flex-col justify-between shadow-sm">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                        <h2 className="text-title text-white flex items-center gap-2">
+                            <Key className="w-4 h-4 text-[#4A72FF]" /> Sync Credentials
+                        </h2>
+                        {lastSyncedAt ? (
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                                <CheckCircle2 className="w-3 h-3" /> Synced
                             </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Zero-Knowledge Security Notice */}
-                <div className="mt-4 flex items-start gap-3 bg-[#13161B]/80 border border-border/40 p-3.5 rounded-xl">
-                    <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    <div className="text-caption text-slate-300 space-y-1">
-                        <span className="font-semibold text-white block">Criptografia Ponta a Ponta de Conhecimento Zero (Zero-Knowledge AES-256-GCM)</span>
-                        <p className="text-slate-400 leading-relaxed">
-                            Todos os dados do projeto são criptografados diretamente no seu navegador usando uma chave derivada da sua Senha (PBKDF2 com 100.000 iterações). O servidor da nuvem armazena apenas bytes indecifráveis e isolados matematicamente. Se você perder a senha, os dados não poderão ser recuperados.
-                        </p>
+                        ) : project.cloud_sync?.syncId ? (
+                            <span className="text-[11px] font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                                Configured
+                            </span>
+                        ) : (
+                            <span className="text-[11px] font-semibold text-muted-foreground bg-slate-800/60 border border-border/40 px-2 py-0.5 rounded-full">
+                                Not Configured
+                            </span>
+                        )}
                     </div>
-                </div>
-            </div>
 
-            {/* Configuration Form Card */}
-            <div className="border border-border/50 bg-[#1C2026] p-6 rounded-2xl shadow-sm space-y-5">
-                <h3 className="text-title text-white flex items-center gap-2 border-b border-border/40 pb-3">
-                    <Key className="w-4 h-4 text-[#4A72FF]" /> Credenciais de Acesso do Projeto
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Sync ID */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                             <label className="text-label text-slate-300 flex items-center gap-1.5">
-                                <span>Sync ID (Canal Único)</span>
-                                <span title="Identificador único para este projeto na nuvem. Deve ser compartilhado com quem for acessar este projeto.">
-                                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help" />
+                                <span>Project Sync ID</span>
+                                <span title="Unique identifier for this project channel in the cloud. Shared with collaborators.">
+                                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                                 </span>
                             </label>
                             <button
                                 type="button"
                                 onClick={generateRandomSyncId}
-                                className="text-[12px] text-[#4A72FF] hover:text-[#7090FF] flex items-center gap-1 cursor-pointer transition-colors"
+                                className="text-xs text-[#4A72FF] hover:text-[#7090FF] flex items-center gap-1 cursor-pointer transition-colors"
                             >
-                                <Sparkles className="w-3 h-3" /> Gerar ID Sugerido
+                                <Sparkles className="w-3 h-3" /> Suggest ID
                             </button>
                         </div>
                         <Input
@@ -316,20 +318,20 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                 setSyncId(e.target.value);
                                 setStatusFeedback(null);
                             }}
-                            placeholder="ex: atendimento-sac-2026"
-                            className="font-mono bg-[#13161B] border-border/50 text-white"
+                            placeholder="e.g. customer-support-agent"
+                            className="font-mono bg-background text-sm"
                         />
-                        <p className="text-caption text-muted-foreground">
-                            Use um identificador simples ou o ID sugerido.
+                        <p className="text-xs text-muted-foreground">
+                            Unique channel name used to identify this project bundle in the cloud.
                         </p>
                     </div>
 
                     {/* Passkey */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         <label className="text-label text-slate-300 flex items-center gap-1.5">
-                            <span>Senha do Projeto (Passkey)</span>
-                            <span title="Chave criptográfica para proteger os dados. Guarde esta senha em um local seguro.">
-                                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help" />
+                            <span>Project Passkey</span>
+                            <span title="Secret password used to derive the AES-256-GCM encryption key. Never sent in plain text.">
+                                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
                             </span>
                         </label>
                         <div className="relative">
@@ -340,158 +342,198 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                                     setPasskey(e.target.value);
                                     setStatusFeedback(null);
                                 }}
-                                placeholder="Digite a senha para criptografar/descriptografar"
-                                className="font-mono bg-[#13161B] border-border/50 text-white pr-10"
+                                placeholder="Enter project secret passkey"
+                                className="font-mono bg-background text-sm pr-10"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPasskey(!showPasskey)}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-200 transition-colors cursor-pointer"
-                                title={showPasskey ? 'Ocultar senha' : 'Ver senha'}
+                                title={showPasskey ? 'Hide passkey' : 'Show passkey'}
                             >
                                 {showPasskey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-caption text-muted-foreground">
-                            Apenas dispositivos com a mesma senha conseguirão descriptografar o projeto.
+                        <p className="text-xs text-muted-foreground">
+                            Required to encrypt/decrypt project data. Keep this password safe.
                         </p>
                     </div>
-                </div>
 
-                {/* Worker URL */}
-                <div className="space-y-2 pt-2 border-t border-border/30">
-                    <div className="flex items-center justify-between">
-                        <label className="text-label text-slate-300 flex items-center gap-1.5">
-                            <span>URL do Worker de Sincronização</span>
-                            <span title="URL do gateway Cloudflare Worker responsável por rotear para o Cloudflare R2.">
-                                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground cursor-help" />
-                            </span>
-                        </label>
-                        {workerUrl !== defaultWorkerUrl && (
-                            <button
-                                type="button"
-                                onClick={() => setWorkerUrl(defaultWorkerUrl)}
-                                className="text-[12px] text-muted-foreground hover:text-slate-200 cursor-pointer"
-                            >
-                                Restaurar Padrão
-                            </button>
+                    {/* Copy Share Instructions Button */}
+                    <div className="pt-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleCopyShareInstructions}
+                            disabled={!syncId.trim()}
+                            className="w-full gap-2 text-xs h-9 hover:border-[#4A72FF]/40 text-slate-200 hover:text-white"
+                        >
+                            {isCopied ? (
+                                <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span className="text-emerald-300">Instructions Copied to Clipboard!</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="w-3.5 h-3.5 text-[#4A72FF]" />
+                                    <span>Copy Sharing Instructions</span>
+                                </>
+                            )}
+                        </Button>
+                        <p className="text-[11px] text-muted-foreground mt-1 text-center">
+                            Copies an easy guide with app link and IDs for your team to import this project.
+                        </p>
+                    </div>
+
+                    {/* Advanced Worker Gateway URL Toggle */}
+                    <div className="pt-2 border-t border-border/40">
+                        <button
+                            type="button"
+                            onClick={() => setShowAdvancedUrl(!showAdvancedUrl)}
+                            className="text-xs text-muted-foreground hover:text-slate-200 transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                            <span>{showAdvancedUrl ? '▼ Hide Worker Gateway URL' : '▶ Advanced: Custom Gateway URL'}</span>
+                        </button>
+                        {showAdvancedUrl && (
+                            <div className="mt-2 space-y-1.5 animate-fade-in">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-label text-slate-300">
+                                        Worker Gateway URL
+                                    </label>
+                                    {workerUrl !== defaultWorkerUrl && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setWorkerUrl(defaultWorkerUrl)}
+                                            className="text-xs text-primary hover:underline cursor-pointer"
+                                        >
+                                            Reset to Default
+                                        </button>
+                                    )}
+                                </div>
+                                <Input
+                                    value={workerUrl}
+                                    onChange={(e) => setWorkerUrl(e.target.value)}
+                                    placeholder="https://agenteval-sync.alexandre-23b.workers.dev"
+                                    className="font-mono text-xs bg-background"
+                                />
+                            </div>
                         )}
                     </div>
-                    <Input
-                        value={workerUrl}
-                        onChange={(e) => setWorkerUrl(e.target.value)}
-                        placeholder="https://agenteval-sync.alexandre-23b.workers.dev"
-                        className="font-mono text-xs bg-[#13161B] border-border/50 text-slate-300"
-                    />
                 </div>
-            </div>
+            </section>
 
-            {/* Status Feedback Alert */}
-            {statusFeedback && (
-                <div
-                    className={`p-4 rounded-xl border flex items-start gap-3 animate-fade-in ${
-                        statusFeedback.type === 'success'
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                            : statusFeedback.type === 'error'
-                            ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                            : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-                    }`}
-                >
-                    {statusFeedback.type === 'success' ? (
-                        <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
-                    ) : statusFeedback.type === 'error' ? (
-                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-400" />
-                    ) : (
-                        <HelpCircle className="w-5 h-5 shrink-0 mt-0.5 text-blue-400" />
-                    )}
-                    <span className="text-body font-medium">{statusFeedback.message}</span>
-                </div>
-            )}
+            {/* Right Card: Cloud Actions & Status */}
+            <section className="space-y-4 border border-border/50 p-6 rounded-xl bg-card flex flex-col justify-between shadow-sm">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                        <div>
+                            <h2 className="text-title text-white flex items-center gap-2">
+                                <Cloud className="w-4 h-4 text-[#4A72FF]" /> Cloud Synchronization
+                            </h2>
+                            {lastSyncedAt && (
+                                <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                                    Last synced: {new Date(lastSyncedAt).toLocaleString()}
+                                </p>
+                            )}
+                        </div>
 
-            {/* Sync Action Buttons Card */}
-            <div className="border border-border/50 bg-[#1C2026] p-6 rounded-2xl shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-title text-white">Ações de Sincronização</h3>
-                        <p className="text-caption text-muted-foreground mt-0.5">
-                            Este projeto possui <strong className="text-white">{projectMissions.length} missões</strong> configuradas localmente.
-                        </p>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleCheckStatus}
+                            disabled={isChecking || isPushing || isPulling || !syncId.trim() || !passkey.trim()}
+                            className="gap-1.5 text-xs h-8 px-2.5"
+                            title="Check if this project channel currently exists in the cloud"
+                        >
+                            <RefreshCw className={`w-3 h-3 ${isChecking ? 'animate-spin' : ''}`} />
+                            <span>Check Cloud</span>
+                        </Button>
                     </div>
 
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleCheckStatus}
-                        disabled={isChecking || isPushing || isPulling || !syncId.trim() || !passkey.trim()}
-                        className="gap-2"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
-                        <span>Verificar Status na Nuvem</span>
-                    </Button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    {/* Push Button */}
-                    <div className="border border-border/40 bg-[#13161B] p-4 rounded-xl flex flex-col justify-between space-y-3">
-                        <div>
-                            <span className="text-label text-white flex items-center gap-2">
-                                <CloudUpload className="w-4 h-4 text-[#4A72FF]" /> Enviar para a Nuvem (Push)
-                            </span>
-                            <p className="text-caption text-muted-foreground mt-1">
-                                Criptografa o projeto e todas as {projectMissions.length} missões locais e envia uma nova versão para a nuvem.
-                            </p>
+                    {/* Status Feedback Alert */}
+                    {statusFeedback && (
+                        <div
+                            className={`p-3 rounded-lg border flex items-start gap-2.5 text-xs animate-fade-in ${
+                                statusFeedback.type === 'success'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                    : statusFeedback.type === 'error'
+                                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                                    : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                            }`}
+                        >
+                            {statusFeedback.type === 'success' ? (
+                                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                            ) : statusFeedback.type === 'error' ? (
+                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                            ) : (
+                                <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
+                            )}
+                            <span className="font-medium">{statusFeedback.message}</span>
                         </div>
+                    )}
+
+                    {/* Push Action */}
+                    <div className="space-y-1.5 pt-1">
                         <Button
                             onClick={handlePush}
                             disabled={isPushing || isPulling}
-                            className="w-full bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-lg shadow-[#4A72FF]/20 hover:shadow-[#4A72FF]/30"
+                            className="w-full bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-md shadow-[#4A72FF]/20 text-xs h-10 gap-2"
                         >
                             {isPushing ? (
                                 <>
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                    <span>Criptografando & Enviando...</span>
+                                    <span>Encrypting & Pushing...</span>
                                 </>
                             ) : (
                                 <>
                                     <CloudUpload className="w-4 h-4" />
-                                    <span>Enviar para Nuvem (Push)</span>
+                                    <span>Push to Cloud (Send Revisions)</span>
                                 </>
                             )}
                         </Button>
+                        <p className="text-[11px] text-muted-foreground">
+                            Encrypts project settings and all <strong>{projectMissions.length} local missions</strong> to the cloud.
+                        </p>
                     </div>
 
-                    {/* Pull Button */}
-                    <div className="border border-border/40 bg-[#13161B] p-4 rounded-xl flex flex-col justify-between space-y-3">
-                        <div>
-                            <span className="text-label text-white flex items-center gap-2">
-                                <CloudDownload className="w-4 h-4 text-emerald-400" /> Puxar da Nuvem (Pull)
-                            </span>
-                            <p className="text-caption text-muted-foreground mt-1">
-                                Baixa e descriptografa a versão mais recente salva na nuvem, atualizando os prompts, ambientes e missões locais.
-                            </p>
-                        </div>
+                    {/* Pull Action */}
+                    <div className="space-y-1.5 pt-1">
                         <Button
                             onClick={handlePull}
                             disabled={isPushing || isPulling}
                             variant="secondary"
-                            className="w-full hover:border-emerald-500/40 text-slate-200 hover:text-white"
+                            className="w-full hover:border-emerald-500/40 text-slate-200 hover:text-white text-xs h-10 gap-2"
                         >
                             {isPulling ? (
                                 <>
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                    <span>Baixando & Descriptografando...</span>
+                                    <span>Downloading & Decrypting...</span>
                                 </>
                             ) : (
                                 <>
                                     <CloudDownload className="w-4 h-4 text-emerald-400" />
-                                    <span>Puxar da Nuvem (Pull)</span>
+                                    <span>Pull from Cloud (Update Local)</span>
                                 </>
                             )}
                         </Button>
+                        <p className="text-[11px] text-muted-foreground">
+                            Downloads and decrypts the latest version from cloud, updating local configuration and missions.
+                        </p>
+                    </div>
+
+                    {/* Zero-Knowledge Security Notice (Compact) */}
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>Zero-Knowledge AES-256-GCM Security</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            Project data is encrypted locally using PBKDF2 (100,000 rounds) before upload. The cloud server stores only indecipherable bytes.
+                        </p>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     );
 };

@@ -13,6 +13,7 @@ import {
     Server,
     RotateCcw,
     Bot,
+    Scale,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -221,7 +222,7 @@ export const AiConfigurationSettings: React.FC = () => {
         if (!keyToUse) {
             setRefreshStatus({
                 type: 'error',
-                message: 'Informe e salve uma chave de API Gemini para verificar novos modelos.',
+                message: 'Enter and save a Gemini API key to check for new models.',
             });
             window.setTimeout(() => setRefreshStatus(null), 4000);
             return;
@@ -235,12 +236,12 @@ export const AiConfigurationSettings: React.FC = () => {
             if (result.newCount > 0) {
                 setRefreshStatus({
                     type: 'success',
-                    message: `${result.newCount} novo(s) modelo(s) encontrado(s) e adicionado(s) à lista! (${result.totalCount} modelos disponíveis)`,
+                    message: `${result.newCount} new model(s) discovered and added to the catalog! (${result.totalCount} models available)`,
                 });
             } else {
                 setRefreshStatus({
                     type: 'success',
-                    message: `Todos os modelos estão atualizados. (${result.totalCount} modelos disponíveis no Google AI)`,
+                    message: `All models are up to date. (${result.totalCount} models available in Google AI)`,
                 });
             }
         } catch (error) {
@@ -249,7 +250,7 @@ export const AiConfigurationSettings: React.FC = () => {
                 message:
                     error instanceof Error
                         ? error.message
-                        : 'Falha ao buscar modelos na API do Gemini.',
+                        : 'Failed to fetch models from Gemini API.',
             });
         } finally {
             setIsRefreshingModels(false);
@@ -264,7 +265,7 @@ export const AiConfigurationSettings: React.FC = () => {
         if (!keyToUse) {
             setRefreshLiteLlmStatus({
                 type: 'error',
-                message: 'Informe e salve a API Key do LiteLLM antes de verificar os modelos.',
+                message: 'Enter and save your LiteLLM API Key before checking models.',
             });
             window.setTimeout(() => setRefreshLiteLlmStatus(null), 4000);
             return;
@@ -277,7 +278,7 @@ export const AiConfigurationSettings: React.FC = () => {
             const result = await refreshLiteLlmModels(urlToUse, keyToUse);
             setRefreshLiteLlmStatus({
                 type: 'success',
-                message: `Conexão bem-sucedida! ${result.totalCount} modelo(s) encontrado(s) no proxy LiteLLM.`,
+                message: `Connection successful! ${result.totalCount} model(s) found in LiteLLM proxy.`,
             });
             if (result.models.length > 0) {
                 const first = result.models[0].id;
@@ -293,7 +294,7 @@ export const AiConfigurationSettings: React.FC = () => {
                 message:
                     error instanceof Error
                         ? error.message
-                        : 'Falha ao conectar ao LiteLLM.',
+                        : 'Failed to connect to LiteLLM.',
             });
         } finally {
             setIsRefreshingLiteLlm(false);
@@ -391,7 +392,7 @@ export const AiConfigurationSettings: React.FC = () => {
                             <Server className="w-5 h-5 text-purple-400" /> LiteLLM Proxy Configuration
                         </h2>
                         <p className="text-body text-muted-foreground max-w-[75ch]">
-                            Consuma o endpoint LiteLLM compatível com a API OpenAI em{' '}
+                            Connect to an OpenAI-compatible LiteLLM endpoint at{' '}
                             <code className="text-primary font-mono text-xs bg-muted/40 px-1 py-0.5 rounded">
                                 https://llm.potencial.tec.br
                             </code>.
@@ -408,7 +409,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                         onClick={() => setInputLitellmBaseUrl(DEFAULT_LITELLM_BASE_URL)}
                                         className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer"
                                     >
-                                        <RotateCcw className="w-3 h-3" /> Restaurar padrão
+                                        <RotateCcw className="w-3 h-3" /> Reset to default
                                     </button>
                                 )}
                             </div>
@@ -446,7 +447,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Armazenada criptografada localmente nas configurações do AgentEval.
+                                Stored encrypted locally in AgentEval settings.
                             </p>
                         </div>
                     </div>
@@ -455,10 +456,10 @@ export const AiConfigurationSettings: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
                                 <h3 className="text-body font-bold text-white flex items-center gap-2">
-                                    <Cpu className="w-4 h-4 text-purple-400" /> Modelos do LiteLLM
+                                    <Cpu className="w-4 h-4 text-purple-400" /> LiteLLM Models
                                 </h3>
                                 <p className="text-xs text-muted-foreground">
-                                    Consulte os modelos disponíveis na instância ou defina os nomes diretamente.
+                                    Discover available models on your instance or specify custom model names directly.
                                 </p>
                             </div>
                             <Button
@@ -469,7 +470,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                 className="gap-2 shrink-0 border-purple-500/40 hover:border-purple-400 text-slate-200"
                             >
                                 <RefreshCw className={`w-4 h-4 text-purple-400 ${isRefreshingLiteLlm ? 'animate-spin' : ''}`} />
-                                {isRefreshingLiteLlm ? 'Verificando...' : 'Verificar Conexão e Modelos'}
+                                {isRefreshingLiteLlm ? 'Checking...' : 'Check Connection & Models'}
                             </Button>
                         </div>
 
@@ -492,11 +493,11 @@ export const AiConfigurationSettings: React.FC = () => {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Evaluator Model */}
+                            {/* Evaluator Agent Model */}
                             <div className="space-y-2 p-4 rounded-xl border border-border/70 bg-background/40">
                                 <div className="flex items-center justify-between">
                                     <label htmlFor="litellm-eval-model" className="text-label font-bold text-white flex items-center gap-1.5">
-                                        <Cpu className="w-4 h-4 text-purple-400" /> Evaluator Model
+                                        <Scale className="w-4 h-4 text-purple-400" /> Evaluator Model
                                     </label>
                                 </div>
                                 {discoveredLiteLlmModels.length > 0 ? (
@@ -523,7 +524,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     />
                                 )}
                                 <p className="text-xs text-muted-foreground">
-                                    Avalia o histórico do teste e gera o relatório com nota e melhorias.
+                                    Evaluates test transcripts and generates quality scores and recommendations.
                                 </p>
                             </div>
 
@@ -558,7 +559,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     />
                                 )}
                                 <p className="text-xs text-muted-foreground">
-                                    Gera as mensagens da persona de teste simulando o usuário final.
+                                    Generates tester persona responses simulating the end user.
                                 </p>
                             </div>
 
@@ -593,7 +594,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     />
                                 )}
                                 <p className="text-xs text-muted-foreground">
-                                    Gera automaticamente os cenários de teste a partir da documentação.
+                                    Automatically drafts test mission scenarios from project documentation.
                                 </p>
                             </div>
                         </div>
@@ -609,7 +610,7 @@ export const AiConfigurationSettings: React.FC = () => {
                             <Key className="w-5 h-5 text-primary" /> Google AI Studio API Key
                         </h2>
                         <p className="text-body text-muted-foreground max-w-[75ch]">
-                            Chave direta da API do Google AI Studio para os agentes Tester, Evaluator e modelos Target Gemini.
+                            Direct API key from Google AI Studio for Tester, Evaluator, and Target Gemini models.
                         </p>
                         <div className="space-y-2">
                             <label htmlFor="gemini-api-key" className="text-label">Gemini API Key</label>
@@ -633,7 +634,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                 </Button>
                             </div>
                             <p className="text-label text-muted-foreground">
-                                Armazenada criptografada localmente nas configurações do AgentEval.
+                                Stored encrypted locally in AgentEval settings.
                             </p>
                         </div>
                     </div>
@@ -645,7 +646,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     <Cpu className="w-5 h-5 text-primary" /> Evaluator Agent & Model Catalog
                                 </h2>
                                 <p className="text-body text-muted-foreground max-w-[75ch]">
-                                    Escolha o modelo Gemini usado para avaliar transcrições e sugerir melhorias.
+                                    Select the Gemini model used to evaluate transcripts and suggest prompt improvements.
                                 </p>
                             </div>
                             <Button
@@ -654,10 +655,10 @@ export const AiConfigurationSettings: React.FC = () => {
                                 onClick={handleRefreshGeminiModels}
                                 disabled={isRefreshingModels}
                                 className="gap-2 shrink-0 border-primary/40 hover:border-primary text-slate-200"
-                                title="Consultar a API do Google Gemini para verificar novos modelos disponíveis"
+                                title="Query the Google Gemini API to check for newly available models"
                             >
                                 <RefreshCw className={`w-4 h-4 text-primary ${isRefreshingModels ? 'animate-spin' : ''}`} />
-                                {isRefreshingModels ? 'Verificando...' : 'Verificar Novos Modelos'}
+                                {isRefreshingModels ? 'Checking...' : 'Check New Models'}
                             </Button>
                         </div>
 
@@ -686,7 +687,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                         <Cpu className="w-4 h-4 text-primary" /> Evaluation Model
                                     </label>
                                     <span className="text-xs text-muted-foreground font-mono">
-                                        {availableEvaluatorModels.length} na lista
+                                        {availableEvaluatorModels.length} in catalog
                                     </span>
                                 </div>
                                 <select
@@ -700,7 +701,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     ))}
                                 </select>
                                 <p className="text-xs text-muted-foreground">
-                                    Utilizado pelo agente avaliador para dar notas e calcular métricas.
+                                    Used by the evaluator agent to score runs and compute quality metrics.
                                 </p>
                             </div>
 
@@ -710,7 +711,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                         <Sparkles className="w-4 h-4 text-[#8B5CF6]" /> Mission Generation Model
                                     </label>
                                     <span className="text-xs text-muted-foreground font-mono">
-                                        {availableEvaluatorModels.length} na lista
+                                        {availableEvaluatorModels.length} in catalog
                                     </span>
                                 </div>
                                 <select
@@ -724,7 +725,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     ))}
                                 </select>
                                 <p className="text-xs text-muted-foreground">
-                                    Utilizado para analisar a documentação e propor missões de teste.
+                                    Used to analyze documentation and propose new test missions.
                                 </p>
                             </div>
                         </div>
@@ -824,7 +825,7 @@ export const AiConfigurationSettings: React.FC = () => {
                                     {lang.nativeName} ({lang.name})
                                 </option>
                             ))}
-                            <option value="custom">Outro idioma (Personalizado)...</option>
+                            <option value="custom">Other language (Custom)...</option>
                         </select>
                         {selectedLang === 'custom' && (
                             <Input
@@ -832,21 +833,21 @@ export const AiConfigurationSettings: React.FC = () => {
                                 type="text"
                                 value={customLang}
                                 onChange={(event) => setCustomLang(event.target.value)}
-                                placeholder="Ex: Italiano, Japonês, pt-PT..."
+                                placeholder="e.g. Italian, Japanese, pt-PT..."
                                 className="sm:max-w-xs bg-background"
                             />
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Define o idioma obrigatório do relatório de avaliação (resumos, critérios e melhorias de prompt), independentemente do provedor utilizado.
+                        Defines the required language for the evaluation report (summaries, criteria, and prompt improvements), regardless of the provider used.
                     </p>
                 </div>
             </div>
 
             {/* SAVE BUTTON */}
             <div className="pt-4 border-t border-border flex items-center gap-4">
-                <Button onClick={handleSave}>Salvar Configurações</Button>
-                {saved && <span role="status" className="text-body text-emerald-400">Configurações salvas com sucesso!</span>}
+                <Button onClick={handleSave}>Save Settings</Button>
+                {saved && <span role="status" className="text-body text-emerald-400">Settings saved successfully!</span>}
             </div>
         </section>
     );

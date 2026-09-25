@@ -122,7 +122,7 @@ export async function decryptProjectBundle(
             ciphertext as BufferSource
         );
     } catch {
-        throw new Error('Falha ao descriptografar projeto. A Senha do Projeto está incorreta.');
+        throw new Error('Failed to decrypt project. The Project Passkey is incorrect or data was corrupted.');
     }
 
     const dec = new TextDecoder();
@@ -130,7 +130,7 @@ export async function decryptProjectBundle(
     const parsed = JSON.parse(jsonText) as ProjectSyncBundle;
 
     if (!parsed || parsed.version !== 1 || !parsed.project || !Array.isArray(parsed.missions)) {
-        throw new Error('O arquivo de sincronização descriptografado não possui um formato válido de projeto.');
+        throw new Error('The decrypted sync bundle does not contain a valid project format.');
     }
 
     return parsed;

@@ -296,7 +296,7 @@ export const testLiteLlmConnection = async (
         const models = await fetchAvailableLiteLlmModels(baseUrl, apiKey);
         return {
             ok: true,
-            message: `Conexão estabelecida com sucesso! ${models.length} modelo(s) encontrado(s).`,
+            message: `Connection established successfully! ${models.length} model(s) found.`,
             modelCount: models.length,
             models,
         };

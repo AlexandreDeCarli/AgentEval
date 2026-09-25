@@ -71,7 +71,7 @@ export const ProjectList: React.FC = () => {
                         className="hover:border-[#4A72FF]/40 text-slate-200 hover:text-white group"
                     >
                         <CloudDownload className="w-4 h-4 text-[#4A72FF] group-hover:scale-110 transition-transform duration-200" />
-                        <span>Importar da Nuvem</span>
+                        <span>Import from Cloud</span>
                     </Button>
                     <Button 
                         id="new-project-button" 
@@ -126,12 +126,12 @@ export const ProjectList: React.FC = () => {
                                     {project.cloud_sync?.syncId && (
                                         <span
                                             className="flex items-center gap-1.5 bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#7090FF] text-label px-2.5 py-1 rounded-lg"
-                                            title={`Canal Cloud Sync: ${project.cloud_sync.syncId}`}
+                                            title={`Cloud Sync ID: ${project.cloud_sync.syncId}`}
                                         >
                                             <Cloud className="w-3.5 h-3.5 text-[#4A72FF]" />
                                             {project.cloud_sync.lastSyncedAt
-                                                ? `Nuvem (${new Date(project.cloud_sync.lastSyncedAt).toLocaleDateString()})`
-                                                : 'Nuvem'}
+                                                ? `Cloud (${new Date(project.cloud_sync.lastSyncedAt).toLocaleDateString()})`
+                                                : 'Cloud'}
                                         </span>
                                     )}
                                 </div>

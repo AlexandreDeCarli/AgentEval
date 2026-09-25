@@ -306,7 +306,7 @@ export const ProjectEditor: React.FC = () => {
         const activeKey = getActiveApiKey();
         if (!activeKey) {
             const providerName = aiProvider === 'litellm' ? 'LiteLLM' : 'Gemini';
-            addToast(`Configure sua ${providerName} API Key nas Configurações primeiro.`, 'error');
+            addToast(`Configure your ${providerName} API Key in Settings first.`, 'error');
             return;
         }
         if (missionsToRun.length === 0) {

@@ -20,12 +20,12 @@ export const defaultMockMission: Mission = {
     id: 'mock-1',
     target_provider: 'http',
     target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
-    titulo: 'Interação Básica (Mock)',
-    target_system_prompt: 'Você é um assistente virtual prestativo e educado. Sua função é responder dúvidas gerais de forma clara.',
-    tester_persona: 'Você é um usuário testando as capacidades de resposta do sistema. Sua meta é extrair informações sobre {{topic}}.',
-    mission_goal: 'Verificar se o assistente consegue explicar o conceito de {{topic}} com clareza em menos de {{turns}} turnos.',
+    titulo: 'Basic Interaction (Mock)',
+    target_system_prompt: 'You are a helpful and polite virtual assistant. Your role is to answer general questions clearly.',
+    tester_persona: 'You are a user testing the response capabilities of the system. Your goal is to gather information about {{topic}}.',
+    mission_goal: 'Verify if the assistant can clearly explain the concept of {{topic}} in fewer than {{turns}} turns.',
     variables: {
-        topic: ['Inteligência Artificial', 'Automação de Testes', 'Qualidade de Software'],
+        topic: ['Artificial Intelligence', 'Test Automation', 'Software Quality'],
         turns: [3, 5, 8],
     },
     max_turns: 8,
@@ -39,8 +39,8 @@ export const defaultMockMission: Mission = {
         max_timeout: 30,
     },
     evaluation_criteria: [
-        { id: 'crit-mock-1', name: 'Clareza', description: 'A explicação fornecida foi fácil de entender?' },
-        { id: 'crit-mock-2', name: 'Alinhamento', description: 'O assistente falou corretamente sobre o tópico solicitado?' }
+        { id: 'crit-mock-1', name: 'Clarity', description: 'Was the explanation provided easy to understand?' },
+        { id: 'crit-mock-2', name: 'Alignment', description: 'Did the assistant accurately address the requested topic?' }
     ]
 };
 
@@ -48,10 +48,10 @@ export const genericMission: Mission = {
     id: 'generic-1',
     target_provider: 'http',
     target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
-    titulo: 'Agente de Exemplo (Produção)',
-    target_system_prompt: 'Você é um assistente virtual prestativo configurado para responder perguntas gerais de suporte da plataforma.',
-    tester_persona: 'Você é um usuário em busca de uma informação específica. Sua meta é interagir com o assistente para extrair uma resposta sobre o funcionamento do portal. Seja direto e educado. Se precisar fornecer um código de identificação, use "ID-999-ABC".',
-    mission_goal: 'Verificar se o assistente consegue responder sobre o procedimento de acesso ao portal usando o código de identificação fornecido.',
+    titulo: 'Example Agent (Production)',
+    target_system_prompt: 'You are a helpful virtual assistant configured to answer general platform support questions.',
+    tester_persona: 'You are a user seeking specific information. Your goal is to interact with the assistant to find out how the portal works. Be direct and polite. If asked for an identification code, use "ID-999-ABC".',
+    mission_goal: 'Verify if the assistant can answer regarding portal access procedures using the provided identification code.',
     variables: {},
     max_turns: 10,
     api_config: {

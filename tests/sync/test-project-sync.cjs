@@ -140,7 +140,7 @@ async function runTests() {
         assert.equal(normalizeWorkerUrl('sync.potencial.tec.br'), 'https://sync.potencial.tec.br');
         assert.equal(normalizeWorkerUrl('http://localhost:8787/'), 'http://localhost:8787');
         assert.equal(normalizeWorkerUrl('https://worker.dev///'), 'https://worker.dev');
-        assert.throws(() => normalizeWorkerUrl('   '), /não foi informada/i);
+        assert.throws(() => normalizeWorkerUrl('   '), /Worker Gateway URL is required|não foi informada/i);
 
         // 6. Direct Cloudflare Worker Gateway Tests (Mock R2)
         console.log('  6. Cloudflare Worker gateway unit tests...');
@@ -281,7 +281,7 @@ async function runTests() {
                         orgSecret: 'empresa-secret-token',
                     });
                 },
-                /Nenhum projeto encontrado|descriptografar/i
+                /No project found|Nenhum projeto encontrado|Failed to decrypt|descriptografar/i
             );
 
         } finally {
