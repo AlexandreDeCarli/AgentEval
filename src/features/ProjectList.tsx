@@ -5,8 +5,8 @@ import { Button } from '../components/ui/Button';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, FolderOpen, FileText, Server, Target } from 'lucide-react';
-import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
-import { Project } from '../types';
+import { DEFAULT_GEMINI_TARGET_MODEL, DEFAULT_LITELLM_TARGET_MODEL } from '../utils/missionTarget';
+import { Project, TargetProvider } from '../types';
 
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
@@ -21,7 +21,7 @@ export const ProjectList: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
-    const [newTargetProvider, setNewTargetProvider] = useState<'http' | 'gemini'>('http');
+    const [newTargetProvider, setNewTargetProvider] = useState<TargetProvider>('http');
 
     const handleOpenNew = () => {
         setNewProjectName('');
@@ -30,7 +30,7 @@ export const ProjectList: React.FC = () => {
         setIsCreateModalOpen(true);
     };
 
-    const handleCreate = (name: string, description: string, targetProvider: 'http' | 'gemini') => {
+    const handleCreate = (name: string, description: string, targetProvider: TargetProvider) => {
         const id = crypto.randomUUID();
         addProject({
             id,
@@ -39,6 +39,7 @@ export const ProjectList: React.FC = () => {
             documentation: '',
             target_provider: targetProvider,
             target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
+            target_litellm_model: DEFAULT_LITELLM_TARGET_MODEL,
             system_prompts: [],
             environments: [],
         });
@@ -183,10 +184,11 @@ export const ProjectList: React.FC = () => {
                         <select
                             className="w-full h-10 rounded-md border border-input bg-[#1C2026] px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                             value={newTargetProvider}
-                            onChange={(e) => setNewTargetProvider(e.target.value as 'http' | 'gemini')}
+                            onChange={(e) => setNewTargetProvider(e.target.value as TargetProvider)}
                         >
                             <option value="http">HTTP API (External agent endpoint)</option>
                             <option value="gemini">Gemini LLM (Direct model testing)</option>
+                            <option value="litellm">LiteLLM (Proxy / Custom endpoints)</option>
                         </select>
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t border-border/40">

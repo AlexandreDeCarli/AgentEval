@@ -434,6 +434,9 @@ export const WelcomeModal: React.FC = () => {
                             <p className="text-body text-amber-400/90 font-medium">
                                 🔒 <strong>Guaranteed Local Security:</strong> Thanks to our local Web Crypto AES-GCM encryption layer, your API key is encrypted and stored locally in your browser's IndexedDB. It is **never** sent to any external servers.
                             </p>
+                            <p className="text-label text-slate-400">
+                                💡 <em>Prefer using LiteLLM? You can switch to LiteLLM (Proxy) anytime in Settings &gt; AI Configuration.</em>
+                            </p>
                         </div>
 
                         {/* API Key Input Field */}

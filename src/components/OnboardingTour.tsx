@@ -192,7 +192,7 @@ export const OnboardingTour: React.FC = () => {
         const projectIdMatch = location.pathname.match(/\/projects\/([^\/]+)/);
         const projectId = projectIdMatch ? projectIdMatch[1] : null;
         const project = projects.find(p => p.id === projectId);
-        const isGemini = project?.target_provider === 'gemini';
+        const isHttp = project?.target_provider === 'http' || !project?.target_provider;
 
         const driverObj = driver({
             showProgress: true,
@@ -277,7 +277,7 @@ export const OnboardingTour: React.FC = () => {
                         align: 'center'
                     }
                 },
-                ...(!isGemini ? [{
+                ...(isHttp ? [{
                     element: '#project-tab-environments',
                     popover: {
                         title: '🌐 Environments',

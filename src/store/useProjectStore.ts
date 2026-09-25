@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Project, SystemPrompt, Environment } from '../types';
 import { fileStorage, getLocalStorage } from '../utils/fileStorage';
 import { seedProject } from './seedData';
-import { DEFAULT_GEMINI_TARGET_MODEL } from '../utils/missionTarget';
+import { DEFAULT_GEMINI_TARGET_MODEL, DEFAULT_LITELLM_TARGET_MODEL } from '../utils/missionTarget';
 
 interface ProjectState {
     projects: Project[];
@@ -160,6 +160,9 @@ export const useProjectStore = create<ProjectState>()(
                     target_gemini_model:
                         project.target_gemini_model?.trim() ||
                         DEFAULT_GEMINI_TARGET_MODEL,
+                    target_litellm_model:
+                        project.target_litellm_model?.trim() ||
+                        DEFAULT_LITELLM_TARGET_MODEL,
                 }));
 
                 return {

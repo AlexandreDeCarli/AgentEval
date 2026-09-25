@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Compass, Sparkles, Server, Target, FileText, Eye } fro
 import { getGeminiModelDisplayName } from '../config/geminiModels';
 import {
     DEFAULT_GEMINI_TARGET_MODEL,
+    DEFAULT_LITELLM_TARGET_MODEL,
     getMissionGeminiModel,
     getMissionLiteLlmModel,
     getMissionTargetProvider,
@@ -36,6 +37,7 @@ const normalizeMission = (mission: Mission): Mission => {
         const projectMission = { ...mission };
         delete projectMission.target_provider;
         delete projectMission.target_gemini_model;
+        delete projectMission.target_litellm_model;
         return projectMission;
     }
 
@@ -43,6 +45,7 @@ const normalizeMission = (mission: Mission): Mission => {
         ...mission,
         target_provider: getMissionTargetProvider(mission),
         target_gemini_model: getMissionGeminiModel(mission),
+        target_litellm_model: getMissionLiteLlmModel(mission),
     };
 };
 
@@ -74,6 +77,7 @@ export const MissionEditor: React.FC = () => {
         system_prompt_id: '',
         target_provider: 'http',
         target_gemini_model: DEFAULT_GEMINI_TARGET_MODEL,
+        target_litellm_model: DEFAULT_LITELLM_TARGET_MODEL,
         titulo: 'New Mission',
         target_system_prompt: '',
         tester_persona: '',
@@ -211,6 +215,7 @@ export const MissionEditor: React.FC = () => {
                 target_system_prompt: defaultPrompt?.content || '',
                 target_provider: getMissionTargetProvider(prev),
                 target_gemini_model: getMissionGeminiModel(prev),
+                target_litellm_model: getMissionLiteLlmModel(prev),
                 api_config: defaultEnv?.api_config || prev.api_config,
                 variables: defaultMockMission.variables,
             }));
