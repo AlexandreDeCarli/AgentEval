@@ -68,16 +68,18 @@ export const ProjectList: React.FC = () => {
                         id="import-cloud-project-button"
                         variant="secondary"
                         onClick={() => setIsImportCloudModalOpen(true)}
-                        className="gap-2 border-border/60 hover:bg-[#272D35] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-slate-200 font-bold text-xs cursor-pointer h-10 px-4"
+                        className="hover:border-[#4A72FF]/40 text-slate-200 hover:text-white group"
                     >
-                        <CloudDownload className="w-4 h-4 text-[#4A72FF]" /> Importar da Nuvem
+                        <CloudDownload className="w-4 h-4 text-[#4A72FF] group-hover:scale-110 transition-transform duration-200" />
+                        <span>Importar da Nuvem</span>
                     </Button>
                     <Button 
                         id="new-project-button" 
                         onClick={handleOpenNew} 
-                        className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-white font-bold text-xs shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 px-5"
+                        className="bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-lg shadow-[#4A72FF]/20 hover:shadow-[#4A72FF]/30 px-5"
                     >
-                        <Plus className="w-4 h-4" /> New Project
+                        <Plus className="w-4 h-4" />
+                        <span>New Project</span>
                     </Button>
                 </div>
             </div>

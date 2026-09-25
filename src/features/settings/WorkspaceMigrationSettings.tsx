@@ -310,7 +310,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                             variant="secondary"
                             onClick={handleTestWorkerUrl}
                             disabled={isTestingUrl}
-                            className="gap-2 text-xs h-10 px-3 cursor-pointer"
+                            className="gap-2 px-3.5"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${isTestingUrl ? 'animate-spin' : ''}`} />
                             <span>{isTestingUrl ? 'Testando...' : 'Testar Conexão'}</span>
@@ -318,7 +318,7 @@ export const WorkspaceMigrationSettings: React.FC = () => {
                         <Button
                             type="button"
                             onClick={handleSaveWorkerUrl}
-                            className="gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white font-bold text-xs h-10 px-4 cursor-pointer shadow-sm"
+                            className="bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-sm px-5"
                         >
                             Salvar
                         </Button>

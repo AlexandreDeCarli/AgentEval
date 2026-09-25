@@ -421,9 +421,10 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                     <Button
                         type="button"
                         variant="secondary"
+                        size="sm"
                         onClick={handleCheckStatus}
                         disabled={isChecking || isPushing || isPulling || !syncId.trim() || !passkey.trim()}
-                        className="gap-2 text-xs cursor-pointer border-border/60 hover:bg-[#272D35]"
+                        className="gap-2"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
                         <span>Verificar Status na Nuvem</span>
@@ -444,7 +445,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                         <Button
                             onClick={handlePush}
                             disabled={isPushing || isPulling}
-                            className="w-full gap-2 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.01] active:scale-[0.99] text-white shadow-lg shadow-[#4A72FF]/10 cursor-pointer h-10 font-bold text-xs"
+                            className="w-full bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:brightness-110 text-white shadow-lg shadow-[#4A72FF]/20 hover:shadow-[#4A72FF]/30"
                         >
                             {isPushing ? (
                                 <>
@@ -474,7 +475,7 @@ export const SettingsSyncSubTab: React.FC<SettingsSyncSubTabProps> = ({
                             onClick={handlePull}
                             disabled={isPushing || isPulling}
                             variant="secondary"
-                            className="w-full gap-2 border-border/60 hover:bg-[#272D35] hover:scale-[1.01] active:scale-[0.99] text-white cursor-pointer h-10 font-bold text-xs"
+                            className="w-full hover:border-emerald-500/40 text-slate-200 hover:text-white"
                         >
                             {isPulling ? (
                                 <>
