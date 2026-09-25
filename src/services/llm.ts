@@ -20,6 +20,7 @@ import {
 import { executeWithModelFallback } from './modelFallbackRunner';
 import { getEvaluationLanguageInstruction } from '../config/evaluationLanguages';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { extractLlmJson } from '../utils/llmJsonParser';
 
 const PRIMARY_TESTER_MODEL = 'gemini-3.5-flash-lite';
 const FALLBACK_TESTER_MODEL_1 = 'gemini-3.1-flash-lite';
@@ -52,13 +53,31 @@ const buildGeminiConversation = (chatHistory: ChatMessage[]) => {
         }));
 };
 
-const cleanJsonMarkdown = (raw: string): string => {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('```')) {
-        const withoutOpening = trimmed.replace(/^```(?:json)?\s*/i, '');
-        return withoutOpening.replace(/\s*```$/, '').trim();
+const fallbackExtractTesterMessage = (cleaned: string): TesterResponsePayload | null => {
+    if (!cleaned) return null;
+
+    const messageMatch = cleaned.match(
+        /(?:^|\n)\s*(?:message|mensagem)\s*[:=]\s*(?:["']?)([\s\S]*?)(?:["']?\s*(?:(?:\n\s*(?:reasoning|missionCompleted|mission_completed|status))|$))/i
+    );
+    const completedMatch = cleaned.match(
+        /(?:missionCompleted|mission_completed)\s*[:=]\s*(true|false)/i
+    );
+
+    if (messageMatch && messageMatch[1].trim()) {
+        return {
+            message: messageMatch[1].trim(),
+            missionCompleted: completedMatch ? completedMatch[1].toLowerCase() === 'true' : false,
+        };
     }
-    return trimmed;
+
+    if (!cleaned.startsWith('{') && !cleaned.startsWith('[') && !cleaned.startsWith('```')) {
+        return {
+            message: cleaned,
+            missionCompleted: false,
+        };
+    }
+
+    return null;
 };
 
 export const generateTesterMessage = async (
@@ -114,16 +133,22 @@ Output JSON with:
             settings.litellmEvaluatorModel?.trim() ||
             'gpt-4o-mini';
 
+        const messages: LiteLlmChatMessage[] = [
+            {
+                role: 'system',
+                content: `${systemPrompt}\n\nCRITICAL INSTRUCTION: You MUST output ONLY a valid JSON object matching the requested schema. Do NOT include markdown code fences, thought tags, or any text before or after the JSON.`,
+            },
+            {
+                role: 'user',
+                content: `CURRENT CONVERSATION HISTORY:\n${historyText || '(No messages exchanged yet. You are starting the conversation.)'}\n\nGenerate your next tester response and status now as JSON.`,
+            },
+        ];
+
         const result = await requestLiteLlmChatCompletion({
             baseUrl: settings.litellmBaseUrl,
             apiKey: key,
             model,
-            messages: [
-                {
-                    role: 'system',
-                    content: `${systemPrompt}\n\nIMPORTANT: Respond with a single valid JSON object containing "reasoning", "message", and "missionCompleted".`,
-                },
-            ],
+            messages,
             responseFormat: { type: 'json_object' },
             onUsage,
         });
@@ -137,15 +162,15 @@ Output JSON with:
         const rawText = result.text || extractLiteLlmText(result.body);
         if (!rawText) throw new Error('Empty response from LiteLLM');
 
-        try {
-            const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as TesterResponsePayload;
-            return {
-                message: parsed.message || '...',
-                missionCompleted: !!parsed.missionCompleted,
-            };
-        } catch {
-            throw new Error('Failed to parse LiteLLM JSON output');
-        }
+        const parsed = extractLlmJson<TesterResponsePayload>(rawText, {
+            fallbackExtract: fallbackExtractTesterMessage,
+            errorContext: `TesterAgent (${model})`,
+        });
+
+        return {
+            message: parsed.message || '...',
+            missionCompleted: !!parsed.missionCompleted,
+        };
     }
 
     // Google Gemini Provider
@@ -197,15 +222,16 @@ Output JSON with:
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
-    try {
-        const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as TesterResponsePayload;
-        return {
-            message: parsed.message || '...',
-            missionCompleted: !!parsed.missionCompleted,
-        };
-    } catch {
-        throw new Error('Failed to parse Gemini JSON output');
-    }
+    const parsed = extractLlmJson<TesterResponsePayload>(rawText, {
+        fallbackExtract: fallbackExtractTesterMessage,
+        errorContext: 'TesterAgent (Gemini)',
+        provider: 'gemini',
+    });
+
+    return {
+        message: parsed.message || '...',
+        missionCompleted: !!parsed.missionCompleted,
+    };
 };
 
 export const generateEvaluation = async (
@@ -288,33 +314,22 @@ ${languageInstruction}`.trim();
                 ? evalModel.trim()
                 : (settings.litellmEvaluatorModel?.trim() || 'gpt-4o-mini');
 
-        const jsonInstruction = `
-IMPORTANT: You MUST reply with a JSON object matching this structure:
-{
-  "overall_score": number (0-100),
-  "summary": string,
-  "criteria_scores": [
-    { "criterion_id": string, "score": number (0-10), "justification": string }
-  ],
-  "prompt_improvements": [
-    { "target_text": string, "suggested_text": string, "justification": string, "severity": "critico" | "importante" | "sugestão" }
-  ],
-  "metrics": {
-    "avg_time_to_first_response_ms": ${metrics.avg_time_to_first_response_ms},
-    "avg_time_to_complete_response_ms": ${metrics.avg_time_to_complete_response_ms}
-  }
-}`;
+        const messages: LiteLlmChatMessage[] = [
+            {
+                role: 'system',
+                content: `You are the EVALUATOR in an automated QA system.\nYour job is to deeply analyze this conversation and grade it based on specific criteria. Note that this test had a limit of ${maxTurns} turns.\n\n${languageInstruction}\n\nCRITICAL INSTRUCTION: You MUST output ONLY a valid JSON object matching this schema:\n{\n  "overall_score": number (0-100),\n  "summary": string,\n  "criteria_scores": [\n    { "criterion_id": string, "score": number (0-10), "justification": string }\n  ],\n  "prompt_improvements": [\n    { "target_text": string, "suggested_text": string, "justification": string, "severity": "critico" | "importante" | "sugestão" }\n  ],\n  "metrics": {\n    "avg_time_to_first_response_ms": ${metrics.avg_time_to_first_response_ms},\n    "avg_time_to_complete_response_ms": ${metrics.avg_time_to_complete_response_ms}\n  }\n}\nDo NOT include markdown code fences or conversational text outside the JSON.`,
+            },
+            {
+                role: 'user',
+                content: `Target's Original System Prompt:\n"""\n${targetSystemPrompt}\n"""\n\nMission Goal the tester was trying to achieve:\n"""\n${missionGoal}\n"""\n\nEvaluation Criteria:\n${criteriaText}\n\nPerformance Metrics from Engine:\n- Average Time to First Response: ${metrics.avg_time_to_first_response_ms}ms\n- Average Time to Complete Response: ${metrics.avg_time_to_complete_response_ms}ms\n\nChat History:\n"""\n${historyText}\n"""\n\nAnalyze this conversation and generate your evaluation now as JSON.`,
+            },
+        ];
 
         const result = await requestLiteLlmChatCompletion({
             baseUrl: settings.litellmBaseUrl,
             apiKey: key,
             model,
-            messages: [
-                {
-                    role: 'system',
-                    content: `${systemPrompt}\n\n${jsonInstruction}`,
-                },
-            ],
+            messages,
             responseFormat: { type: 'json_object' },
             onUsage,
         });
@@ -328,18 +343,17 @@ IMPORTANT: You MUST reply with a JSON object matching this structure:
         const rawText = result.text || extractLiteLlmText(result.body);
         if (!rawText) throw new Error('Empty response from LiteLLM evaluator');
 
-        try {
-            const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as EvaluationResponsePayload;
-            return {
-                overall_score: typeof parsed.overall_score === 'number' ? parsed.overall_score : 0,
-                summary: parsed.summary || 'No summary',
-                criteria_scores: Array.isArray(parsed.criteria_scores) ? parsed.criteria_scores : [],
-                prompt_improvements: Array.isArray(parsed.prompt_improvements) ? parsed.prompt_improvements : [],
-                metrics: parsed.metrics || metrics,
-            };
-        } catch {
-            throw new Error('Failed to parse LiteLLM evaluation JSON output');
-        }
+        const parsed = extractLlmJson<EvaluationResponsePayload>(rawText, {
+            errorContext: `EvaluatorAgent (${model})`,
+        });
+
+        return {
+            overall_score: typeof parsed.overall_score === 'number' ? parsed.overall_score : 0,
+            summary: parsed.summary || 'No summary',
+            criteria_scores: Array.isArray(parsed.criteria_scores) ? parsed.criteria_scores : [],
+            prompt_improvements: Array.isArray(parsed.prompt_improvements) ? parsed.prompt_improvements : [],
+            metrics: parsed.metrics || metrics,
+        };
     }
 
     // Google Gemini Provider
@@ -443,18 +457,18 @@ IMPORTANT: You MUST reply with a JSON object matching this structure:
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
-    try {
-        const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as EvaluationResponsePayload;
-        return {
-            overall_score: parsed.overall_score || 0,
-            summary: parsed.summary || 'No summary',
-            criteria_scores: parsed.criteria_scores || [],
-            prompt_improvements: parsed.prompt_improvements || [],
-            metrics: parsed.metrics || metrics
-        };
-    } catch {
-        throw new Error('Failed to parse Gemini evaluation JSON output');
-    }
+    const parsed = extractLlmJson<EvaluationResponsePayload>(rawText, {
+        errorContext: 'EvaluatorAgent (Gemini)',
+        provider: 'gemini',
+    });
+
+    return {
+        overall_score: parsed.overall_score || 0,
+        summary: parsed.summary || 'No summary',
+        criteria_scores: parsed.criteria_scores || [],
+        prompt_improvements: parsed.prompt_improvements || [],
+        metrics: parsed.metrics || metrics,
+    };
 };
 
 export const generateGeminiTargetResponse = async (

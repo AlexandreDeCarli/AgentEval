@@ -1,8 +1,9 @@
 import { GeminiUsageMeasurement, Mission, Project } from '../types';
 import { extractGeminiText, getGeminiErrorBody, requestGeminiGenerateContent } from './geminiClient';
-import { extractLiteLlmText, getLiteLlmErrorMessage, requestLiteLlmChatCompletion } from './litellmClient';
+import { extractLiteLlmText, getLiteLlmErrorMessage, LiteLlmChatMessage, requestLiteLlmChatCompletion } from './litellmClient';
 import { executeWithModelFallback } from './modelFallbackRunner';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { extractLlmJson } from '../utils/llmJsonParser';
 
 export const DEFAULT_GENERATOR_MODEL = 'gemini-3.7-flash';
 export const FALLBACK_GENERATOR_MODEL = 'gemini-3.6-flash';
@@ -22,15 +23,6 @@ interface GeneratedMissionPayload {
     max_turns?: number;
     evaluation_criteria?: GeneratedCriterionPayload[];
 }
-
-const cleanJsonMarkdown = (raw: string): string => {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('```')) {
-        const withoutOpening = trimmed.replace(/^```(?:json)?\s*/i, '');
-        return withoutOpening.replace(/\s*```$/, '').trim();
-    }
-    return trimmed;
-};
 
 export const generateMissionsFromAI = async (
     apiKey: string,
@@ -138,8 +130,17 @@ Example of good variable design:
         max_timeout: 30,
     };
 
-    const mapParsedMissions = (parsed: GeneratedMissionPayload[]): Mission[] => {
-        return parsed.map((raw) => {
+    const mapParsedMissions = (parsed: GeneratedMissionPayload[] | unknown): Mission[] => {
+        let list: GeneratedMissionPayload[] = [];
+        if (Array.isArray(parsed)) {
+            list = parsed as GeneratedMissionPayload[];
+        } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { missions?: GeneratedMissionPayload[] }).missions)) {
+            list = (parsed as { missions: GeneratedMissionPayload[] }).missions!;
+        } else if (parsed && typeof parsed === 'object' && (parsed as GeneratedMissionPayload).titulo) {
+            list = [parsed as GeneratedMissionPayload];
+        }
+
+        return list.map((raw) => {
             const rawSystemPromptId = raw.system_prompt_id || promptsForGeneration[0]?.id || '';
             const systemPromptId = allowedSystemPromptIds.has(rawSystemPromptId)
                 ? rawSystemPromptId
@@ -204,16 +205,22 @@ Return a JSON object containing a "missions" key with exactly ${count ?? 'betwee
 ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 `;
 
+        const messages: LiteLlmChatMessage[] = [
+            {
+                role: 'system',
+                content: `${systemPrompt}\n\n${jsonInstruction}`,
+            },
+            {
+                role: 'user',
+                content: `Generate ${count ?? 'between 8 and 12'} test missions now in the requested JSON structure.${userPrompt ? `\n\nUser instructions: ${userPrompt}` : ''}`,
+            },
+        ];
+
         const result = await requestLiteLlmChatCompletion({
             baseUrl: settings.litellmBaseUrl,
             apiKey: key,
             model: configuredModel,
-            messages: [
-                {
-                    role: 'system',
-                    content: `${systemPrompt}\n\n${jsonInstruction}`,
-                },
-            ],
+            messages,
             responseFormat: { type: 'json_object' },
             onUsage,
         });
@@ -225,18 +232,15 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
         const rawText = result.text || extractLiteLlmText(result.body);
         if (!rawText) throw new Error('Empty response from LiteLLM');
 
-        let parsedData: unknown;
-        try {
-            parsedData = JSON.parse(cleanJsonMarkdown(rawText));
-        } catch {
-            throw new Error('Failed to parse LiteLLM JSON output');
-        }
+        const parsedData = extractLlmJson<unknown>(rawText, {
+            errorContext: `MissionGenerator (${configuredModel})`,
+        });
 
         let parsedList: GeneratedMissionPayload[] = [];
         if (Array.isArray(parsedData)) {
-            parsedList = parsedData;
+            parsedList = parsedData as GeneratedMissionPayload[];
         } else if (parsedData && typeof parsedData === 'object' && Array.isArray((parsedData as { missions?: GeneratedMissionPayload[] }).missions)) {
-            parsedList = (parsedData as { missions: GeneratedMissionPayload[] }).missions;
+            parsedList = (parsedData as { missions: GeneratedMissionPayload[] }).missions!;
         } else {
             throw new Error('LiteLLM did not return a valid missions list in the expected JSON format');
         }
@@ -333,7 +337,10 @@ ${userPrompt ? `\n### ADDITIONAL INSTRUCTIONS FROM USER:\n${userPrompt}` : ''}
 
     if (!rawText) throw new Error('Empty response from Gemini');
 
-    const parsed = JSON.parse(cleanJsonMarkdown(rawText)) as GeneratedMissionPayload[];
+    const parsed = extractLlmJson<GeneratedMissionPayload[]>(rawText, {
+        errorContext: 'MissionGenerator (Gemini)',
+        provider: 'gemini',
+    });
 
     return mapParsedMissions(parsed);
 };
