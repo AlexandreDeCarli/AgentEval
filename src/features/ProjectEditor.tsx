@@ -23,7 +23,7 @@ const ProjectDashboardTab = React.lazy(() =>
 );
 
 type Tab = 'dashboard' | 'missions' | 'settings';
-type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments';
+type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments' | 'sync';
 
 import { getLocalStorage, safeLocalStorageSet, isQuotaExceededError } from '../utils/fileStorage';
 
@@ -136,7 +136,8 @@ export const ProjectEditor: React.FC = () => {
                 subtabFromQuery === 'info' ||
                 subtabFromQuery === 'docs' ||
                 subtabFromQuery === 'prompts' ||
-                subtabFromQuery === 'environments'
+                subtabFromQuery === 'environments' ||
+                subtabFromQuery === 'sync'
             ) {
                 setSettingsTab(subtabFromQuery as SettingsTab);
             }
@@ -148,7 +149,8 @@ export const ProjectEditor: React.FC = () => {
             tabFromQuery === 'info' ||
             tabFromQuery === 'docs' ||
             tabFromQuery === 'prompts' ||
-            tabFromQuery === 'environments'
+            tabFromQuery === 'environments' ||
+            tabFromQuery === 'sync'
         ) {
             setActiveTab('settings');
             setSettingsTab(tabFromQuery as SettingsTab);

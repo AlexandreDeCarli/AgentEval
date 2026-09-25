@@ -6,8 +6,9 @@ import { SettingsInfoSubTab } from './SettingsInfoSubTab';
 import { SettingsDocsSubTab } from './SettingsDocsSubTab';
 import { SettingsPromptsSubTab } from './SettingsPromptsSubTab';
 import { SettingsEnvsSubTab } from './SettingsEnvsSubTab';
+import { SettingsSyncSubTab } from './SettingsSyncSubTab';
 
-type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments';
+export type SettingsTab = 'info' | 'docs' | 'prompts' | 'environments' | 'sync';
 
 interface ProjectSettingsTabProps {
     project: Project;
@@ -35,6 +36,7 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
         { key: 'docs' as const, label: 'Documentation' },
         { key: 'prompts' as const, label: 'System Prompts' },
         ...(targetProvider === 'http' ? [{ key: 'environments' as const, label: 'Environments' }] : []),
+        { key: 'sync' as const, label: 'Cloud Sync' },
     ];
 
     return (
@@ -100,6 +102,14 @@ export const ProjectSettingsTab: React.FC<ProjectSettingsTabProps> = ({
 
             {settingsTab === 'environments' && targetProvider === 'http' && (
                 <SettingsEnvsSubTab project={project} onChange={onChange} />
+            )}
+
+            {settingsTab === 'sync' && (
+                <SettingsSyncSubTab
+                    project={project}
+                    onChange={onChange}
+                    onSave={onSave}
+                />
             )}
         </div>
     );
