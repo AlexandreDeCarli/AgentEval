@@ -61,6 +61,10 @@ interface SettingsState {
     evaluationLanguage: string;
     setEvaluationLanguage: (lang: string) => void;
 
+    // Sync settings
+    syncWorkerUrl: string;
+    setSyncWorkerUrl: (url: string) => void;
+
     // Helper utilities
     hasActiveApiKey: () => boolean;
     getActiveApiKey: () => string;
@@ -173,6 +177,10 @@ export const useSettingsStore = create<SettingsState>()(
             evaluationLanguage: 'pt-BR',
             setEvaluationLanguage: (lang) => set({ evaluationLanguage: lang }),
 
+            // Sync
+            syncWorkerUrl: 'https://sync.potencial.tec.br',
+            setSyncWorkerUrl: (url) => set({ syncWorkerUrl: url }),
+
             hasActiveApiKey: () => {
                 const state = get();
                 if (state.aiProvider === 'litellm') {
@@ -253,6 +261,9 @@ export const useSettingsStore = create<SettingsState>()(
                     discoveredLiteLlmModels: typedState?.discoveredLiteLlmModels?.length
                         ? typedState.discoveredLiteLlmModels
                         : currentState.discoveredLiteLlmModels,
+                    syncWorkerUrl: typedState?.syncWorkerUrl !== undefined
+                        ? typedState.syncWorkerUrl
+                        : currentState.syncWorkerUrl,
                 };
             },
         }
