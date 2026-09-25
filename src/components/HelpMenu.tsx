@@ -230,7 +230,7 @@ export const HelpMenu: React.FC = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-full inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 hover:bg-primary/20 text-primary hover:text-white text-label transition-all duration-200 cursor-pointer"
-                                title="Ver o que mudou na versão v2.6.0 no GitHub (Abre em nova aba)"
+                                title={`Ver o que mudou na versão v${APP_VERSION} no GitHub (Abre em nova aba)`}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Release Notes (v{APP_VERSION})</span>
