@@ -4,21 +4,32 @@ import { useMissionStore } from '../store/useMissionStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { EvaluationReport } from './EvaluationReport';
 import { ChatBubble } from '../components/ChatBubble';
 import { TestRun } from '../types';
 import { DebugLogPanel } from '../components/DebugLogPanel';
-import { Trash2, ExternalLink, TrendingUp, Target, Server, Clock } from 'lucide-react';
+import { Trash2, ExternalLink, TrendingUp, Target, Server, Clock, Filter, Search, Layers, X } from 'lucide-react';
 import { ConfirmDeleteModal } from '../components/ui/ConfirmDeleteModal';
+import {
+    DEFAULT_TEST_RUN_FILTERS,
+    filterTestRuns,
+    getTestRunFilterOptions,
+    reconcileSelectedRunIds,
+    TestRunFilters,
+} from './test-history/testRunFilters';
 
 export const TestHistory: React.FC = () => {
-    const { runs, deleteRun } = useTestRunStore();
+    const { runs, deleteRun, deleteRuns } = useTestRunStore();
     const { missions } = useMissionStore();
     const { projects } = useProjectStore();
 
     const [selectedRun, setSelectedRun] = useState<TestRun | null>(null);
     const [detailTab, setDetailTab] = useState<'score' | 'chat' | 'logs'>('score');
     const [runToDelete, setRunToDelete] = useState<TestRun | null>(null);
+    const [filters, setFilters] = useState<TestRunFilters>(DEFAULT_TEST_RUN_FILTERS);
+    const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
+    const [batchDeleteModalOpen, setBatchDeleteModalOpen] = useState<boolean>(false);
 
     useEffect(() => {
         if (!selectedRun) {
@@ -29,6 +40,59 @@ export const TestHistory: React.FC = () => {
     // Optimize nested lookups by pre-computing Maps
     const missionMap = useMemo(() => new Map(missions.map((m) => [m.id, m])), [missions]);
     const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+
+    const filterOptions = useMemo(() => getTestRunFilterOptions(projects), [projects]);
+
+    const filteredRuns = useMemo(
+        () => filterTestRuns(runs, filters, missionMap, projectMap),
+        [runs, filters, missionMap, projectMap]
+    );
+
+    const selectedVisibleRuns = useMemo(
+        () => filteredRuns.filter((r) => selectedRunIds.includes(r.id)),
+        [filteredRuns, selectedRunIds]
+    );
+
+    useEffect(() => {
+        setSelectedRunIds((curr) => reconcileSelectedRunIds(curr, runs));
+    }, [runs]);
+
+    const hasActiveFilters =
+        filters.query.trim() !== '' ||
+        filters.projectId !== 'all' ||
+        filters.status !== 'all' ||
+        filters.environmentId !== 'all';
+    const hasSelection = selectedVisibleRuns.length > 0;
+
+    const handleToggleSelectRun = (runId: string, selected: boolean) => {
+        setSelectedRunIds((curr) => {
+            if (selected) {
+                return curr.includes(runId) ? curr : [...curr, runId];
+            }
+            return curr.filter((id) => id !== runId);
+        });
+    };
+
+    const handleSelectVisible = () => {
+        setSelectedRunIds(filteredRuns.map((r) => r.id));
+    };
+
+    const handleClearSelection = () => {
+        setSelectedRunIds([]);
+    };
+
+    const handleClearFilters = () => {
+        setFilters(DEFAULT_TEST_RUN_FILTERS);
+    };
+
+    const handleConfirmBatchDelete = () => {
+        const targetIds = hasSelection
+            ? selectedVisibleRuns.map((r) => r.id)
+            : filteredRuns.map((r) => r.id);
+        deleteRuns(targetIds);
+        setSelectedRunIds([]);
+        setBatchDeleteModalOpen(false);
+    };
 
     const getMissionTitle = (id: string) => missionMap.get(id)?.titulo || 'Unknown Mission';
 
@@ -42,6 +106,23 @@ export const TestHistory: React.FC = () => {
                         Review past execution logs, conversations, and LLM evaluations.
                     </p>
                 </div>
+                {runs.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                            variant="destructive"
+                            onClick={() => setBatchDeleteModalOpen(true)}
+                            disabled={filteredRuns.length === 0}
+                            className="gap-2 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white font-bold text-xs uppercase shadow-lg shadow-red-500/10 cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {hasSelection
+                                ? `Delete Selected (${selectedVisibleRuns.length})`
+                                : hasActiveFilters
+                                ? `Delete Filtered (${filteredRuns.length})`
+                                : `Clear History (${filteredRuns.length})`}
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Test History List */}
@@ -51,100 +132,257 @@ export const TestHistory: React.FC = () => {
                     <span>No tests have been executed yet. Run a mission to populate history logs.</span>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {runs.map((run) => {
-                        const mission = missionMap.get(run.mission_id);
-                        const project = mission && mission.project_id ? projectMap.get(mission.project_id) : undefined;
-                        const missionTitle = mission?.titulo || 'Unknown Mission';
-                        const missionGoal = mission?.mission_goal || 'No description available for this test scenario.';
-                        const dateStr = new Date(run.created_at).toLocaleString();
-                        const turnsSpent = run.chat_history.filter(m => m.role === 'target').length;
-                        
-                        return (
-                            <div
-                                key={run.id}
-                                className="border border-border/50 rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20 transition-all duration-300 shadow-sm gap-4 relative overflow-hidden"
-                            >
-                                {/* Accent Line */}
-                                <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#4A72FF]/20 to-transparent opacity-10" />
+                <div className="space-y-6">
+                    {/* Filter Toolbar */}
+                    <div className="rounded-xl border border-border/50 bg-[#1C2026] p-4 space-y-4">
+                        <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 flex-1">
+                                <label className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground flex items-center gap-1.5">
+                                        <Search className="w-3.5 h-3.5" /> Find run
+                                    </span>
+                                    <Input
+                                        value={filters.query}
+                                        onChange={(event) =>
+                                            setFilters((current) => ({ ...current, query: event.target.value }))
+                                        }
+                                        placeholder="Search mission, goal, error..."
+                                        aria-label="Search test runs by mission, goal, or error"
+                                    />
+                                </label>
 
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <h4 className="text-body font-bold text-white break-words" title={missionTitle}>
-                                            {missionTitle}
-                                        </h4>
-                                        
-                                        {/* Project Tag */}
-                                        {project && (
-                                            <span className="text-label bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700/60 select-none">
-                                                {project.name}
-                                            </span>
-                                        )}
- 
-                                        {/* Evaluation overall score badge */}
-                                        {run.evaluation ? (
-                                            <span className="text-label bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#4A72FF] px-2.5 py-0.5 rounded select-none tabular-nums">
-                                                Score: {run.evaluation.overall_score}/100
-                                            </span>
-                                        ) : (
-                                            <span className="text-label bg-slate-800 text-slate-500 border border-slate-700/60 px-2.5 py-0.5 rounded select-none">
-                                                No Score
-                                            </span>
-                                        )}
- 
-                                        {/* Success / Failed badge */}
-                                        <span className={`px-2 py-0.5 rounded text-label border select-none ${
-                                            run.status === 'success'
-                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
-                                                : run.status === 'failed'
-                                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/25'
-                                                : 'bg-slate-800 text-slate-400 border-slate-700/60'
-                                        }`}>
-                                            {run.status === 'success' ? '✓ Success' : '✗ Failed'}
-                                        </span>
-                                    </div>
-                                    
-                                    <p className="text-body text-muted-foreground line-clamp-2 mt-1.5">
-                                        {missionGoal}
-                                    </p>
+                                <label className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground flex items-center gap-1.5">
+                                        <Layers className="w-3.5 h-3.5" /> Project
+                                    </span>
+                                    <select
+                                        value={filters.projectId}
+                                        onChange={(event) =>
+                                            setFilters((current) => ({ ...current, projectId: event.target.value }))
+                                        }
+                                        className="h-10 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] focus-visible:border-[#4A72FF]"
+                                        aria-label="Filter test runs by project"
+                                    >
+                                        <option value="all">All projects</option>
+                                        {filterOptions.projectOptions.map((proj) => (
+                                            <option key={proj.id} value={proj.id}>
+                                                {proj.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
 
-                                    <div className="flex flex-wrap gap-2 mt-3 select-none">
-                                        <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
-                                            <Clock className="w-3.5 h-3.5 text-[#4A72FF]" />
-                                            Ran on: {dateStr}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
-                                            <Target className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                                            {turnsSpent} turns
-                                        </span>
-                                        {run.resolved_variables && Object.keys(run.resolved_variables).length > 0 && (
-                                            <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
-                                                {Object.keys(run.resolved_variables).length} vars
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 self-end sm:self-center ml-0 sm:ml-4 select-none">
-                                    <Button 
-                                        onClick={() => setSelectedRun(run)}
-                                        className="gap-1.5 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white h-9 px-4 rounded-lg cursor-pointer transition-all duration-200 shadow-md shadow-[#4A72FF]/10 flex items-center"
+                                <label className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground flex items-center gap-1.5">
+                                        <Filter className="w-3.5 h-3.5" /> Status
+                                    </span>
+                                    <select
+                                        value={filters.status}
+                                        onChange={(event) =>
+                                            setFilters((current) => ({
+                                                ...current,
+                                                status: event.target.value as TestRunFilters['status'],
+                                            }))
+                                        }
+                                        className="h-10 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] focus-visible:border-[#4A72FF]"
+                                        aria-label="Filter test runs by status"
                                     >
-                                        <ExternalLink className="w-3.5 h-3.5" /> Details
-                                    </Button>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        onClick={() => setRunToDelete(run)} 
-                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer h-9 w-9 p-0 flex items-center justify-center rounded-lg transition-all duration-200"
-                                        title="Delete History Record"
+                                        <option value="all">All statuses</option>
+                                        <option value="success">✓ Success</option>
+                                        <option value="failed">✗ Failed</option>
+                                    </select>
+                                </label>
+
+                                <label className="space-y-1.5">
+                                    <span className="text-label text-muted-foreground flex items-center gap-1.5">
+                                        <Server className="w-3.5 h-3.5" /> Environment
+                                    </span>
+                                    <select
+                                        value={filters.environmentId}
+                                        onChange={(event) =>
+                                            setFilters((current) => ({ ...current, environmentId: event.target.value }))
+                                        }
+                                        className="h-10 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] focus-visible:border-[#4A72FF]"
+                                        aria-label="Filter test runs by environment"
                                     >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                                        <option value="all">All environments</option>
+                                        {filterOptions.environmentOptions.map((env) => (
+                                            <option key={env.id} value={env.id}>
+                                                {env.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
                             </div>
-                        );
-                    })}
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSelectVisible}
+                                    disabled={filteredRuns.length === 0}
+                                    className="text-xs"
+                                >
+                                    Select visible
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearSelection}
+                                    disabled={selectedRunIds.length === 0}
+                                    className="text-xs"
+                                >
+                                    Clear selection
+                                </Button>
+                                {hasActiveFilters && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleClearFilters}
+                                        className="gap-1 text-xs text-muted-foreground hover:text-white"
+                                    >
+                                        <X className="w-3.5 h-3.5" /> Clear filters
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-label text-muted-foreground">
+                            <span>{filteredRuns.length} visible</span>
+                            <span className="text-border">/</span>
+                            <span>{selectedVisibleRuns.length} selected</span>
+                            {hasActiveFilters && (
+                                <>
+                                    <span className="text-border">/</span>
+                                    <span>Deletion is scoped to current filters</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Filtered Runs List or Empty Filter State */}
+                    {filteredRuns.length === 0 ? (
+                        <div className="py-10 text-center border border-dashed border-border/60 bg-[#1C2026]/40 rounded-2xl select-none">
+                            <p className="text-body text-white font-bold mb-1">No test runs match these filters.</p>
+                            <p className="text-body text-muted-foreground mb-4">
+                                Adjust the search query, project, status, or environment filters.
+                            </p>
+                            <Button variant="outline" onClick={handleClearFilters} className="gap-2">
+                                <X className="w-4 h-4" /> Clear filters
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredRuns.map((run) => {
+                                const mission = missionMap.get(run.mission_id);
+                                const project = mission && mission.project_id ? projectMap.get(mission.project_id) : undefined;
+                                const missionTitle = mission?.titulo || 'Unknown Mission';
+                                const missionGoal = mission?.mission_goal || 'No description available for this test scenario.';
+                                const dateStr = new Date(run.created_at).toLocaleString();
+                                const turnsSpent = run.chat_history.filter(m => m.role === 'target').length;
+                                const isSelected = selectedRunIds.includes(run.id);
+                                
+                                return (
+                                    <div
+                                        key={run.id}
+                                        className={`border rounded-xl bg-[#1C2026] p-5 flex flex-col sm:flex-row sm:items-center justify-between transition-all duration-300 shadow-sm gap-4 relative overflow-hidden ${
+                                            isSelected
+                                                ? 'border-[#4A72FF]/70 bg-[#272D35]/35'
+                                                : 'border-border/50 hover:border-[#4A72FF]/40 hover:bg-[#272D35]/20'
+                                        }`}
+                                    >
+                                        {/* Accent Line */}
+                                        <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#4A72FF]/20 to-transparent opacity-10" />
+
+                                        <label className="flex items-center self-start sm:self-center pt-0.5 sm:pt-0 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={(e) => handleToggleSelectRun(run.id, e.target.checked)}
+                                                className="h-4 w-4 rounded border-border bg-[#272D35] text-[#4A72FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A72FF] cursor-pointer"
+                                                aria-label={`Select test run for mission ${missionTitle}`}
+                                            />
+                                        </label>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <h4 className="text-body font-bold text-white break-words" title={missionTitle}>
+                                                    {missionTitle}
+                                                </h4>
+                                                
+                                                {/* Project Tag */}
+                                                {project && (
+                                                    <span className="text-label bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700/60 select-none">
+                                                        {project.name}
+                                                    </span>
+                                                )}
+         
+                                                {/* Evaluation overall score badge */}
+                                                {run.evaluation ? (
+                                                    <span className="text-label bg-[#4A72FF]/10 border border-[#4A72FF]/20 text-[#4A72FF] px-2.5 py-0.5 rounded select-none tabular-nums">
+                                                        Score: {run.evaluation.overall_score}/100
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-label bg-slate-800 text-slate-500 border border-slate-700/60 px-2.5 py-0.5 rounded select-none">
+                                                        No Score
+                                                    </span>
+                                                )}
+         
+                                                {/* Success / Failed badge */}
+                                                <span className={`px-2 py-0.5 rounded text-label border select-none ${
+                                                    run.status === 'success'
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                                                        : run.status === 'failed'
+                                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/25'
+                                                        : 'bg-slate-800 text-slate-400 border-slate-700/60'
+                                                }`}>
+                                                    {run.status === 'success' ? '✓ Success' : '✗ Failed'}
+                                                </span>
+                                            </div>
+                                            
+                                            <p className="text-body text-muted-foreground line-clamp-2 mt-1.5">
+                                                {missionGoal}
+                                            </p>
+
+                                            <div className="flex flex-wrap gap-2 mt-3 select-none">
+                                                <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
+                                                    <Clock className="w-3.5 h-3.5 text-[#4A72FF]" />
+                                                    Ran on: {dateStr}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
+                                                    <Target className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                                                    {turnsSpent} turns
+                                                </span>
+                                                {run.resolved_variables && Object.keys(run.resolved_variables).length > 0 && (
+                                                    <span className="inline-flex items-center gap-1.5 text-label bg-[#272D35] text-slate-300 px-2.5 py-1 rounded-lg border border-white/[0.04] tabular-nums">
+                                                        {Object.keys(run.resolved_variables).length} vars
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2 self-end sm:self-center ml-0 sm:ml-4 select-none">
+                                            <Button 
+                                                onClick={() => setSelectedRun(run)}
+                                                className="gap-1.5 bg-gradient-to-r from-[#4A72FF] to-[#8B5CF6] hover:scale-[1.02] active:scale-[0.98] text-white h-9 px-4 rounded-lg cursor-pointer transition-all duration-200 shadow-md shadow-[#4A72FF]/10 flex items-center"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" /> Details
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setRunToDelete(run)} 
+                                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer h-9 w-9 p-0 flex items-center justify-center rounded-lg transition-all duration-200"
+                                                title="Delete History Record"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -160,6 +398,23 @@ export const TestHistory: React.FC = () => {
                         setRunToDelete(null);
                     }}
                     onCancel={() => setRunToDelete(null)}
+                />
+            )}
+
+            {/* Batch Delete Confirmation Modal */}
+            {batchDeleteModalOpen && (
+                <ConfirmDeleteModal
+                    itemType="Test Runs"
+                    itemName={
+                        hasSelection
+                            ? `${selectedVisibleRuns.length} Selected Runs`
+                            : hasActiveFilters
+                            ? `${filteredRuns.length} Filtered Runs`
+                            : `All ${filteredRuns.length} History Runs`
+                    }
+                    warningDescription="The conversational history, API inspector payloads, and evaluation score metrics for these test runs will be permanently deleted."
+                    onConfirm={handleConfirmBatchDelete}
+                    onCancel={() => setBatchDeleteModalOpen(false)}
                 />
             )}
 
