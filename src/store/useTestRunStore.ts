@@ -64,6 +64,7 @@ export const useTestRunStore = create<TestRunState>()(
                     runs: state.runs.filter((r) => r.id !== id),
                 })),
             deleteRuns: (ids) => {
+                if (!ids || ids.length === 0) return;
                 const idSet = new Set(ids);
                 set((state) => ({
                     runs: state.runs.filter((r) => !idSet.has(r.id)),
