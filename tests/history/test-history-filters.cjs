@@ -142,6 +142,15 @@ async function runTests() {
         assert.equal(errorFiltered.length, 1);
         assert.equal(errorFiltered[0].id, 'r2');
 
+        // 3a. Query filter on mission goal
+        const goalFiltered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, query: 'authentication' }, missionMap, projectMap);
+        assert.equal(goalFiltered.length, 2);
+
+        // 3b. Query filter on project name
+        const projectNameFiltered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, query: 'Beta' }, missionMap, projectMap);
+        assert.equal(projectNameFiltered.length, 1);
+        assert.equal(projectNameFiltered[0].id, 'r4');
+
         // 4. Project filter
         const p2Filtered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, projectId: 'p2' }, missionMap, projectMap);
         assert.equal(p2Filtered.length, 1);
