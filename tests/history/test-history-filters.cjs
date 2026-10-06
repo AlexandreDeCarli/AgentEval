@@ -99,6 +99,83 @@ async function runTests() {
         assert.equal(useTestRunStore.getState().runs.length, 0, 'runs should be 0 after clearAllRuns');
 
         console.log('✓ functional tests for deleteRuns and clearAllRuns passed');
+
+        console.log('--- Testing Test Run Filtering Functions ---');
+        const {
+            DEFAULT_TEST_RUN_FILTERS,
+            filterTestRuns,
+            getTestRunFilterOptions,
+            reconcileSelectedRunIds
+        } = module;
+
+        const mockProjects = [
+            { id: 'p1', name: 'Project Alpha', environments: [{ id: 'env1', name: 'Staging' }] },
+            { id: 'p2', name: 'Project Beta', environments: [{ id: 'env2', name: 'Production' }] }
+        ];
+
+        const mockMissions = [
+            { id: 'm1', project_id: 'p1', titulo: 'Login Flow', mission_goal: 'Test user authentication', environment_id: 'env1' },
+            { id: 'm2', project_id: 'p1', titulo: 'Checkout Flow', mission_goal: 'Test payment gateway', environment_id: 'env1' },
+            { id: 'm3', project_id: 'p2', titulo: 'Profile Update', mission_goal: 'Edit avatar and bio', environment_id: 'env2' }
+        ];
+
+        const mockRuns = [
+            { id: 'r1', mission_id: 'm1', status: 'success', created_at: 1000 },
+            { id: 'r2', mission_id: 'm1', status: 'failed', error: 'Network timeout during OTP', created_at: 2000 },
+            { id: 'r3', mission_id: 'm2', status: 'success', created_at: 3000 },
+            { id: 'r4', mission_id: 'm3', status: 'failed', created_at: 4000 }
+        ];
+
+        const missionMap = new Map(mockMissions.map(m => [m.id, m]));
+        const projectMap = new Map(mockProjects.map(p => [p.id, p]));
+
+        // 1. Default filters return all runs
+        const allFiltered = filterTestRuns(mockRuns, DEFAULT_TEST_RUN_FILTERS, missionMap, projectMap);
+        assert.equal(allFiltered.length, 4);
+
+        // 2. Query filter on mission title
+        const loginFiltered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, query: 'login' }, missionMap, projectMap);
+        assert.equal(loginFiltered.length, 2);
+
+        // 3. Query filter on error text
+        const errorFiltered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, query: 'timeout' }, missionMap, projectMap);
+        assert.equal(errorFiltered.length, 1);
+        assert.equal(errorFiltered[0].id, 'r2');
+
+        // 4. Project filter
+        const p2Filtered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, projectId: 'p2' }, missionMap, projectMap);
+        assert.equal(p2Filtered.length, 1);
+        assert.equal(p2Filtered[0].id, 'r4');
+
+        // 5. Status filter
+        const successFiltered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, status: 'success' }, missionMap, projectMap);
+        assert.equal(successFiltered.length, 2);
+
+        // 6. Environment filter
+        const env2Filtered = filterTestRuns(mockRuns, { ...DEFAULT_TEST_RUN_FILTERS, environmentId: 'env2' }, missionMap, projectMap);
+        assert.equal(env2Filtered.length, 1);
+        assert.equal(env2Filtered[0].id, 'r4');
+
+        // 7. Combined filter
+        const combinedFiltered = filterTestRuns(mockRuns, {
+            query: '',
+            projectId: 'p1',
+            status: 'failed',
+            environmentId: 'all'
+        }, missionMap, projectMap);
+        assert.equal(combinedFiltered.length, 1);
+        assert.equal(combinedFiltered[0].id, 'r2');
+
+        // 8. Reconcile selection
+        const reconciled = reconcileSelectedRunIds(['r1', 'deleted_id', 'r3'], mockRuns);
+        assert.deepEqual(reconciled, ['r1', 'r3']);
+
+        // 9. Options extraction
+        const options = getTestRunFilterOptions(mockProjects);
+        assert.equal(options.projectOptions.length, 2);
+        assert.equal(options.environmentOptions.length, 2);
+
+        console.log('✓ All filter and reconciliation algorithms passed');
     } finally {
         cleanup();
     }
