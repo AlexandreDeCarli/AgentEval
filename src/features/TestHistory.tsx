@@ -412,6 +412,11 @@ export const TestHistory: React.FC = () => {
                             ? `${filteredRuns.length} Filtered Runs`
                             : `All ${filteredRuns.length} History Runs`
                     }
+                    subtitle={
+                        hasSelection
+                            ? `${selectedVisibleRuns.length} test records marked for deletion`
+                            : `${filteredRuns.length} test records affected`
+                    }
                     warningDescription="The conversational history, API inspector payloads, and evaluation score metrics for these test runs will be permanently deleted."
                     onConfirm={handleConfirmBatchDelete}
                     onCancel={() => setBatchDeleteModalOpen(false)}

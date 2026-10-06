@@ -166,6 +166,15 @@ export const useTestExecutionStore = create<TestExecutionStore>()((set, get) => 
 
         // 1. Resolver variáveis
         const resolvedVars = resolveVariables(mission.variables || {});
+        
+        // Garantir que variáveis de canal (ex: WhatsApp phone_number e contact_name) possuam valores reais caso omitidas na missão
+        if (!resolvedVars.phone_number && (runtimeApiConfig?.payload_template?.includes('{{phone_number}}') || runtimeApiConfig?.get_url?.includes('{{phone_number}}'))) {
+            resolvedVars.phone_number = '5546988087783';
+        }
+        if (!resolvedVars.contact_name && runtimeApiConfig?.payload_template?.includes('{{contact_name}}')) {
+            resolvedVars.contact_name = 'Alexandre de Carli';
+        }
+
         const contextVars = {
             ...resolvedVars,
             target_system_prompt: activeTargetSystemPrompt,
