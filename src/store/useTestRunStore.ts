@@ -12,6 +12,8 @@ interface TestRunState {
     addDebugLog: (id: string, entry: DebugLogEntry) => void;
     setEvaluation: (id: string, evalResult: Evaluation) => void;
     deleteRun: (id: string) => void;
+    deleteRuns: (ids: string[]) => void;
+    clearAllRuns: () => void;
 }
 
 export const useTestRunStore = create<TestRunState>()(
@@ -60,6 +62,16 @@ export const useTestRunStore = create<TestRunState>()(
             deleteRun: (id) =>
                 set((state) => ({
                     runs: state.runs.filter((r) => r.id !== id),
+                })),
+            deleteRuns: (ids) => {
+                const idSet = new Set(ids);
+                set((state) => ({
+                    runs: state.runs.filter((r) => !idSet.has(r.id)),
+                }));
+            },
+            clearAllRuns: () =>
+                set(() => ({
+                    runs: [],
                 })),
         }),
         {
