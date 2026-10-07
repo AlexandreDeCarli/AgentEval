@@ -24,6 +24,13 @@ export const applyVariables = (
         const replacement = value === null || value === undefined ? '' : String(value);
         result = result.replace(regex, replacement);
     }
+    // Defensive fallbacks for channel placeholders (WhatsApp/phone/contact) if omitted in variables
+    if (result.includes('{{phone_number}}')) {
+        result = result.replace(/{{phone_number}}/g, '5546988087783');
+    }
+    if (result.includes('{{contact_name}}')) {
+        result = result.replace(/{{contact_name}}/g, 'Alexandre de Carli');
+    }
     return result;
 };
 
@@ -35,5 +42,8 @@ export const injectMessage = (template: string | undefined | null, message: stri
     result = result.replace(new RegExp('{{wamid}}', 'g'), 'wamid.' + Math.random().toString(36).substring(2, 12));
     result = result.replace(new RegExp('{{entry_id}}', 'g'), Math.random().toString(36).substring(2, 14));
     result = result.replace(new RegExp('{{timestamp}}', 'g'), Math.floor(Date.now() / 1000).toString());
+    // Defensive fallbacks for channel placeholders
+    result = result.replace(new RegExp('{{phone_number}}', 'g'), '5546988087783');
+    result = result.replace(new RegExp('{{contact_name}}', 'g'), 'Alexandre de Carli');
     return result;
 };
